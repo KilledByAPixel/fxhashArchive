@@ -11,13 +11,26 @@ let cache = new Map<string, Promise<unknown>>()
 export const _resetCache = () => { cache = new Map() }
 
 function getJson<T>(path: string): Promise<T> {
-  if (!cache.has(path)) {
-    cache.set(path, fetch(BASE + path).then((res) => {
+  const hit = cache.get(path)
+  if (hit) return hit as Promise<T>
+
+  let entry: Promise<unknown> | undefined
+  entry = fetch(BASE + path)
+    .then((res) => {
       if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`)
       return res.json()
-    }))
-  }
-  return cache.get(path) as Promise<T>
+    })
+    .catch((err) => {
+      // Evict failures. Memoizing a rejection means one transient error fetching, say,
+      // tokens/slug-index.json makes every project deep link on the site answer
+      // "not found" for the rest of the session, with no retry short of a reload.
+      // Successes stay cached; only the failed attempt is forgotten.
+      if (cache.get(path) === entry) cache.delete(path)
+      throw err
+    })
+
+  cache.set(path, entry)
+  return entry as Promise<T>
 }
 
 export const loadMeta = () => getJson<SnapshotMeta>('meta.json')

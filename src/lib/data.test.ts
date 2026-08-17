@@ -89,6 +89,43 @@ test('loadIterationIds memoizes the map shard across projects', async () => {
   expect(vi.mocked(fetch).mock.calls.length).toBe(before)
 })
 
+test('a failed fetch is not memoized, so the next attempt really retries', async () => {
+  // A cached rejection would make one transient failure of tokens/slug-index.json
+  // turn *every* project deep link into "Not found" for the rest of the session.
+  _resetCache()
+  let attempts = 0
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    attempts += 1
+    if (attempts === 1) throw new Error('network blip')
+    const key = Object.keys(routes).find((k) => String(url).endsWith(k))
+    if (!key) return { ok: false, status: 404 } as Response
+    return { ok: true, json: async () => routes[key] } as Response
+  }))
+
+  await expect(loadMeta()).rejects.toThrow('network blip')
+  expect((await loadMeta()).shardCount).toBe(2)
+  expect(attempts).toBe(2)
+
+  // Successes are still memoized — the retry path must not defeat the cache.
+  await loadMeta()
+  expect(attempts).toBe(2)
+})
+
+test('a slug lookup that failed once can succeed on a later attempt', async () => {
+  _resetCache()
+  let fail = true
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    if (fail) throw new Error('slug-index unreachable')
+    const key = Object.keys(routes).find((k) => String(url).endsWith(k))
+    if (!key) return { ok: false, status: 404 } as Response
+    return { ok: true, json: async () => routes[key] } as Response
+  }))
+
+  await expect(findTokenBySlug('tok-3')).rejects.toThrow(/unreachable/)
+  fail = false
+  expect((await findTokenBySlug('tok-3'))?.id).toBe(3)
+})
+
 test('isVisible hides moderated flags', () => {
   expect(isVisible(tok(1))).toBe(true)
   expect(isVisible(tok(1, { flag: 'MALICIOUS' }))).toBe(false)

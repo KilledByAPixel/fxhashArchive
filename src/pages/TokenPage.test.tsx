@@ -169,6 +169,47 @@ test('a missing mapping entry falls back to the join and shows what it finds', a
   expect(byIds).not.toHaveBeenCalled()
 })
 
+test('a zero-row first page still offers "Load more" for the remaining ids', async () => {
+  // TzKT can answer a page with no rows while plenty of ids remain. Gating the button
+  // on a non-empty grid stranded everything after that page with no way forward.
+  const ids = Array.from({ length: 100 }, (_, i) => `FX0-${i}`)
+  vi.spyOn(data, 'loadIterationIds').mockClear().mockResolvedValue(ids)
+  vi.spyOn(tzkt, 'fetchIterationsByIds').mockClear().mockImplementation(
+    async (_ids: string[], offset = 0, limit = 48) =>
+      offset === 0
+        ? []
+        : ids.slice(offset, offset + limit).map((id) => iter({ contract: 'KT1v1', tokenId: id.split('-')[1], name: id })),
+  )
+
+  renderAt('/token/tok-5')
+
+  const more = await screen.findByRole('button', { name: /load more/i })
+  fireEvent.click(more)
+  expect(await screen.findByText('FX0-48')).toBeTruthy()
+})
+
+// --- "could not load" is not "does not exist" --------------------------------
+
+test('a failed project lookup offers a retry instead of claiming the project is gone', async () => {
+  vi.mocked(data.findTokenBySlug).mockRejectedValueOnce(new Error('slug-index.json: HTTP 503'))
+
+  renderAt('/token/tok-5')
+
+  expect(await screen.findByText(/could not load this project/i)).toBeTruthy()
+  expect(screen.queryByText(/not found/i)).toBeNull()
+
+  // The mocked lookup succeeds on the retry, exactly as a recovered network would.
+  fireEvent.click(screen.getByRole('button', { name: /retry/i }))
+  expect(await screen.findByRole('heading', { name: 'Tok 5' })).toBeTruthy()
+})
+
+test('a slug that genuinely is not in the snapshot still renders not-found', async () => {
+  vi.mocked(data.findTokenBySlug).mockResolvedValue(null)
+  renderAt('/token/no-such-project')
+  expect(await screen.findByText(/not found/i)).toBeTruthy()
+  expect(screen.queryByRole('button', { name: /retry/i })).toBeNull()
+})
+
 // --- moderation --------------------------------------------------------------
 
 test('a moderated project is unreachable by direct link, through the real data layer', async () => {

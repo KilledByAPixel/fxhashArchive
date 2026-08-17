@@ -4,6 +4,7 @@ import { findTokenBySlug, loadIterationIds } from '../lib/data'
 import { fetchIterations, fetchIterationsByIds, type Iteration } from '../lib/tzkt'
 import type { LeanToken } from '../lib/types'
 import IpfsImage from '../components/IpfsImage'
+import LoadError from '../components/LoadError'
 import NotFoundPage from './NotFoundPage'
 
 const PAGE = 48
@@ -16,9 +17,21 @@ const PAGE = 48
  */
 type ObjktIds = string[] | null | undefined
 
+/**
+ * "We could not load it" and "it does not exist" are different answers, and only one
+ * of them is safe to assert from a rejected fetch. Collapsing both into null told
+ * people their link was dead when the network merely blinked.
+ */
+type ProjectState =
+  | { status: 'loading' }
+  | { status: 'ok'; token: LeanToken }
+  | { status: 'notfound' }
+  | { status: 'error' }
+
 export default function TokenPage() {
   const { slug } = useParams()
-  const [token, setToken] = useState<LeanToken | null | undefined>(undefined)
+  const [state, setState] = useState<ProjectState>({ status: 'loading' })
+  const [attempt, setAttempt] = useState(0)
   const [objktIds, setObjktIds] = useState<ObjktIds>(undefined)
   const [iterations, setIterations] = useState<Iteration[] | null>(null)
   const [iterError, setIterError] = useState(false)
@@ -30,18 +43,22 @@ export default function TokenPage() {
     // Reset all per-project state synchronously so a slug change (e.g. editing the
     // URL hash while already on a project page) can't leave the previous project's
     // hero, iterations, offset, or error state visible while the new one loads.
-    setToken(undefined)
+    setState({ status: 'loading' })
     setObjktIds(undefined)
     setIterations(null)
     setIterError(false)
     setOffset(0)
     setDone(false)
     findTokenBySlug(slug!).then(
-      (t) => { if (!cancelled) setToken(t) },
-      () => { if (!cancelled) setToken(null) },
+      (t) => { if (!cancelled) setState(t ? { status: 'ok', token: t } : { status: 'notfound' }) },
+      // A rejected lookup says nothing about whether the project exists.
+      () => { if (!cancelled) setState({ status: 'error' }) },
     )
     return () => { cancelled = true }
-  }, [slug])
+  }, [slug, attempt])
+
+  // The loaded project, or null while it is unavailable for any reason.
+  const token = state.status === 'ok' ? state.token : null
 
   // Resolve the authoritative id list. A failure here is "we don't know", never
   // "nothing was minted" — the fallback join below gets a chance instead.
@@ -94,30 +111,34 @@ export default function TokenPage() {
     return () => { cancelled = true }
   }, [token, objktIds, offset])
 
-  if (token === undefined) return <p>Loading…</p>
-  if (token === null) return <NotFoundPage />
+  if (state.status === 'loading') return <p>Loading…</p>
+  if (state.status === 'notfound') return <NotFoundPage />
+  if (state.status === 'error') {
+    return <LoadError what="this project" onRetry={() => setAttempt((a) => a + 1)} />
+  }
 
+  const project = state.token
   const neverMinted = Array.isArray(objktIds) && objktIds.length === 0
   // Mapping unavailable and no generatorUri to join on: nothing left to try.
-  const noSource = objktIds === null && !token.generativeUri
+  const noSource = objktIds === null && !project.generativeUri
 
   return (
     <div>
       <div className="token-hero">
-        <IpfsImage uri={token.displayUri ?? token.thumbnailUri} alt={token.name} className="hero-img" />
+        <IpfsImage uri={project.displayUri ?? project.thumbnailUri} alt={project.name} className="hero-img" />
         <div>
-          <h2>{token.name}</h2>
+          <h2>{project.name}</h2>
           <p>
             by{' '}
-            {token.author
-              ? <Link to={`/artist/${token.author.id}`}>{token.author.name ?? token.author.id}</Link>
+            {project.author
+              ? <Link to={`/artist/${project.author.id}`}>{project.author.name ?? project.author.id}</Link>
               : 'unknown'}
           </p>
           <p className="muted">
-            edition of {token.supply}
+            edition of {project.supply}
             {iterations && iterations.length > 0 && ` · ${iterations.length} iterations loaded`}
           </p>
-          {token.tags.length > 0 && <p className="muted">{token.tags.join(', ')}</p>}
+          {project.tags.length > 0 && <p className="muted">{project.tags.join(', ')}</p>}
         </div>
       </div>
 
@@ -133,19 +154,19 @@ export default function TokenPage() {
         <p>Could not load iterations for this project.</p>
       )}
       {iterations && iterations.length > 0 && (
-        <>
-          <div className="token-grid">
-            {iterations.map((it) => (
-              <Link key={`${it.contract}-${it.tokenId}`} to={`/gentk/${it.contract}/${it.tokenId}`} className="token-card">
-                <IpfsImage uri={it.thumbnailUri ?? it.displayUri} alt={it.name ?? it.tokenId} className="token-thumb" />
-                <div className="token-name">{it.name ?? `#${it.tokenId}`}</div>
-              </Link>
-            ))}
-          </div>
-          {!done && (
-            <button className="load-more" onClick={() => setOffset((o) => o + PAGE)}>Load more</button>
-          )}
-        </>
+        <div className="token-grid">
+          {iterations.map((it) => (
+            <Link key={`${it.contract}-${it.tokenId}`} to={`/gentk/${it.contract}/${it.tokenId}`} className="token-card">
+              <IpfsImage uri={it.thumbnailUri ?? it.displayUri} alt={it.name ?? it.tokenId} className="token-thumb" />
+              <div className="token-name">{it.name ?? `#${it.tokenId}`}</div>
+            </Link>
+          ))}
+        </div>
+      )}
+      {/* Outside the grid on purpose: a page that returned no rows (TzKT can do that
+          while ids remain) used to hide this button and strand the rest of the list. */}
+      {!done && iterations !== null && (
+        <button className="load-more" onClick={() => setOffset((o) => o + PAGE)}>Load more</button>
       )}
     </div>
   )
