@@ -52,12 +52,16 @@ this:
   it directly from the browser with no proxy or backend.
 - Public IPFS gateways serve the artwork images as plain `<img>` tags, which
   need no CORS at all. The chain is `ipfs.io` → `dweb.link` →
-  `gateway.pinata.cloud`, three independent operators tried in order; an
-  image only falls back to a placeholder once all three have failed. (Entries
-  are checked for being both alive and independent: `cloudflare-ipfs.com` was
-  removed after Cloudflare retired the host, and `w3s.link` / `nftstorage.link`
-  are not used because they redirect onto `dweb.link`, which is already in the
-  chain.)
+  `gateway.pinata.cloud`, tried in order; an image only falls back to a
+  placeholder once all three have failed. That's two independent operators
+  across three endpoints, not three: `ipfs.io` and `dweb.link` are both
+  Protocol Labs / Interplanetary Shipyard endpoints (path-style vs.
+  subdomain-style of the same service), while `gateway.pinata.cloud` is a
+  genuinely separate operator. (Entries are checked for being both alive and
+  independent: `cloudflare-ipfs.com` was removed after Cloudflare retired the
+  host, and `w3s.link` / `nftstorage.link` are not used because they redirect
+  onto `dweb.link`, which is already in the chain — the same duplication test
+  that trims the `ipfs.io`/`dweb.link` pair down to one operator above.)
 - Each iteration's live code runs inside an
   `<iframe sandbox="allow-scripts">` with **no** `allow-same-origin` — these
   are untrusted third-party programs, and the sandbox is deliberately strict.
@@ -134,13 +138,24 @@ you should choose to do. To publish:
 
 ## Known limitations
 
-- **Moderation is honored, deliberately without a bypass.** 2,692 projects
-  (9.8% of the catalog) carry fxhash moderation flags (`MALICIOUS`,
-  `HIDDEN`, `REPORTED`, `AUTO_DETECT_COPY`) for plagiarism or abuse, and are
-  hidden from the browse grid and lookups. There is no toggle to reveal
-  them, on purpose. This is enforced in the data layer — `findTokenBySlug`
-  resolves a flagged slug to not-found — so a direct `#/token/<slug>` link
-  cannot reach one, and nothing offers to run its code.
+- **Moderation is honored, deliberately without a bypass — for projects.**
+  2,692 projects (9.8% of the catalog) carry fxhash moderation flags
+  (`MALICIOUS`, `HIDDEN`, `REPORTED`, `AUTO_DETECT_COPY`) for plagiarism or
+  abuse, and are hidden from the browse grid, from artist pages, and from
+  project lookup by slug. There is no toggle to reveal them, on purpose.
+  This is enforced in the data layer — `findTokenBySlug` resolves a flagged
+  slug to not-found via `isVisible` — so a direct `#/token/<slug>` link
+  cannot reach a flagged project, and no in-app link ever points at one.
+  **This does not extend to individual iterations.** `#/gentk/<contract>/
+  <tokenId>` resolves a minted token directly against TzKT, with no
+  moderation check on that path — a hand-crafted URL naming an iteration
+  of a flagged project can still reach it and will still offer "Run live".
+  Closing that would need a reverse index from iteration id back to its
+  project, which does not exist yet. Two things bound the exposure in the
+  meantime: nothing in the app links to that URL (the only `/gentk/` links
+  live on project pages, and flagged project pages are unreachable), and
+  whatever code runs there is confined to the same `sandbox="allow-scripts"`
+  iframe, with no `allow-same-origin`, as every other iteration.
 - **One partial dependency on fxhash remains.** 372 projects (~1.4% of the
   catalog) and roughly 12% of newer iterations store their code via
   `onchfs://` URIs — fxhash's *on-chain* filesystem, which is different from
