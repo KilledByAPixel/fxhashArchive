@@ -38,11 +38,20 @@ async function shardIndexForSlug(slug: string): Promise<number | undefined> {
   return index[slug]
 }
 
+/**
+ * Look a project up by slug — the single entry point every deep link goes through.
+ *
+ * Moderation is enforced *here*, not only where grids are built: a flagged project
+ * (fxhash's own plagiarism/abuse flags) must be as unreachable from `#/token/<slug>`
+ * as it is from the browse grid, or the promise made to users is a lie and the site
+ * offers a "Run live" button on abusive code. A flagged slug resolves to not-found.
+ */
 export async function findTokenBySlug(slug: string): Promise<LeanToken | null> {
   const shardIdx = await shardIndexForSlug(slug)
   if (shardIdx === undefined) return null
   const shard = await loadShard(shardIdx)
-  return shard.find((t) => t.slug === slug) ?? null
+  const token = shard.find((t) => t.slug === slug)
+  return token && isVisible(token) ? token : null
 }
 
 /**

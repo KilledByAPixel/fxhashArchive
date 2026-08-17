@@ -30,7 +30,11 @@ beforeEach(() => {
   vi.spyOn(data, 'findTokenBySlug').mockResolvedValue(token)
 })
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.unstubAllGlobals()
+  data._resetCache()
+})
 
 test('renders project info and iterations from tzkt', async () => {
   vi.spyOn(tzkt, 'fetchIterations').mockResolvedValue([iter()])
@@ -163,6 +167,29 @@ test('a missing mapping entry falls back to the join and shows what it finds', a
   expect(await screen.findByText('Joined #1')).toBeTruthy()
   expect(join).toHaveBeenCalled()
   expect(byIds).not.toHaveBeenCalled()
+})
+
+// --- moderation --------------------------------------------------------------
+
+test('a moderated project is unreachable by direct link, through the real data layer', async () => {
+  // Deliberately not mocking the data layer: the guarantee ("hidden from the browse
+  // grid and lookups") only means anything if the lookup itself enforces it.
+  vi.mocked(data.findTokenBySlug).mockRestore()
+  data._resetCache()
+  const flagged: LeanToken = { ...token, id: 7, slug: 'bad-tok', name: 'Plagiarised', flag: 'MALICIOUS' }
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    const u = String(url)
+    if (u.endsWith('tokens/slug-index.json')) return { ok: true, json: async () => ({ 'bad-tok': 0 }) } as Response
+    if (u.endsWith('tokens/index-000.json')) return { ok: true, json: async () => [flagged] } as Response
+    return { ok: false, status: 404 } as Response
+  }))
+
+  renderAt('/token/bad-tok')
+
+  expect(await screen.findByText(/not found/i)).toBeTruthy()
+  expect(screen.queryByRole('heading', { name: 'Plagiarised' })).toBeNull()
+  // Above all: no route to executing a flagged project's code.
+  expect(screen.queryByRole('button', { name: /run live/i })).toBeNull()
 })
 
 test('"Load more" pages through the mapping by offset and stops at the end', async () => {

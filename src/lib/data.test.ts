@@ -11,8 +11,8 @@ const tok = (id: number, over: Partial<LeanToken> = {}): LeanToken => ({
 const routes: Record<string, unknown> = {
   'meta.json': { generatedAt: 'T', tokenCount: 3, shardCount: 2, shardSize: 2 },
   'tokens/index-000.json': [tok(1), tok(2)],
-  'tokens/index-001.json': [tok(3)],
-  'tokens/slug-index.json': { 'tok-1': 0, 'tok-2': 0, 'tok-3': 1 },
+  'tokens/index-001.json': [tok(3), tok(4, { flag: 'MALICIOUS' })],
+  'tokens/slug-index.json': { 'tok-1': 0, 'tok-2': 0, 'tok-3': 1, 'tok-4': 1 },
   // Iteration-id shards mirror tokens/index-NNN.json one-for-one.
   'iterations/map-000.json': { '1': ['FX0-5', 'FX1-6'], '2': [] },
   'iterations/map-001.json': { '3': ['FX0-9'] },
@@ -42,6 +42,13 @@ test('loadShard pads shard number', async () => {
 test('findTokenBySlug resolves via slug index; null when missing', async () => {
   expect((await findTokenBySlug('tok-3'))?.id).toBe(3)
   expect(await findTokenBySlug('nope')).toBeNull()
+})
+
+test('findTokenBySlug hides moderated projects, so a direct link cannot reach one', async () => {
+  // Moderation is a documented guarantee, not a browse-grid decoration: the flagged
+  // slug must resolve to "not found" exactly like an unknown one.
+  expect(await findTokenBySlug('tok-4')).toBeNull()
+  expect(await findTokenBySlug('tok-3')).not.toBeNull()
 })
 
 test('loadIterationIds resolves the map shard via the slug index', async () => {
