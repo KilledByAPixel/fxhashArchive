@@ -183,3 +183,14 @@ you should choose to do. To publish:
 - This is an **unofficial** archive viewer with no affiliation to fxhash.
   It hosts no artwork of its own — every image and every piece of art code
   you see streams live from IPFS gateways and the Tezos chain via TzKT.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
+
+That covers the viewer's code. It is not a claim over the catalog: the
+metadata under `public/data/` is factual record data (ids, slugs, titles,
+tags, timestamps, Tezos addresses, and IPFS content hashes) captured from
+fxhash's public API rather than authored here. No artwork is included in this
+repository — every image and every program streams from IPFS and the Tezos
+chain at view time, and rights to those remain with their artists.
