@@ -1,0 +1,4 @@
+:root { color-scheme: dark; font-family: system-ui, sans-serif; }
+body { margin: 0; background: #111; color: #eee; }
+a { color: #9ecbff; text-decoration: none; }
+img { max-width: 100%; }
