@@ -49,3 +49,26 @@ test('fetchIteration returns single token or null', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => [] }) as unknown as Response))
   expect(await fetchIteration(GENTK_CONTRACTS[1], '999')).toBeNull()
 })
+
+test('fetchIterations returns the populated contract\'s rows when the other contract fails', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    const u = String(url)
+    if (u.includes(GENTK_CONTRACTS[0])) {
+      throw new Error('network blip')
+    }
+    if (u.includes(GENTK_CONTRACTS[1]) && u.includes('generatorUri')) {
+      return { ok: true, json: async () => [row('7')] } as Response
+    }
+    return { ok: true, json: async () => [] } as Response
+  }))
+  const iters = await fetchIterations('ipfs://QmGen')
+  expect(iters).toHaveLength(1)
+  expect(iters[0]).toMatchObject({ contract: GENTK_CONTRACTS[1], tokenId: '7', iterationHash: 'oo7' })
+})
+
+test('fetchIterations rethrows when every contract query fails', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => {
+    throw new Error('network down')
+  }))
+  await expect(fetchIterations('ipfs://QmGen')).rejects.toThrow('network down')
+})

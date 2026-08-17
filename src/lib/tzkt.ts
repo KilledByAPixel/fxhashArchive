@@ -47,7 +47,7 @@ async function getRows(url: string): Promise<TzktRow[]> {
 
 export async function fetchIterations(generativeUri: string, offset = 0, limit = 48): Promise<Iteration[]> {
   const uri = encodeURIComponent(generativeUri)
-  const results = await Promise.all(
+  const settled = await Promise.allSettled(
     GENTK_CONTRACTS.map(async (contract) => {
       const url =
         `${TZKT}/tokens?contract=${contract}&metadata.generatorUri=${uri}` +
@@ -55,7 +55,11 @@ export async function fetchIterations(generativeUri: string, offset = 0, limit =
       return (await getRows(url)).map((r) => toIteration(contract, r))
     }),
   )
-  return results.flat()
+  const fulfilled = settled.filter((s): s is PromiseFulfilledResult<Iteration[]> => s.status === 'fulfilled')
+  if (fulfilled.length === 0) {
+    throw (settled[0] as PromiseRejectedResult).reason
+  }
+  return fulfilled.flatMap((s) => s.value)
 }
 
 export async function fetchIteration(contract: string, tokenId: string): Promise<Iteration | null> {
