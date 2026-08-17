@@ -119,3 +119,19 @@ test('an in-flight fetch for a superseded param cannot overwrite the newer itera
   expect(screen.getByRole('heading', { name: 'Piece #3' })).toBeTruthy()
   expect(screen.queryByText('Piece #9')).toBeNull()
 })
+
+// --- "could not load" is not "does not exist" --------------------------------
+
+test('a resolved-but-absent iteration renders not-found', async () => {
+  vi.spyOn(tzkt, 'fetchIteration').mockResolvedValue(null)
+  renderPage()
+  expect(await screen.findByText(/not found/i)).toBeTruthy()
+  expect(screen.queryByText(/could not load/i)).toBeNull()
+})
+
+test('a rejected fetch renders a retry-able error, not not-found', async () => {
+  vi.spyOn(tzkt, 'fetchIteration').mockRejectedValue(new Error('TzKT: HTTP 502'))
+  renderPage()
+  expect(await screen.findByText(/could not load/i)).toBeTruthy()
+  expect(screen.queryByText(/not found/i)).toBeNull()
+})

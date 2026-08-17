@@ -3,11 +3,20 @@ import { useParams } from 'react-router-dom'
 import { fetchIteration, type Iteration } from '../lib/tzkt'
 import { ipfsToHttp } from '../lib/ipfs'
 import IpfsImage from '../components/IpfsImage'
+import LoadError from '../components/LoadError'
 import NotFoundPage from './NotFoundPage'
+
+/** As on TokenPage/ArtistPage: a failed load must not masquerade as "no such iteration". */
+type IterationState =
+  | { status: 'loading' }
+  | { status: 'ok'; iteration: Iteration }
+  | { status: 'notfound' }
+  | { status: 'error' }
 
 export default function IterationPage() {
   const { contract, tokenId } = useParams()
-  const [it, setIt] = useState<Iteration | null | undefined>(undefined)
+  const [state, setState] = useState<IterationState>({ status: 'loading' })
+  const [attempt, setAttempt] = useState(0)
   const [live, setLive] = useState(false)
 
   useEffect(() => {
@@ -15,17 +24,23 @@ export default function IterationPage() {
     // Reset per-iteration state synchronously so navigating between two iterations
     // while this page stays mounted can't leave the previous one's content or the
     // "live" toggle visible while the new one loads.
-    setIt(undefined)
+    setState({ status: 'loading' })
     setLive(false)
     fetchIteration(contract!, tokenId!).then(
-      (result) => { if (!cancelled) setIt(result) },
-      () => { if (!cancelled) setIt(null) },
+      (result) => { if (!cancelled) setState(result ? { status: 'ok', iteration: result } : { status: 'notfound' }) },
+      // A rejected fetch says nothing about whether the iteration exists.
+      () => { if (!cancelled) setState({ status: 'error' }) },
     )
     return () => { cancelled = true }
-  }, [contract, tokenId])
+  }, [contract, tokenId, attempt])
 
-  if (it === undefined) return <p>Loading…</p>
-  if (it === null) return <NotFoundPage />
+  if (state.status === 'loading') return <p>Loading…</p>
+  if (state.status === 'notfound') return <NotFoundPage />
+  if (state.status === 'error') {
+    return <LoadError what="this iteration" onRetry={() => setAttempt((a) => a + 1)} />
+  }
+
+  const it = state.iteration
 
   const liveSrc = ipfsToHttp(it.artifactUri)
 

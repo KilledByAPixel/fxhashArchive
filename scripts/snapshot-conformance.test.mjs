@@ -80,6 +80,10 @@ test('shardCount agrees with the files on disk, and the iteration map mirrors th
   expect(shardFiles[0]).toBe('index-000.json') // zero-padded, zero-based, contiguous
   expect(shardFiles.at(-1)).toBe(`index-${String(meta.shardCount - 1).padStart(3, '0')}.json`)
   // loadIterationIds addresses an iteration map shard with the token shard's index.
+  // NOTE: the weekly cron (snapshot.yml) only runs snapshot.mjs, never
+  // snapshot-iterations.mjs, so shardCount can drift past a 1,000-token shard
+  // boundary without map-*.json being regenerated to match. If this goes red after
+  // an automated refresh, the fix is to run `npm run snapshot:iterations` by hand.
   expect(mapFiles).toHaveLength(meta.shardCount)
 })
 
