@@ -28,6 +28,11 @@ const renderAt = (path: string) =>
 
 beforeEach(() => {
   vi.spyOn(data, 'findTokenBySlug').mockResolvedValue(token)
+  // Default: no mapping entry, i.e. the fallback generatorUri join. Stated explicitly
+  // because leaving it unmocked ran the real loader, whose relative-URL fetch happens
+  // to fail in this environment — so these tests were exercising the fallback path by
+  // accident, and would have silently changed meaning the day someone stubbed fetch.
+  vi.spyOn(data, 'loadIterationIds').mockResolvedValue(null)
 })
 
 afterEach(() => {
@@ -167,6 +172,45 @@ test('a missing mapping entry falls back to the join and shows what it finds', a
   expect(await screen.findByText('Joined #1')).toBeTruthy()
   expect(join).toHaveBeenCalled()
   expect(byIds).not.toHaveBeenCalled()
+})
+
+test('a TzKT failure on the mapping path reports unavailable, without a silent fallback', async () => {
+  // The primary path's failure state had no coverage at all: every test that reached
+  // "Iterations unavailable" got there through the fallback join.
+  vi.spyOn(data, 'loadIterationIds').mockClear().mockResolvedValue(['FX0-955', 'FX0-960'])
+  const byIds = vi.spyOn(tzkt, 'fetchIterationsByIds').mockClear().mockRejectedValue(new Error('TzKT: HTTP 502'))
+  const join = vi.spyOn(tzkt, 'fetchIterations').mockClear().mockResolvedValue([])
+
+  renderAt('/token/tok-5')
+
+  expect(await screen.findByText(/iterations unavailable/i)).toBeTruthy()
+  // Knowing the ids exist, an unreachable indexer must never read as "never minted".
+  expect(screen.queryByText(/have been minted/i)).toBeNull()
+  expect(byIds).toHaveBeenCalled()
+  expect(join).not.toHaveBeenCalled()
+})
+
+test('a slug change resets a populated mapping, not just an empty one', async () => {
+  const tokenB: LeanToken = { ...token, id: 6, slug: 'tok-6', name: 'Tok 6' }
+  vi.spyOn(data, 'findTokenBySlug').mockImplementation(async (slug: string) =>
+    slug === 'tok-5' ? token : tokenB)
+  vi.spyOn(data, 'loadIterationIds').mockClear().mockImplementation(async (slug: string) =>
+    slug === 'tok-5' ? ['FX0-1'] : ['FX0-2'])
+  vi.spyOn(tzkt, 'fetchIterationsByIds').mockClear().mockImplementation(async (ids: string[]) =>
+    ids.map((id) => iter({ contract: 'KT1v1', tokenId: id.split('-')[1], name: `iter-${id}` })))
+
+  render(
+    <MemoryRouter initialEntries={['/token/tok-5']}>
+      <Link to="/token/tok-6">go to B</Link>
+      <Routes><Route path="/token/:slug" element={<TokenPage />} /></Routes>
+    </MemoryRouter>,
+  )
+
+  expect(await screen.findByText('iter-FX0-1')).toBeTruthy()
+  fireEvent.click(screen.getByText('go to B'))
+
+  expect(await screen.findByText('iter-FX0-2')).toBeTruthy()
+  expect(screen.queryByText('iter-FX0-1')).toBeNull()
 })
 
 test('a zero-row first page still offers "Load more" for the remaining ids', async () => {

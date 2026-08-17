@@ -17,4 +17,8 @@ test('renders nav and browse route by default', () => {
 test('unknown route renders not-found', () => {
   renderAt('/definitely/not/a/route')
   expect(screen.getByText(/not found/i)).toBeTruthy()
+  // This file has no explicit afterEach(cleanup); it relies on RTL's automatic
+  // cleanup, which only registers when vitest runs with `globals: true`. A second
+  // nav here would mean the previous test's tree is still mounted.
+  expect(screen.getAllByRole('link', { name: 'fxhash viewer' })).toHaveLength(1)
 })

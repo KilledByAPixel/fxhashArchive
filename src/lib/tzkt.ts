@@ -142,7 +142,10 @@ export async function fetchIterationsByIds(
 }
 
 export async function fetchIteration(contract: string, tokenId: string): Promise<Iteration | null> {
-  const url = `${TZKT}/tokens?contract=${contract}&tokenId=${encodeURIComponent(tokenId)}&select=tokenId,firstMinter,metadata`
+  // Both params come from the URL hash; encode both, not just the token id.
+  const url =
+    `${TZKT}/tokens?contract=${encodeURIComponent(contract)}` +
+    `&tokenId=${encodeURIComponent(tokenId)}&select=tokenId,firstMinter,metadata`
   const rows = await getRows(url)
   return rows.length ? toIteration(contract, rows[0]) : null
 }

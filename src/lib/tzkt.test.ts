@@ -56,6 +56,16 @@ test('fetchIteration returns single token or null', async () => {
   expect(await fetchIteration(GENTK_CONTRACTS[1], '999')).toBeNull()
 })
 
+test('fetchIteration encodes both route params, not just the token id', async () => {
+  // Both come straight off the URL hash, so both are user-controlled and neither
+  // should be able to smuggle extra query parameters into the TzKT request.
+  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => [] }) as unknown as Response))
+  await fetchIteration('KT1x&limit=10000', '7&select=metadata')
+  const url = String(vi.mocked(fetch).mock.calls[0][0])
+  expect(url).toContain('contract=KT1x%26limit%3D10000')
+  expect(url).toContain('tokenId=7%26select%3Dmetadata')
+})
+
 test('fetchIterations returns the populated contract\'s rows when the other contract fails', async () => {
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
     const u = String(url)
