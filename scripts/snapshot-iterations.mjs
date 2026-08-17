@@ -22,7 +22,7 @@
 // OUT of the map entirely (never an empty-array placeholder), so it is
 // retried automatically on the next invocation.
 
-import { readFile, writeFile, rename, mkdir, readdir } from 'node:fs/promises'
+import { readFile, writeFile, rename, unlink, mkdir, readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { execFileSync } from 'node:child_process'
 
@@ -59,7 +59,27 @@ async function loadJson(path, fallback) {
 async function atomicWrite(path, data) {
   const tmp = `${path}.tmp-${process.pid}`
   await writeFile(tmp, data)
-  await rename(tmp, path)
+  let lastErr
+  for (let attempt = 1; attempt <= 8; attempt++) {
+    try {
+      await rename(tmp, path)
+      return
+    } catch (err) {
+      lastErr = err
+      // Windows transiently locks freshly-written files (AV/indexer) causing
+      // EPERM/EBUSY on rename. Retry with backoff before giving up.
+      if (err.code !== 'EPERM' && err.code !== 'EBUSY') break
+      await sleep(50 * attempt)
+    }
+  }
+  // Fallback: rename kept failing. Write directly instead of losing the
+  // update or crashing the whole multi-hour run.
+  try {
+    await writeFile(path, data)
+    await unlink(tmp).catch(() => {})
+  } catch {
+    throw lastErr
+  }
 }
 
 async function fetchObjktsPage(projectId, skip, attempt = 1) {
@@ -227,7 +247,14 @@ async function main() {
       const sorted = {}
       for (const k of Object.keys(map).sort((a, b) => Number(a) - Number(b))) sorted[k] = map[k]
       const data = JSON.stringify(sorted)
-      writeChain = writeChain.then(() => atomicWrite(mapPath, data))
+      // Never let a transient write failure become an unhandled rejection
+      // that kills the whole run — the in-memory map is cumulative, so the
+      // next successful persist() will include whatever this one missed.
+      writeChain = writeChain.then(() =>
+        atomicWrite(mapPath, data).catch((err) => {
+          console.error(`  WARN: failed to persist ${mapPath}: ${err.message} (will retry on next write)`)
+        }),
+      )
       return writeChain
     }
 
@@ -258,7 +285,11 @@ async function main() {
     )
 
     const meta = await computeMeta(OUT, shardLabels)
-    await atomicWrite(join(OUT, 'meta.json'), JSON.stringify(meta, null, 2))
+    try {
+      await atomicWrite(join(OUT, 'meta.json'), JSON.stringify(meta, null, 2))
+    } catch (err) {
+      console.error(`  WARN: failed to write meta.json: ${err.message} (will retry after next shard)`)
+    }
 
     if (DO_COMMIT) commitShard(label, OUT)
   }
@@ -266,6 +297,12 @@ async function main() {
   logProgress(true)
   console.log('DONE')
 }
+
+// Defensive backstop: log and keep the process alive rather than let a
+// stray unhandled rejection kill an hours-long run outright.
+process.on('unhandledRejection', (err) => {
+  console.error('UNHANDLED REJECTION (continuing):', err)
+})
 
 main().catch((err) => {
   console.error('FATAL:', err)
