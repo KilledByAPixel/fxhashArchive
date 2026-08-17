@@ -16,17 +16,35 @@ export default function TokenPage() {
   const [offset, setOffset] = useState(0)
   const [done, setDone] = useState(false)
 
-  useEffect(() => { findTokenBySlug(slug!).then(setToken, () => setToken(null)) }, [slug])
+  useEffect(() => {
+    let cancelled = false
+    // Reset all per-project state synchronously so a slug change (e.g. editing the
+    // URL hash while already on a project page) can't leave the previous project's
+    // hero, iterations, offset, or error state visible while the new one loads.
+    setToken(undefined)
+    setIterations(null)
+    setIterError(false)
+    setOffset(0)
+    setDone(false)
+    findTokenBySlug(slug!).then(
+      (t) => { if (!cancelled) setToken(t) },
+      () => { if (!cancelled) setToken(null) },
+    )
+    return () => { cancelled = true }
+  }, [slug])
 
   useEffect(() => {
     if (!token?.generativeUri) return
+    let cancelled = false
     fetchIterations(token.generativeUri, offset, PAGE).then(
       (page) => {
+        if (cancelled) return
         setIterations((prev) => [...(prev ?? []), ...page])
         if (page.length < PAGE) setDone(true)
       },
-      () => setIterError(true),
+      () => { if (!cancelled) setIterError(true) },
     )
+    return () => { cancelled = true }
   }, [token, offset])
 
   if (token === undefined) return <p>Loading…</p>
@@ -58,7 +76,10 @@ export default function TokenPage() {
       {iterError && <p>Iterations unavailable right now (TzKT unreachable). Try again later.</p>}
       {!iterError && !hasGenerativeUri && <p>No iterations available for this project.</p>}
       {!iterError && hasGenerativeUri && iterations === null && <p>Loading iterations…</p>}
-      {iterations && (
+      {!iterError && iterations !== null && iterations.length === 0 && (
+        <p>No iterations have been minted for this project.</p>
+      )}
+      {iterations && iterations.length > 0 && (
         <>
           <div className="token-grid">
             {iterations.map((it) => (
