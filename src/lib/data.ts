@@ -32,10 +32,39 @@ export async function loadAllTokens(): Promise<LeanToken[]> {
   return shards.flat()
 }
 
-export async function findTokenBySlug(slug: string): Promise<LeanToken | null> {
+/** Which `tokens/index-NNN.json` shard holds this project, or undefined if unknown. */
+async function shardIndexForSlug(slug: string): Promise<number | undefined> {
   const index = await getJson<Record<string, number>>('tokens/slug-index.json')
-  const shardIdx = index[slug]
+  return index[slug]
+}
+
+export async function findTokenBySlug(slug: string): Promise<LeanToken | null> {
+  const shardIdx = await shardIndexForSlug(slug)
   if (shardIdx === undefined) return null
   const shard = await loadShard(shardIdx)
   return shard.find((t) => t.slug === slug) ?? null
+}
+
+/**
+ * Project -> minted iteration ids, sharded to mirror `tokens/index-NNN.json`.
+ * Captured from fxhash's own API, so it covers the launch-era tokens that carry
+ * no `metadata.generatorUri` on chain and are therefore invisible to the TzKT join.
+ */
+export const loadIterationMap = (i: number) =>
+  getJson<Record<string, string[]>>(`iterations/map-${String(i).padStart(3, '0')}.json`)
+
+/**
+ * The authoritative iteration ids for a project, as `FX{version}-{tokenId}`.
+ *
+ * Three outcomes, deliberately distinct — conflating any two of them recreates the
+ * bug this exists to fix (claiming art was never minted when we simply cannot tell):
+ *   - `string[]` (possibly empty) — we know; empty means genuinely never minted.
+ *   - `null`                      — we do not know (no such project in the index).
+ *   - rejection                   — we could not load the mapping at all.
+ */
+export async function loadIterationIds(slug: string, projectId: number): Promise<string[] | null> {
+  const shardIdx = await shardIndexForSlug(slug)
+  if (shardIdx === undefined) return null
+  const map = await loadIterationMap(shardIdx)
+  return map[String(projectId)] ?? null
 }
