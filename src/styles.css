@@ -2,3 +2,8 @@
 body { margin: 0; background: #111; color: #eee; }
 a { color: #9ecbff; text-decoration: none; }
 img { max-width: 100%; }
+
+.site-header { display: flex; gap: 1.5rem; align-items: baseline; padding: 1rem 1.5rem; border-bottom: 1px solid #333; }
+.brand { font-weight: 700; color: #fff; }
+.site-main { padding: 1.5rem; max-width: 1200px; margin: 0 auto; }
+.site-footer { padding: 1rem 1.5rem; color: #888; font-size: 0.85rem; border-top: 1px solid #333; margin-top: 3rem; }
