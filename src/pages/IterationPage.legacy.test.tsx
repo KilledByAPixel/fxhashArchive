@@ -1,0 +1,207 @@
+import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react'
+import { test, expect, vi, beforeEach, afterEach } from 'vitest'
+import { MemoryRouter, Routes, Route } from 'react-router-dom'
+import IterationPage from './IterationPage'
+import * as tzkt from '../lib/tzkt'
+import { GENTK_CONTRACTS } from '../lib/tzkt'
+import type { Iteration } from '../lib/tzkt'
+
+const V1 = GENTK_CONTRACTS[0]
+const V2 = GENTK_CONTRACTS[1]
+
+/** Enough of a real v1 artifact to be recognised by needsLegacyPatch. */
+const V1_HTML = `<!DOCTYPE html><html><head><script id="fxhash-snippet">
+let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+var fxhash = 'oo9'
+let b58dec = (str) => str.split('').reduce((p,c,i) => p + alphabet.indexOf(c) * (Math.pow(alphabet.length, str.length-i-1)), 0)
+</script><script src="./sketch.js"></script></head><body></body></html>`
+
+const base = (contract: string): Iteration => ({
+  contract, tokenId: '9', name: 'Piece #9', iterationHash: 'oo9',
+  artifactUri: 'ipfs://QmGen', displayUri: 'ipfs://QmDisp', thumbnailUri: null,
+  attributes: [], minter: 'Minter',
+})
+
+const mockFetchText = (body: string, ok = true) =>
+  vi.fn(() => Promise.resolve({ ok, text: () => Promise.resolve(body) } as Response))
+
+beforeEach(() => {
+  vi.spyOn(tzkt, 'fetchIteration').mockResolvedValue(base(V1))
+})
+
+afterEach(() => {
+  cleanup()
+  vi.unstubAllGlobals()
+})
+
+const renderPage = (contract: string) =>
+  render(
+    <MemoryRouter initialEntries={[`/gentk/${contract}/9`]}>
+      <Routes><Route path="/gentk/:contract/:tokenId" element={<IterationPage />} /></Routes>
+    </MemoryRouter>,
+  )
+
+const runLive = async () =>
+  fireEvent.click(await screen.findByRole('button', { name: /run live/i }))
+
+test('a v1 iteration fetches the artifact and renders it via srcdoc with the patch ahead of the snippet', async () => {
+  const fetchMock = mockFetchText(V1_HTML)
+  vi.stubGlobal('fetch', fetchMock)
+
+  renderPage(V1)
+  await runLive()
+
+  const frame = await waitFor(() => {
+    const f = document.querySelector('iframe')
+    if (!f?.getAttribute('srcdoc')) throw new Error('no srcdoc iframe yet')
+    return f
+  })
+
+  expect(fetchMock).toHaveBeenCalledWith('https://ipfs.io/ipfs/QmGen')
+
+  const doc = frame.getAttribute('srcdoc')!
+  expect(doc).toContain('fxhash-legacy-patch')
+  expect(doc).toContain('<base href="https://ipfs.io/ipfs/QmGen/">')
+  expect(doc.indexOf('fxhash-legacy-patch')).toBeLessThan(doc.indexOf('Math.pow(alphabet.length'))
+
+  // The sandbox must stay exactly as strict as it was: opaque origin, scripts only.
+  expect(frame.getAttribute('sandbox')).toBe('allow-scripts')
+  expect(frame.getAttribute('src')).toBeNull()
+})
+
+test('a v2 iteration never fetches and keeps using src — srcdoc would strip its seed', async () => {
+  const fetchMock = mockFetchText(V1_HTML)
+  vi.stubGlobal('fetch', fetchMock)
+  vi.spyOn(tzkt, 'fetchIteration').mockResolvedValue({
+    ...base(V2), artifactUri: 'ipfs://QmGen/?fxhash=oo9',
+  })
+
+  renderPage(V2)
+  await runLive()
+
+  const frame = document.querySelector('iframe')!
+  expect(frame.getAttribute('src')).toBe('https://ipfs.io/ipfs/QmGen/?fxhash=oo9')
+  expect(frame.getAttribute('srcdoc')).toBeNull()
+  expect(fetchMock).not.toHaveBeenCalled()
+})
+
+test('a rejected artifact fetch falls back to the direct src rather than showing nothing', async () => {
+  vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('network down'))))
+
+  renderPage(V1)
+  await runLive()
+
+  const frame = await waitFor(() => {
+    const f = document.querySelector('iframe')
+    if (!f?.getAttribute('src')) throw new Error('no direct iframe yet')
+    return f
+  })
+  expect(frame.getAttribute('src')).toBe('https://ipfs.io/ipfs/QmGen')
+  expect(frame.getAttribute('srcdoc')).toBeNull()
+})
+
+test('a non-OK artifact response falls back to the direct src', async () => {
+  vi.stubGlobal('fetch', mockFetchText('nope', false))
+
+  renderPage(V1)
+  await runLive()
+
+  const frame = await waitFor(() => {
+    const f = document.querySelector('iframe')
+    if (!f?.getAttribute('src')) throw new Error('no direct iframe yet')
+    return f
+  })
+  expect(frame.getAttribute('src')).toBe('https://ipfs.io/ipfs/QmGen')
+})
+
+test('HTML that does not need patching is served directly, not through srcdoc', async () => {
+  vi.stubGlobal('fetch', mockFetchText('<html><head></head><body>self-contained v2-era piece</body></html>'))
+
+  renderPage(V1)
+  await runLive()
+
+  const frame = await waitFor(() => {
+    const f = document.querySelector('iframe')
+    if (!f?.getAttribute('src')) throw new Error('no direct iframe yet')
+    return f
+  })
+  expect(frame.getAttribute('src')).toBe('https://ipfs.io/ipfs/QmGen')
+})
+
+test('HTML with the snippet but no <head> falls back to the direct src', async () => {
+  vi.stubGlobal('fetch', mockFetchText(
+    `<html><body><script>var fxhash = 'oo9'; b58dec = (s) => Math.pow(alphabet.length, 2)</script></body></html>`,
+  ))
+
+  renderPage(V1)
+  await runLive()
+
+  const frame = await waitFor(() => {
+    const f = document.querySelector('iframe')
+    if (!f?.getAttribute('src')) throw new Error('no direct iframe yet')
+    return f
+  })
+  expect(frame.getAttribute('src')).toBe('https://ipfs.io/ipfs/QmGen')
+})
+
+test('shows a loading state while the artifact is being fetched', async () => {
+  let release!: (v: unknown) => void
+  vi.stubGlobal('fetch', vi.fn(() => new Promise((resolve) => { release = resolve })))
+
+  renderPage(V1)
+  await runLive()
+
+  expect(screen.getByText(/preparing/i)).toBeTruthy()
+  expect(document.querySelector('iframe')).toBeNull()
+
+  release({ ok: true, text: () => Promise.resolve(V1_HTML) })
+  await waitFor(() => {
+    if (!document.querySelector('iframe')) throw new Error('not rendered yet')
+  })
+})
+
+test('offers a "load original" escape hatch that re-renders with the plain direct src', async () => {
+  vi.stubGlobal('fetch', mockFetchText(V1_HTML))
+
+  renderPage(V1)
+  await runLive()
+
+  const original = await screen.findByRole('button', { name: /load original/i })
+  expect(document.querySelector('iframe')!.getAttribute('srcdoc')).toBeTruthy()
+
+  fireEvent.click(original)
+
+  const frame = document.querySelector('iframe')!
+  expect(frame.getAttribute('src')).toBe('https://ipfs.io/ipfs/QmGen')
+  expect(frame.getAttribute('srcdoc')).toBeNull()
+  // The escape hatch is one-way for this view; it must not bounce back to patched.
+  expect(screen.queryByRole('button', { name: /load original/i })).toBeNull()
+})
+
+test('the "load original" control only exists while the patched version is showing', async () => {
+  vi.stubGlobal('fetch', mockFetchText(V1_HTML))
+  vi.spyOn(tzkt, 'fetchIteration').mockResolvedValue(base(V2))
+
+  renderPage(V2)
+  await runLive()
+
+  expect(screen.queryByRole('button', { name: /load original/i })).toBeNull()
+})
+
+test('toggling back to the image and re-running live still works for a patched piece', async () => {
+  vi.stubGlobal('fetch', mockFetchText(V1_HTML))
+
+  renderPage(V1)
+  await runLive()
+  await waitFor(() => {
+    if (!document.querySelector('iframe')?.getAttribute('srcdoc')) throw new Error('not patched yet')
+  })
+
+  fireEvent.click(screen.getByRole('button', { name: /show image/i }))
+  expect(document.querySelector('iframe')).toBeNull()
+
+  await runLive()
+  await waitFor(() => {
+    if (!document.querySelector('iframe')?.getAttribute('srcdoc')) throw new Error('not patched again')
+  })
+})
