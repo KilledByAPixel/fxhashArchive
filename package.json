@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "snapshot": "node scripts/snapshot.mjs"
+    "snapshot": "node scripts/snapshot.mjs",
+    "snapshot:iterations": "node scripts/snapshot-iterations.mjs"
   },
   "dependencies": {
     "react": "^19.2.8",
