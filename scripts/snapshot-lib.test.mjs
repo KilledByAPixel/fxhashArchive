@@ -1,5 +1,8 @@
 import { test, expect } from 'vitest'
-import { leanToken, shardTokens, buildSlugIndex, buildArtists, buildTokensMap, buildMeta } from './snapshot-lib.mjs'
+import {
+  leanToken, shardTokens, buildSlugIndex, buildArtists, buildTokensMap, buildMeta,
+  isTruncatedSnapshot, MIN_RETAINED_RATIO,
+} from './snapshot-lib.mjs'
 
 const raw = (id, over = {}) => ({
   id, slug: `tok-${id}`, name: `Tok ${id}`, flag: 'CLEAN',
@@ -50,4 +53,30 @@ test('buildTokensMap maps author id to token ids', () => {
 
 test('buildMeta summarizes snapshot', () => {
   expect(buildMeta([leanToken(raw(1))], 1, 'T')).toEqual({ generatedAt: 'T', tokenCount: 1, shardCount: 1, shardSize: 1000 })
+})
+
+// --- truncation guard --------------------------------------------------------
+// The paging loop stops on a short page, so a mid-run API degradation looks exactly
+// like "the end of the catalog". Committing that over a good snapshot silently
+// deletes projects from the site, and the job would still go green.
+
+test('isTruncatedSnapshot rejects a run that lost more than 5% of the catalog', () => {
+  expect(isTruncatedSnapshot(20000, { tokenCount: 27430 })).toBe(true)
+  expect(isTruncatedSnapshot(0, { tokenCount: 27430 })).toBe(true)
+  expect(isTruncatedSnapshot(Math.floor(27430 * MIN_RETAINED_RATIO) - 1, { tokenCount: 27430 })).toBe(true)
+})
+
+test('isTruncatedSnapshot accepts growth, parity, and normal churn', () => {
+  expect(isTruncatedSnapshot(27430, { tokenCount: 27430 })).toBe(false)
+  expect(isTruncatedSnapshot(27500, { tokenCount: 27430 })).toBe(false)
+  expect(isTruncatedSnapshot(Math.ceil(27430 * MIN_RETAINED_RATIO), { tokenCount: 27430 })).toBe(false)
+})
+
+test('isTruncatedSnapshot lets a legitimate first run through', () => {
+  // No previous meta.json to compare against, or an unusable one.
+  expect(isTruncatedSnapshot(27430, null)).toBe(false)
+  expect(isTruncatedSnapshot(27430, undefined)).toBe(false)
+  expect(isTruncatedSnapshot(27430, {})).toBe(false)
+  expect(isTruncatedSnapshot(27430, { tokenCount: 'lots' })).toBe(false)
+  expect(isTruncatedSnapshot(27430, { tokenCount: 0 })).toBe(false)
 })

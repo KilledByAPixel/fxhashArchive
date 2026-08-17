@@ -21,6 +21,9 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 20, cache: npm }
       - run: npm ci
+      # Vite does not typecheck, so without this nothing stops a type error from
+      # auto-deploying on push.
+      - run: npm run typecheck
       - run: npm test
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
