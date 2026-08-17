@@ -14,20 +14,36 @@ public Tezos indexer) at view time.
 
 ## Why this keeps working when fxhash doesn't
 
-The viewer is built around three data tiers, each with a different — and
-mostly independent — source:
+The viewer is built around four data sources, none of which fxhash has to
+serve at view time:
 
 | Tier | Content | Source | Runtime dependency on fxhash |
 |---|---|---|---|
 | 1 | Projects + artists | Committed JSON snapshot in `public/data/` | **None** — served from GitHub Pages |
-| 2 | Iterations (individual minted artworks), their seeds and traits | [TzKT](https://tzkt.io), a public Tezos blockchain indexer, queried live | **None** — independent operator |
-| 3 | Images and artwork code | IPFS, via a multi-gateway fallback chain | **None** for IPFS |
+| 2 | Project → iteration id mapping | Committed JSON in `public/data/iterations/` | **None** — served from GitHub Pages |
+| 3 | Iterations (individual minted artworks), their seeds and traits | [TzKT](https://tzkt.io), a public Tezos blockchain indexer, queried live | **None** — independent operator |
+| 4 | Images and artwork code | IPFS, via a multi-gateway fallback chain | **None** for IPFS |
 
-fxhash's own GraphQL API (`api.fxhash.xyz`) is used **only** by
-`scripts/snapshot.mjs`, offline, to build the Tier 1 snapshot. It is never
-called at runtime — nothing under `src/` references it. If that API goes
-away entirely, the site keeps working exactly as it does today, serving the
-last committed snapshot; the only thing that stops is future refreshes.
+Tiers 1 and 2 were both **captured from fxhash's own GraphQL API**
+(`api.fxhash.xyz`) while it was still answering — this viewer is independent
+of fxhash *at runtime*, not independent of fxhash as a source of record.
+That API is used only by `scripts/snapshot.mjs` and
+`scripts/snapshot-iterations.mjs`, offline; nothing under `src/` references
+it. If it goes away entirely, the site keeps working exactly as it does
+today; only future refreshes stop.
+
+### Why the iteration mapping exists (tier 2)
+
+Iterations can in principle be found on-chain by joining gentk tokens on
+their `metadata.generatorUri`. That join misses roughly **a third** of all
+gentk tokens, because tokens minted in fxhash's launch era carry no
+`generatorUri` at all — so a viewer relying on it alone would show early,
+historically important projects as though nothing had ever been minted from
+them. `public/data/iterations/` avoids that by naming the iterations
+outright: **27,430 projects → 1,845,509 iteration ids** (`FX{version}-{tokenId}`),
+sharded one file per token shard. The ids are then resolved live against
+TzKT, so the artwork data itself still comes from the chain — the committed
+mapping only answers *which* tokens belong to a project.
 
 Some supporting facts, verified against the live endpoints while building
 this:
@@ -35,10 +51,19 @@ this:
 - TzKT sends `access-control-allow-origin: *`, so the static site can query
   it directly from the browser with no proxy or backend.
 - Public IPFS gateways serve the artwork images as plain `<img>` tags, which
-  need no CORS at all.
+  need no CORS at all. The chain is `ipfs.io` → `dweb.link` →
+  `gateway.pinata.cloud`, three independent operators tried in order; an
+  image only falls back to a placeholder once all three have failed. (Entries
+  are checked for being both alive and independent: `cloudflare-ipfs.com` was
+  removed after Cloudflare retired the host, and `w3s.link` / `nftstorage.link`
+  are not used because they redirect onto `dweb.link`, which is already in the
+  chain.)
 - Each iteration's live code runs inside an
   `<iframe sandbox="allow-scripts">` with **no** `allow-same-origin` — these
   are untrusted third-party programs, and the sandbox is deliberately strict.
+  Only `ipfs://` and `onchfs://` URIs are ever resolved into that frame; every
+  other scheme, `http(s):` included, is rejected outright. Real records use
+  nothing else, so allowing them would only have served a hostile URL.
 
 ## Local development
 
@@ -46,21 +71,30 @@ this:
 npm install       # install dependencies (package-lock.json is committed)
 npm run dev       # start the dev server
 npm test          # run the test suite (vitest)
+npm run typecheck # tsc --noEmit (vite build does not typecheck)
 npm run build     # production build to dist/
 npm run preview   # serve the production build locally
 npm run snapshot  # refresh public/data/ from the live fxhash API
+npm run snapshot:iterations  # refresh the project -> iteration id mapping
 ```
+
+`npm run snapshot` refuses to write if the catalog it fetched is smaller than
+95% of the committed one, since a mid-run API failure looks exactly like the
+end of the catalog. Use `--out <dir>` for partial or experimental runs.
 
 ## How deployment works
 
 Pushing to `master` triggers `.github/workflows/deploy.yml`, which installs
-dependencies, runs the test suite, builds the site with Vite, and publishes
-`dist/` to GitHub Pages via the official `actions/deploy-pages` action. No
-manual build or upload step is needed once this is wired up.
+dependencies, typechecks, runs the test suite, builds the site with Vite, and
+publishes `dist/` to GitHub Pages via the official `actions/deploy-pages`
+action. No manual build or upload step is needed once this is wired up.
 
 Separately, `.github/workflows/snapshot.yml` runs every Monday (and can be
 triggered manually), re-running `scripts/snapshot.mjs` against the live
-fxhash API and committing `public/data/` if the catalog changed. This
+fxhash API and committing `public/data/` if the catalog changed. When it does
+commit, it explicitly dispatches `deploy.yml` — GitHub does not trigger
+workflows from pushes made with the default `GITHUB_TOKEN`, so without that
+step the refreshed catalog would never reach the live site. This
 doubles as a **liveness canary**: the day fxhash's API is finally retired
 for good, this job starts failing loudly in the Actions tab, while the
 committed snapshot — and the live site built from it — stays exactly as it
@@ -104,7 +138,9 @@ you should choose to do. To publish:
   (9.8% of the catalog) carry fxhash moderation flags (`MALICIOUS`,
   `HIDDEN`, `REPORTED`, `AUTO_DETECT_COPY`) for plagiarism or abuse, and are
   hidden from the browse grid and lookups. There is no toggle to reveal
-  them, on purpose.
+  them, on purpose. This is enforced in the data layer — `findTokenBySlug`
+  resolves a flagged slug to not-found — so a direct `#/token/<slug>` link
+  cannot reach one, and nothing offers to run its code.
 - **One partial dependency on fxhash remains.** 372 projects (~1.4% of the
   catalog) and roughly 12% of newer iterations store their code via
   `onchfs://` URIs — fxhash's *on-chain* filesystem, which is different from
@@ -122,6 +158,13 @@ you should choose to do. To publish:
   fxhash). Because of this, the UI shows the project's edition size plus a
   live count from TzKT instead of trusting that field. Please don't "fix"
   it back to using `iterationsCount` — it undercounts almost everything.
+- **The committed data is a point-in-time capture, and it came from fxhash.**
+  Both the catalog and the project → iteration mapping were pulled from
+  `api.fxhash.xyz` while it still answered. They cannot be regenerated from
+  scratch if that API stays down (the mapping in particular has no equivalent
+  on-chain source — that is the whole reason it is committed), and they will
+  not grow on their own. Nothing new is being minted on a dead platform, so
+  this is a frozen archive rather than a live mirror.
 - This is an **unofficial** archive viewer with no affiliation to fxhash.
-  It hosts no artwork of its own — everything you see streams live from
-  IPFS gateways and the Tezos chain via TzKT.
+  It hosts no artwork of its own — every image and every piece of art code
+  you see streams live from IPFS gateways and the Tezos chain via TzKT.
