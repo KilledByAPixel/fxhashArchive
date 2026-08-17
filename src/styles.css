@@ -28,3 +28,8 @@ img { max-width: 100%; }
 .iteration-meta { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 1rem; }
 .iteration-meta dt { color: #888; }
 .iteration-meta dd { margin: 0; }
+
+.artist-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.artist-row { display: flex; gap: 1rem; align-items: center; padding: 0.5rem; border-radius: 8px; background: #1a1a1a; }
+.avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; }
+.avatar-lg { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; }
