@@ -16,8 +16,7 @@ test('selects gateway by index, clamping to last', () => {
   expect(ipfsToHttp('ipfs://QmAbC', 99)).toBe(GATEWAYS[GATEWAYS.length - 1] + 'QmAbC')
 })
 
-test('passes through non-ipfs URIs and handles null', () => {
-  expect(ipfsToHttp('https://example.com/x.png')).toBe('https://example.com/x.png')
+test('handles null and undefined', () => {
   expect(ipfsToHttp(null)).toBeNull()
   expect(ipfsToHttp(undefined)).toBeNull()
 })
@@ -44,8 +43,14 @@ test('blocks data: URIs', () => {
   expect(ipfsToHttp('data:text/html,<script>alert(1)</script>')).toBeNull()
 })
 
-test('still passes through plain https:// URIs unchanged', () => {
-  expect(ipfsToHttp('https://example.com/x.png')).toBe('https://example.com/x.png')
+test('rejects absolute http(s) URLs — they are pure attack surface here', () => {
+  // No real fxhash record uses them: across all 27,430 snapshot projects the image
+  // and code URIs are 100% ipfs:// (or onchfs://), and a 200-row live TzKT sample of
+  // artifactUri is the same. Since this value becomes an <iframe src>, an attacker-
+  // supplied http(s) URL would be the only thing this branch ever served.
+  expect(ipfsToHttp('https://example.com/x.png')).toBeNull()
+  expect(ipfsToHttp('http://example.com/evil.html')).toBeNull()
+  expect(ipfsToHttp('https://evil.example/drainer#ipfs://QmAbC')).toBeNull()
 })
 
 test('blocks unrecognised schemes', () => {
