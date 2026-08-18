@@ -1,0 +1,95 @@
+body {
+  font-family:sans-serif;
+  overflow: hidden;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;  /*vertical */
+
+  --bodymargin : 0px;
+  --wContent: calc(100vw - 2*var(--bodymargin));
+  --hContent: calc(100vh - 2*var(--bodymargin));
+  margin:0;
+  padding:0;
+  height:100vh;
+}
+body.Debug
+{
+  justify-content: right;
+}
+  
+#ARTWORK
+{ padding:var(--bodymargin);
+  display : inline-block;
+}
+
+#outputImage
+{
+  display : inline-block;
+}
+#outputImage canvas
+{
+  max-width: var(--wContent);
+  max-height:var(--hContent);
+  /*box-shadow: 1px 1px 2px 1px rgba(0, 0, 0, .2);*/
+
+}
+
+#stencil,#mask
+{
+  display:inline-block;
+}
+#stencil canvas,#mask canvas
+{
+  max-width : 200px;
+}
+h4
+{
+  font-size: 12px;
+}
+#logContainer
+{
+  position:absolute;
+  top:0; left:0;
+  z-index:1;
+  background-color:rgba(255,255,255,0.6);
+  font-size:10px;
+  max-width: 420px;
+  padding-top:5px;
+}
+#logContainer .buttons a
+{ margin-right : 5px;
+  padding : 2px 4px 2px 4px;
+  background-color: #000;
+  border-radius: 3px;
+  color:#fff;
+  cursor:pointer;
+  text-decoration: none;
+
+}
+
+a.btnSVG
+{ position:absolute;
+  z-index: 1;
+  bottom : 8px;
+  left: 0; 
+  right: 0; 
+  margin-left: auto; 
+  margin-right: auto; 
+  display: inline-block;
+  line-height:20px;
+  padding: 4px;
+  color : black;
+  text-decoration:none;
+  cursor:pointer;
+  width:fit-content;
+  background : rgba(106,158,44,0.3);
+  border-radius: 10px;
+}
+a.btnSVG:hover
+{
+  background : rgba(255,255,255,0.9);
+
+}
+#artworkLog b 
+{background:#fff}

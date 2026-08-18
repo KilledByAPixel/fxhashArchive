@@ -1,0 +1,15 @@
+
+body {
+  /* width:  100%;
+  margin: 0; */
+  background-color: white;
+  margin: 0;
+  overflow: hidden;
+}
+canvas {
+  padding-left: 0;
+  padding-right: 0;
+  margin-left: auto;
+  margin-right: auto;
+  display: none;
+}

@@ -1,0 +1,309 @@
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script id="fxhash-snippet">
+      let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+      var fxhash = new URLSearchParams(window.location.search).get('fxhash')
+      let b58dec = (str) => str.split('').reduce((p,c,i) => p + alphabet.indexOf(c) * (Math.pow(alphabet.length, str.length-i-1)), 0)
+      let fxhashTrunc = fxhash.slice(2)
+      let regex = new RegExp(".{" + ((fxhashTrunc.length/4)|0) + "}", 'g')
+      let hashes = fxhashTrunc.match(regex).map(h => b58dec(h))
+      let sfc32 = (a, b, c, d) => {
+        return () => {
+          a |= 0; b |= 0; c |= 0; d |= 0
+          var t = (a + b | 0) + d | 0
+          d = d + 1 | 0
+          a = b ^ b >>> 9
+          b = c + (c << 3) | 0
+          c = c << 21 | c >>> 11
+          c = c + t | 0
+          return (t >>> 0) / 4294967296
+        }
+      }
+      var fxrand = sfc32(...hashes)
+      // used to get features during token mint
+      window.addEventListener("message", (event) => {
+        if (event.data === "fxhash_getFeatures") {
+          parent.postMessage({
+            id: "fxhash_getFeatures",
+            data: window.$fxhashFeatures
+          }, "*")
+        }
+      })
+</script>
+<style>
+body,html {
+	margin:0;
+	padding:0;
+	width:100vw;
+	height:100vw;
+	overflow:hidden;
+	
+	background:#111;
+	color: #fff;
+	font: 21px monospace;
+}
+canvas {
+	display:none;
+}
+img {
+	max-width: 100%;
+	max-height: 100%;
+	bottom: 0;
+	left: 0;
+	margin: auto;
+	overflow: auto;
+	position: fixed;
+	right: 0;
+	top: 0;
+	-o-object-fit: contain;
+	object-fit: contain;
+}
+</style>
+</head>
+<body>
+<canvas id="canvas" width="11" height="11"></canvas>
+<canvas id="canvas2" width="17" height="17"></canvas>
+<div id=result></div>
+
+<script>
+/*
+
+SMOLSKULL
+Generative art by Mark Knol 
+
+https://twitter.com/mknol
+https://hicetnunc.xyz/markknol
+
+*/
+
+let ctx = canvas.getContext('2d');
+let ctx2 = canvas2.getContext('2d');
+
+const WHITE = "#FCFCFC";
+const LIGHT_GRAY = "#EEE";
+const BLACK = "#111";
+const GREEN = "#58cf34";
+const GRAY = "#555";
+const RED = "#cd202c";
+const BLUE = "#347fcf";
+const YELLOW = "#e4d81a";
+
+let colors = [RED, BLUE, BLACK, GRAY, LIGHT_GRAY, GREEN, YELLOW];
+let backgroundColors = [BLACK, BLACK, YELLOW,BLUE,RED,GREEN,WHITE];
+
+let props = {
+	eyeHeight: 4,
+	eyeColor: 4,
+	eyeDirection: 4,
+	mouthType: 2,
+	mouthSize: 3,
+	background: backgroundColors.length,
+}
+
+function rand() {
+    return fxrand();
+}
+
+const s = 11;
+function makeFace(faceProps) {
+	let bg = BLACK;
+	let skin = WHITE;
+	
+	bg = backgroundColors[faceProps.background];
+	if (bg == WHITE) skin = GRAY;
+	
+	ctx.fillStyle = skin;
+	ctx.fillRect(0,0,s,s);
+	
+	let eyeY = 1 + rand() * 3 | 0;
+	if (faceProps.mouthSize == 2) eyeY = 1;
+	
+	// eyes fill
+	let eyeColor = [GRAY,GRAY];
+	if (faceProps.eyeColor == 1) {
+		let clr1 = pick(colors);
+		let clr2 = pick(colors);
+		while (clr1 == clr2) clr2 = pick(colors);
+		eyeColor[0] = pick(colors);
+		eyeColor[1] = pick(colors);
+	} else if (faceProps.eyeColor == 2) {
+		let clr = pick(colors);
+		eyeColor[0] = clr;
+		eyeColor[1] = clr;
+	} else if (faceProps.eyeColor == 3) {
+		let clr1 = pick(colors);
+		let clr2 = pick(colors);
+		while (clr1 == clr2) clr2 = pick(colors);
+		
+		const RAINBOW1 = ctx.createLinearGradient(2, eyeY, 2, eyeY + faceProps.eyeHeight + 1);
+		RAINBOW1.addColorStop(0, clr1);
+		RAINBOW1.addColorStop(1, clr2);
+		
+		eyeColor[0] = RAINBOW1;
+		eyeColor[1] = RAINBOW1;
+	} else if (faceProps.eyeColor == 4) {
+		let clr1 = pick(colors);
+		let clr2 = pick(colors);
+		let clr3 = pick(colors);
+		let clr4 = pick(colors);
+		while (clr1 == clr2) clr2 = pick(colors);
+		while (clr3 == clr1 || clr3 == clr2) clr3 = pick(colors);
+		while (clr4 == clr1 || clr4 == clr2 || clr4 == clr3) clr4 = pick(colors);
+		
+		const RAINBOW1 = ctx.createLinearGradient(2, eyeY, 2, eyeY + faceProps.eyeHeight + 1);
+		RAINBOW1.addColorStop(0, clr1);
+		RAINBOW1.addColorStop(1, clr2);
+		
+		const RAINBOW2 = ctx.createLinearGradient(2, eyeY, 2, eyeY + faceProps.eyeHeight + 1);
+		RAINBOW2.addColorStop(0, clr3);
+		RAINBOW2.addColorStop(1, clr4);
+		
+		eyeColor[0] = RAINBOW1;
+		eyeColor[1] = RAINBOW2;
+	}
+	ctx.fillStyle = eyeColor[0];
+	ctx.fillRect(2, eyeY, 3, faceProps.eyeHeight + 2);
+	ctx.fillStyle = eyeColor[1];
+	ctx.fillRect(6, eyeY, 3, faceProps.eyeHeight + 2);
+	
+	ctx.fillStyle = BLACK;
+	if (faceProps.eyeHeight <= 2 || rand() > 0.2) { 
+		if (faceProps.eyeDirection == 0) {
+			ctx.fillRect(2, eyeY, 1, faceProps.eyeHeight + 2);
+			ctx.fillRect(6, eyeY, 1, faceProps.eyeHeight + 2);
+		} else if (faceProps.eyeDirection == 1) {
+			ctx.fillRect(2 + 2, eyeY, 1, faceProps.eyeHeight + 2);
+			ctx.fillRect(6 + 2, eyeY, 1, faceProps.eyeHeight + 2);
+		} else if (faceProps.eyeDirection == 2) {
+			ctx.fillRect(2, faceProps.eyeHeight + eyeY+1, 3, 1);
+			ctx.fillRect(6, faceProps.eyeHeight + eyeY+1, 3, 1);
+		} else if (faceProps.eyeDirection == 3) {
+			ctx.fillRect(2, eyeY, 3, 1);
+			ctx.fillRect(6, eyeY, 3, 1);
+		}
+	}
+	
+	mouthY = (eyeY+1) + faceProps.eyeHeight + 2 + rand() * 2|0;
+	if (faceProps.mouthSize == 2) mouthY = (eyeY+1) + faceProps.eyeHeight + 2;
+	
+	ctx.fillStyle = BLACK;
+	if (faceProps.mouthType == 0) {	
+		if (rand() > 0.5) {
+			ctx.fillRect(3, mouthY, 5, (faceProps.mouthSize+1)*2);
+		} else {
+			ctx.fillRect(4, mouthY, 3, (faceProps.mouthSize+1)*2);
+		}
+	} else {
+		ctx.fillRect(3, mouthY, 1, (faceProps.mouthSize+1)*2);
+		ctx.fillRect(5, mouthY, 1, (faceProps.mouthSize+1)*2);
+		ctx.fillRect(7, mouthY, 1, (faceProps.mouthSize+1)*2);
+	}
+	
+	// random additions
+	ctx.fillStyle = bg;
+	
+	// rounded corner part 1
+	ctx.fillRect(0, 0, 1, 1);
+	ctx.fillRect(s-1, 0, 1, 1);
+	
+	// side cheeks
+	let h = 1+rand()*4|0;
+	let w = 1+rand()*2|0;
+	ctx.fillRect(0, s-h, w, h);
+	ctx.fillRect(s-w, s-h, w, h);
+	
+	ctx2.fillStyle = bg;
+	ctx2.fillRect(0,0,ctx2.canvas.width,ctx2.canvas.height);
+	ctx2.drawImage(ctx.canvas, 3, 3);
+	
+	const scale = 80;
+	const finalImage = upscale(ctx2, scale);
+	
+	finalImage.fillStyle = skin;
+	finalImage.beginPath();
+	finalImage.arc(4*scale, 4*scale, scale, 0, Math.PI*2);
+	finalImage.arc(13*scale, 4*scale, scale, 0, Math.PI*2);
+	finalImage.fill();
+	
+	return `<img src="${finalImage.canvas.toDataURL()}" alt='${JSON.stringify(faceProps)}' />`;
+}
+
+let characterProps = [];
+for(let eyeHeight=0;eyeHeight<props["eyeHeight"];eyeHeight++)
+for(let eyeColor=0;eyeColor<props["eyeColor"];eyeColor++)
+for(let eyeDirection=0;eyeDirection<props["eyeDirection"];eyeDirection++)
+for(let mouthType=0;mouthType<props["mouthType"];mouthType++)
+for(let mouthSize=0;mouthSize<props["mouthSize"];mouthSize++)
+for(let background=0;background<props["background"];background++) {
+	if (eyeHeight == 3 && mouthSize == 2) continue;
+	characterProps.push({eyeHeight, eyeColor, eyeDirection, mouthType, mouthSize, background});
+}
+
+const settings = pick(characterProps);
+const smolskull = makeFace(settings);
+result.innerHTML = smolskull;
+
+const realProps = {};
+for(let key in settings) {
+	const value = settings[key];
+	if (key == "eyeHeight") {
+		if (value == 0) realProps["eyes"] = "smol";
+		else if (value == 1) realProps["eyes"] = "regular";
+		else if (value == 2) realProps["eyes"] = "large";
+		else realProps["eyes"] = "huge";
+	} else if (key == "eyeColor") {
+		if (value == 0) realProps["eye_color"] = "regular";
+		else if (value == 1) realProps["eye_color"] = "different colors";
+		else if (value == 2) realProps["eye_color"] = "colored";
+		else if (value == 3) realProps["eye_color"] = "gradient";
+		else realProps["eye_color"] = "weird gradient";
+	} else if (key == "eyeDirection") {
+		if (value == 0) realProps["look"] = "⬅️";
+		else if (value == 1) realProps["look"] = "➡️";
+		else if (value == 2) realProps["look"] = "⬇️";
+		else if (value == 3) realProps["look"] = "⬆️";
+	} else if (key == "mouthType") {
+		if (value == 0) realProps["mouth"] = "⬛";
+		else if (value == 1) realProps["mouth"] = "|||";
+	} else if (key == "mouthSize") {
+		if (value == 0) realProps["mouth_size"] = "smol";
+		else if (value == 1) realProps["mouth_size"] = "regular";
+		else if (value == 2) realProps["mouth_size"] = "huge";
+	} else if (key == "background") {
+		if (value == 0 || value == 1) realProps[key] = "⚫";
+		else if (value == 2) realProps[key] = "🟡";
+		else if (value == 3) realProps[key] = "🔵";
+		else if (value == 4) realProps[key] = "🔴";
+		else if (value == 5) realProps[key] = "🟢";
+		else if (value == 6) realProps[key] = "⚪";
+	} else {
+		realProps[key] =  settings[key];
+	}
+}
+window.$fxhashFeatures = realProps;
+console.log(realProps);
+
+function pick(arr) {
+	return arr[rand()*arr.length|0];
+}
+
+function upscale(ctx, scale = 5) {
+	const out = document.createElement("canvas");
+	out.width = ctx.canvas.width * scale;
+	out.height = ctx.canvas.height * scale;
+	const ctx2 = out.getContext("2d");
+	ctx2.imageSmoothingEnabled = false;
+	ctx2.drawImage(
+		ctx.canvas,
+		0,
+		0,
+		ctx.canvas.width * scale,
+		ctx.canvas.height * scale
+	);
+	return ctx2;
+}
+</script>
+</body>
+</html>

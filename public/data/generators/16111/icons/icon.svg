@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="300" height="300" viewBox="0 0 300 300" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill:#fff;">
+	<rect x="0"   y="0"   width="300" height="300" style="fill:#000;"/>
+	<rect x="75"  y="105" width="50"  height="10"/>
+	<rect x="75"  y="185" width="50"  height="10"/>
+	<rect x="165" y="185" width="60"  height="10"/>
+	<rect x="85"  y="115" width="20"  height="70"/>
+	<rect x="185" y="105" width="20"  height="80"/>
+	<rect x="115" y="115" width="20"  height="10"/>
+	<rect x="175" y="115" width="10"  height="10"/>
+	<rect x="165" y="125" width="20"  height="10"/>
+	<rect x="115" y="175" width="20"  height="10"/>
+	<rect x="125" y="125" width="20"  height="50"/>
+</svg>
