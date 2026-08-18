@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-18T03:55:43.501Z",
+  "generatedAt": "2026-08-18T03:58:34.789Z",
   "source": "TzKT (cached IPFS token metadata)",
   "chunkSize": 10000,
   "contracts": [
@@ -28,5 +28,6 @@
   "chunksTotal": 186,
   "chunksComplete": 186,
   "seedsCaptured": 1802387,
-  "seedsMissing": 52392
+  "seedsMissing": 43246,
+  "seedsMissingReason": "unsigned mints ([WAITING TO BE SIGNED]) — no seed ever existed"
 }
