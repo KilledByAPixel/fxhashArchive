@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html><head>
+    <meta charset=utf-8>
+    <meta name=viewport content=width=device-width,height=device-height,initial-scale=1,maximum-scale=1>
+    <meta name=apple-mobile-web-app-capable content=yes>
+    <meta name=mobile-web-app-capable content=yes>
+    <title>FXHash</title>
+    <script id="fxhash-snippet">
+      let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+      var fxhash = new URLSearchParams(window.location.search).get('fxhash')
+      let b58dec = (str) => str.split('').reduce((p,c,i) => p + alphabet.indexOf(c) * (Math.pow(alphabet.length, str.length-i-1)), 0)
+      let fxhashTrunc = fxhash.slice(2)
+      let regex = new RegExp(".{" + ((fxhashTrunc.length/4)|0) + "}", 'g')
+      let hashes = fxhashTrunc.match(regex).map(h => b58dec(h))
+      let sfc32 = (a, b, c, d) => {
+        return () => {
+          a |= 0; b |= 0; c |= 0; d |= 0
+          var t = (a + b | 0) + d | 0
+          d = d + 1 | 0
+          a = b ^ b >>> 9
+          b = c + (c << 3) | 0
+          c = c << 21 | c >>> 11
+          c = c + t | 0
+          return (t >>> 0) / 4294967296
+        }
+      }
+      var fxrand = sfc32(...hashes)
+      // used to get features during token mint
+      window.addEventListener("message", (event) => {
+        if (event.data === "fxhash_getFeatures") {
+          parent.postMessage({
+            id: "fxhash_getFeatures",
+            data: window.$fxhashFeatures
+          }, "*")
+        }
+      })
+</script>
+    <style>
+    body
+    {
+        background:#000;
+        margin:0;
+        overflow:hidden;
+    }
+    canvas
+    {
+        position:absolute;
+        transform:translate(-50%,-50%);
+        top:50%;
+        left:50%;
+    }
+    </style>
+</head>
+<body>
+<canvas id=c width=2048 height=2048></canvas>
+<script>
+"use strict";const e=Math.PI,t=(e,t=1)=>(e%t+t)%t,l=(e,t=0,l=1)=>e<t?t:e>l?l:e;let i=1e9*fxrand()|0;const o=(e=1,t=0)=>(i^=i<<13,i^=i>>>17,i^=i<<5,t+(e-t)*Math.abs(i%1e9)/1e9),a=e=>o()>.5?1:-1,h=(e=1,t=0)=>0|o(e,t);c.title="Click to download HD image.";const n=document.createElement("a");c.onclick=e=>{n.download=fxhash+".png",n.href=c.toDataURL("image/png").replace("image/png","image/octet-stream"),n.click()};const r=document.createElement("canvas");r.width=c.width,r.height=c.height;let d=r.getContext("2d");const s=c.getContext("2d");let f=0,g=0,w=Math.sin,p=Math.cos;Math.tan;const m=(e=0,i=0,o=1,a=1)=>`hsla(${360*t(e)},${100*l(i)}%,${100*l(o)}%,${l(a)})`;let C=t=>{f=g++/60,i=N;const l=1>innerWidth/innerHeight?innerWidth:1*innerHeight;c.style.width=l+"px";const n=s,d=c.width;c.width|=0,n.save();let u=a();for(let e=E?19:1;e--;){if(E){let e=f,t=c.width/2,l=c.height/2,i=c.width/4,h=t+i*o(-.5,.5)+Math.sin(o(1e3)+.1*e*o(.2,.5))*i*o(-1,1),r=l+i*o(-.5,.5)+Math.sin(o(1e3)+.1*e*o(.2,.5))*i*o(-1,1),d=o(1e3)+e*o(.1,.2),s=i*o(1,1.5)*Math.sin(d),g=i*o(1,1.5)*Math.cos(d);s*=a(),g*=a();let w=n.createLinearGradient(h,r,h+s,r+g),p=o(),C=m(p,1,.5),u=m(p+.5,1,.5);w.addColorStop(0,C),w.addColorStop(1,u),n.fillStyle=w,n.globalCompositeOperation="difference"}else{let e=q[h(q.length)]+o(.3,.2)*u;const t=c.width*o(.4,.6),l=c.height*o(.4,.6),i=n.createRadialGradient(t,l,0,t,l,.7*c.width);let a=o(.5,.9),r=m(e,o(),a),d=m(o()-X*(R?.01*f:0),o(),a-.4);i.addColorStop(0,r),i.addColorStop(1,d),n.fillStyle=i}n.fillRect(0,0,c.width,c.height)}E&&(n.globalCompositeOperation="multiply",n.fillStyle="#999",n.fillRect(0,0,c.width,c.height),n.globalCompositeOperation="difference");let S=m(q[h(q.length)]+o(.05)*a(),I?o():0,o(.1,.2));if(!W){if(0==x)n.rect(0|$,0|$,d-2*$|0,d-2*$|0);else if(1==x)n.arc(d/2,d/2,d/2-$,0,9);else if(2==x){let t=(d-2*$)/2-1,l=d/2,i=d/2,a=o(.7,.9)*t;((e,t,l,i,o,a=0)=>{let h,c=Math.PI/2;for(let n=5;n--;)e.arc(t+p(h=a+c/2-n*c)*o,l+w(h)*o,i,h-=c/2,h+c)})(n,l,i,(d-2*$)/2-a,a,e/4)}else if(3==x){let e=Math.PI/4,t=.5+w(f+o(1e3))/2,l=c.width/2-$;n.beginPath();let i=1024;for(let o=i;--o;){let a=e*o*8/(i-1),h=a%e;n.arc(c.width/2,c.height/2,l/(1-t+t*p(a%(2*e)>e?e-h:h)),a,a)}n.closePath(),n.fill()}{n.shadowColor=S,n.shadowBlur=o(90,200);let e=o(1e3),t=10*o(1,2);n.shadowOffsetX=t*p(e),n.shadowOffsetY=t*w(e),n.fill(),n.fill()}n.clip()}n.shadowColor="#000",n.shadowBlur=0,E&&(n.globalCompositeOperation="source-over",n.fillStyle="#000",n.fillRect(0,0,c.width,c.height),n.globalCompositeOperation="difference");for(let e=E?19:1;e--;){if(E){let e=f,t=c.width/2,l=c.height/2,i=c.width/4,a=t+i*o(-1,1)+Math.sin(o(1e3)+.1*e*o(.2,.5))*i*o(-1,1),h=l+i*o(-1,1)+Math.sin(o(1e3)+.1*e*o(.2,.5))*i*o(-1,1),r=n.createRadialGradient(a,h,0,a,h,c.height/2*o(1,2)),d=o(),s=m(d,1,.5),g=m(d+.5,1,.5);r.addColorStop(0,s),r.addColorStop(1,g),n.fillStyle=r,n.globalCompositeOperation="difference"}else if(G){let e=q[h(q.length)]+o(.05,.1)*u;n.fillStyle=m(e,I?o():0,o(1,.95)),n.globalCompositeOperation="difference"}else{let e=q[h(q.length)]+o(.05,.1)*u;n.fillStyle=m(e,I?o():0,o(.1)+(O?.5:0))}n.fillRect(0,0,c.width,c.height)}if(E?(n.globalCompositeOperation="lighter",n.fillStyle="#999",n.fillRect(0,0,c.width,c.height),n.globalCompositeOperation="difference"):n.globalCompositeOperation="source-over",!O){A(f),n.shadowColor=S,n.shadowBlur=o(10,60);let e=o(1e3),t=o(10,20);n.shadowOffsetX=t*p(e),n.shadowOffsetY=t*w(e),n.drawImage(r,0,0)}if(n.restore(),B||x){let e,t=q[h(q.length)]+o(.1)*a(),l=20;B?3==B?(l+=o(20),e=m(t,I?1:0,o(.3,.7)),0==P&&(l/=2)):(e=D?2!=B?"#fff":"#000":2==B?"#fff":"#000",(O||0==P)&&(l/=2)):(l=2,e=D?"#999":"#333"),3==B?(n.shadowBlur=50+20*Math.sin(4*f),n.shadowColor=m(t+o(.05,.1)*a(),I?1:0,.5)):B&&(n.shadowBlur=1==B?5:20,n.shadowColor=e),n.shadowOffsetX=0,n.shadowOffsetY=0,n.lineWidth=l,n.strokeStyle=e,n.stroke()}n.shadowColor="#000",n.shadowBlur=0,D&&(s.fillStyle="#fff",s.globalCompositeOperation="difference",s.fillRect(0,0,c.width,c.height),s.globalCompositeOperation="source-over"),I||(s.fillStyle="#fff",s.globalCompositeOperation="saturation",s.fillRect(0,0,c.width,c.height),s.globalCompositeOperation="source-over"),n.drawImage(L,0,0,c.width,c.height),n.drawImage(U,0,0,c.width,c.height),n.drawImage(z,0,0,c.width,c.height),requestAnimationFrame(C)},u=h(2),S=o()<.02;S&&(u=2);let O=o()<.01;O&&(u=3);let y=!S&&!O&&o()<.01;y&&(u=4);let b=!S&&!O&&!y&&o()<.01;b&&(u=5);let M=!b&&!S&&!O&&!y&&o()<.01;M&&(u=6);let v=!M&&!b&&!S&&!O&&!y&&o()<.01;v&&(u=7);let I=o()<.05?0:h(1,4),R=!O&&o()<.03;R&&(I=6);let x=h(2);o()<.2&&(x=2),o()<.05&&(x=3),x==u&&x<=1&&(x=1-x);let k=h(2);0==x?k=1:1==x&&(k=0);let B=o()<.5?1:o()<.5?0:o()<.7?2:3,P=o()<.01?0:o()<.8?1:o()<.3?3:2;O&&P>=2&&(P=1);let W=P>=2,D=o()<.2,E=o()<(O?.5:.05);E&&(B=h(2));let G=o()<.1,T=!S&&o()<.03,Y=!T&&!E&&o()<.02,$=h(100,150)*(x?2:.8);0==x&&($+=150),0==P||O?$=.25*c.width+o(30):2!=P&&3!=P||(x=0,B=0,3==P&&($=0)),$|=0;let q,F=3!=B||I?["None","Black","White","Color"][B]:"Gray";window.$fxhashFeatures={Inside:["Squares","Circles","Gitch","Empty","Overload","Sparse","Manic","Transparent"][u],Outside:W?"None":["Square","Circle","Squircle","Morph"][x],Outline:F,Size:O?"Who cares?":["Small","Average","Unbound","Full"][P],Hues:I&&O&&E?"What?":R?"Rainbow":["Grayscale","One","Two","Three","Four"][I],Inverted:D?"Yes":"No",Special:E?"Trippy":T?"Stroked":Y?"Dirty":G?"Difference":"You are"};const H=1e9*fxrand(),N=1e9*fxrand();let X=a();const A=e=>{if(2==g){let e=Y?2:1,t=Y?3:1;j(1*e,.05*t,L),j(2*e,.05*t,U),j(4*e,.05*t,z)}i=H,r.width|=0;const l=c.width;if(R)for(let e=I;e--;)q[e]=t(q[e]+.002*X);let a=q[h(q.length)]+o(.05,-.05),n=m(a,I?o():0,o(.6,.95),v?.1:1);d.globalCompositeOperation=G?"difference":"xor";const s=l/200*(M?50:S?10:1),f=l-2*$;let p=S?710:99;y?p*=3:b&&(p=p/8|0);let C=h(q.length);for(let t=p;t--;){let i=$+o(f),a=$+o(f),c=f/9*o(.03,1),r=f/9*o(.03,1);if(S?(i=$/2+o(l-$),a=$/2+o(l-$)):d.beginPath(),i+=s*w(o(1e3)+1*e*o(-1,1)),a+=s*w(o(1e3)+1*e*o(-1,1)),d.fillStyle=n,o()<.1){let e=q[h(q.length)]+o(.05,-.05);d.fillStyle=m(e,I?o():0,o())}if(R){let t=v&&o()<.9?.1:1;d.fillStyle=m(e*o(.05,.1)+o(),o(),o(),t)}let g=t%40==0?k:!k;if(S?d.lineTo(i,a):g?d.rect(i-c,a-r,2*c,2*r):d.arc(i,a,c,0,9),d.lineWidth=o(20,40),S){if(t%100==0){C=(C+1)%q.length;let e=q[h(q.length)]+o(.05,-.05);d.fillStyle=m(e,I?o():0,o()),d.fill(),d.beginPath()}}else d.fill(),T&&d.stroke()}},L=document.createElement("canvas"),U=document.createElement("canvas"),z=document.createElement("canvas"),j=(e=2,l=.1,i=noiseCanvas)=>{const a=l;i.width=c.width/e,i.height=c.height/e;let h=new ImageData(i.width,i.height),n=o(),r=o(.3),d=o(),s=o();for(let e=0;e<h.data.length;e+=4){let l=t(n+o(r,-r)),i=d+o(s,-s),c=o();const f=c<.5?c*(1+i):c+i-c*i,g=2*c-f,w=(e,t,l)=>(l=(l%1+1)%1)<1/6?e+6*(t-e)*l:l<.5?t:l<2/3?e+(t-e)*(2/3-l)*6:e;h.data[e+0]=255*w(g,f,l+1/3),h.data[e+1]=255*w(g,f,l),h.data[e+2]=255*w(g,f,l-1/3),h.data[e+3]=255*o(a)}i.getContext("2d").putImageData(h,0,0)};(()=>{q=[0];let e=o();for(let l=I;l--;)q[l]=t(e+l/I+o(.1,.2)*a())})(),C()
+</script>
+</body>
+</html>

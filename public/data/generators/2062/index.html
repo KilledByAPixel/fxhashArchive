@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name=viewport content=width=device-width,height=device-height,initial-scale=1,maximum-scale=1>
+    <meta name=apple-mobile-web-app-capable content=yes>
+    <meta name=mobile-web-app-capable content=yes>
+    <title>Zpritez 3D</title>
+    <script id="fxhash-snippet">
+      let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+      var fxhash = new URLSearchParams(window.location.search).get('fxhash')
+      let b58dec = (str) => str.split('').reduce((p,c,i) => p + alphabet.indexOf(c) * (Math.pow(alphabet.length, str.length-i-1)), 0)
+      let fxhashTrunc = fxhash.slice(2)
+      let regex = new RegExp(".{" + ((fxhashTrunc.length/4)|0) + "}", 'g')
+      let hashes = fxhashTrunc.match(regex).map(h => b58dec(h))
+      let sfc32 = (a, b, c, d) => {
+        return () => {
+          a |= 0; b |= 0; c |= 0; d |= 0
+          var t = (a + b | 0) + d | 0
+          d = d + 1 | 0
+          a = b ^ b >>> 9
+          b = c + (c << 3) | 0
+          c = c << 21 | c >>> 11
+          c = c + t | 0
+          return (t >>> 0) / 4294967296
+        }
+      }
+      var fxrand = sfc32(...hashes)
+      // used to get features during token mint
+      window.addEventListener("message", (event) => {
+        if (event.data === "fxhash_getFeatures") {
+          parent.postMessage({
+            id: "fxhash_getFeatures",
+            data: window.$fxhashFeatures
+          }, "*")
+        }
+      })
+</script>
+
+<style>
+
+body
+{
+    background: #000;
+    margin: 0;
+    overflow: hidden;
+}
+canvas
+{
+    position: absolute;
+    transform: translate(-50%,0%);
+    height: 100%;
+    left: 50%;
+}
+</style>
+</head>
+<body>
+<canvas id=c width=1920 height=1080></canvas>
+<a id=downloadLink style=display:none></a>
+<script>
+"use strict";let t=0,e=0,n=0,i=c.getContext("2d"),o=Math.sin,l=Math.cos,a=(Math.tan,(t,e,n,i=1)=>`rgba(${0|t},${0|e},${0|n},${i})`),h=i=>{requestAnimationFrame(h),i<n-2||(n=Math.max(n+1e3/60,i),t=e++/60,j(t))};const r=void 0!==window.ontouchstart,s=(Math.PI,(t,e=1)=>(t%e+e)%e),d=(t,e=0,n=1)=>t<e?e:t>n?n:t,w=(t,e=0,n=1)=>n-e?d((t-e)/(n-e)):0,f=(t,e=0,n=1)=>e+d(t)*(n-e),g=(t=1,e=0)=>e+(t-e)*fxrand();let u=1e9*fxrand()|0;const S=(t=1,e=0)=>(u^=u<<13,u^=u>>>17,u^=u<<5,e+(t-e)*Math.abs(u%1e9)/1e9),m=t=>S()>.5?1:-1;class C{constructor(t=0,e=1,n=1,i=1){this.h=t,this.s=e,this.l=n,this.a=i}mutate(t=.05,e=0){return new C(this.h+S(t,e)*m(),this.s+S(t,e)*m(),d(this.l+S(t,e)*m(),.1,1),this.a)}setH(t){return new C(t,this.s,this.l,this.a)}setS(t){return new C(this.h,t,this.l,this.a)}setL(t){return new C(this.h,this.s,t,this.a)}setA(t){return new C(this.h,this.s,this.l,t)}getCSS(){return`hsla(${360*s(this.h)|0},${100*d(this.s)|0}%,${100*d(this.l)|0}%,${d(this.a)})`}lerp(t,e){return new C(f(e,this.h+t.h),f(e,this.s+t.s),f(e,this.l+t.l),f(e,this.a+t.a))}}const p=[["⬛",new C(fxrand(),.2,.2)],["⬜",new C(fxrand(),.2,1)],["🟥",new C(0,1,.5)],["🟧",new C(1/12,1,.5)],["🟨",new C(1/6,1,.5)],["🟩",new C(2/6,1,.5)],["🟦",new C(4/6,1,.55)],["🟪",new C(.75,1,.5)],["🌈",new C,"Rainbow"],["🌠",new C,"Stars"],["✨",new C,"Sparkle"]],x=[["⚫",new C(0,.2,.2)],["⚪",new C(0,.2,1)],["🔴",new C(0,1,.5)],["🟠",new C(1/12,1,.5)],["🟡",new C(1/6,1,.5)],["🟢",new C(2/6,1,.5)],["🔵",new C(4/6,1,.55)],["🟣",new C(.75,1,.5)],["🌈",new C]],b=0|g(p.length),R=p[b][1],M=g()<.5?0:0|g(x.length),y=x[M][1],L=8==M,G=g()<.03,$=0|g(2),k=g()<.4,O=new C(g(),g(),1),P=8==b||10==b,v=9==b||10==b;window.$fxhashFeatures={"Background Color":p[b][0],"Background Blend":$?"Radial":"Linear","Background Special":p[b][2]?p[b][2]:"No","Outline Color":x[M][0],Monochrome:k?"Yes":"No",Glitch:G?"Yes":"No"},console.log(window.$fxhashFeatures),console.log(fxhash);const B=11+g(4)|0,A=fxrand()<.5,I=1e9*fxrand()|0,T=1e9*fxrand();let F,N,Y,D=0,V=0,q=0,z=0,H=0,U=0,X=1;const j=e=>{H+=z&&t<z+.5?0:X/60,U+=q||z&&t<z+1?0:X/60,onmousemove=t=>{const e=c.getBoundingClientRect();D=w(t.x,e.left,e.right),V=w(t.y,e.top,e.bottom),D*=1920,D-=420,D/=1080,D=d(D)},oncontextmenu=t=>!1,onblur=onmouseup=t=>q=0,onmousedown=e=>{e.button&&(downloadLink.download="zprite.png",downloadLink.href=c.toDataURL("image/png").replace("image/png","image/octet-stream"),downloadLink.click(),onmousedown()),q=1,X=-X,u=T,z=t;{let t=1,n=1,i=0;const o=()=>S(),l=()=>o(),a=()=>l()?1:-1,h=.1+o()**3/4*t,c=o()**3/4*t,r=o()**3/4*t,s=.1+o()**3/4*t,d=h+c+r+s;if(F)try{const t=F.context,e=t.createGain();F.disconnect(),F.connect(e),e.connect(t.destination);const n=F.context.currentTime+.02;e.gain.linearRampToValueAtTime(1,n),e.gain.linearRampToValueAtTime(0,n+.1)}catch(e){F.stop?F.stop():F.noteOff&&F.noteOff(0)}let w=2*D-1;G&&Math.random()<.5&&S(),F=Q(n,i,(100+o()**2*500)*(1-V),h,r,s,5*o()|0,o()**2*3,l()**3*50*a()*w,l()**3*50*a()*w,l()**2*500*a()*w,o()**2*d,l()*d,l()**4,o()*l()**3*500*a(),l()**4,.05+l()**3/2,1-l(),c,l()**3)}},r&&(ontouchstart=ontouchmove=ontouchend=t=>{t.button=0;const e=t.touches.length;return e?(Y||Q(0,Y=1),t.x=t.touches[0].clientX,t.y=t.touches[0].clientY,N?onmousemove(t):(onmousemove(t),onmousedown(t))):N&&onmouseup(t),N=e,!t.cancelable}),c.width|=0,u=I,i.fillStyle=R.getCSS(),P&&(i.globalCompositeOperation="difference");for(let t=P?5:1;t--;)if(P){let t;if(1==$){let n=o(e/3+S(99))*S(200,-200)+S(c.width),l=o(e/3+S(99))*S(200,-200)+S(c.height),a=o(e/3+S(99))*S(200)+200+S(c.width/2);t=i.createRadialGradient(n,l,0,n,l,a+200+S(c.width/2))}else{let n=S(c.width),l=S(c.height),a=S()<.5?1:-1,h=o(e/2+S(99))*S(200,-200)+n-a*S(c.width,c.width/4),r=o(e/2+S(99))*S(200,-200)+n+a*S(c.width,c.width/4);a=S()<.5?1:-1;let s=o(e/2+S(99))*S(200,-200)+l-a*S(c.height,c.height/4),d=o(e/2+S(99))*S(200,-200)+l+a*S(c.height,c.height/4);t=i.createLinearGradient(h,s,r,d)}let n=S();t.addColorStop(0,new C(n,1,.5).getCSS()),t.addColorStop(1,new C(n+S(.4,.6),1,.5).getCSS()),i.fillStyle=t,i.fillRect(0,0,c.width,c.height)}else if(v){let t;t=1==$?i.createRadialGradient(c.width/2,c.height/2,0,c.width/2,c.height/2,c.width):i.createLinearGradient(0,0,0,c.height),t.addColorStop(0,new C(S(),S(),S(.1)).getCSS()),t.addColorStop(1,new C(S(),S(),S(.2,.4)).getCSS()),i.fillStyle=t,i.fillRect(0,0,c.width,c.height)}else{let t;t=1==$?i.createRadialGradient(c.width/2,c.height/2,0,c.width/2,c.height/2,c.width):S()<.5?i.createLinearGradient(0,0,0,c.height):i.createLinearGradient(0,0,c.width,0);let e=R,n=e.mutate(.3,.2),o=e.mutate(.3,.2);if(1==b){let t=S();n=new C(t,S(),S(.8)),o=new C(t+S(.4,.6),S(),S(.8))}t.addColorStop(0,n.getCSS()),t.addColorStop(.5,e.getCSS()),t.addColorStop(1,o.getCSS()),i.fillStyle=t,i.fillRect(0,0,c.width,c.height)}if(v){i.globalCompositeOperation="lighter",i.fillStyle="#fff";for(let e=2e3;e--;){let e=S(P?10*o(t+S(99)):5);i.fillStyle=new C(S(),P?1:S(.5),S()).getCSS(),P?i.fillRect(S(c.width),s(-t*S(99,50)+S(c.height+40),c.height+40)-20,e,e):i.fillRect((t*S(99,50)+S(c.width+40))%(c.width+40)-20,S(c.height),e,e)}}if(i.globalCompositeOperation="source-over",function(e,n=16){function i(t,i,w,g){let m;u=I,i-=r/2,E=0,J=0;for(let p=0;p<h*r;++p){const x=a?p/h|0:p%h,b=a?p%h:p/h|0,R=u;let $;if($=k?O.setL(S(.1,1)):new C(S(),S()**.5,S(.1,1)),w){let t=g/3,n=1,i=y.h;if(0==M)n=0,t=g/3;else if(1==M)n=0,t=1-g/2;else if(L){let e=S(),o=S();e<o&&(i=e,e=o,o=i),i=f(g,e,o),n=1,t=.6*g}$=new C(i,n,t),e.fillStyle=$.getCSS()}else if(!p||S()<d){m=0;const t=e.createLinearGradient(0,c.height/2+64*(i-1),0,c.height/2+64*(i+n));t.addColorStop(0,$.mutate(k?.05:.3).getCSS()),t.addColorStop(.5,$.getCSS()),t.addColorStop(1,$.mutate(k?.05:.3).getCSS()),e.fillStyle=t}u=R;let P=S(s/2)**2,v=S(s/2)**2,B=S();if(o(P+o(Math.PI*(3*H|0)/4)/6)**2*s*2>x*x+(b-r/2)**2){let n=c.width/2+64*(t+x-A/2),a=c.width/2+64*(t-x+A/2),h=c.height/2+64*(i+b);if(w){const t=19.2,i=83.2;let c,d=Math.PI/2;e.beginPath();for(let a=4;a--;e.arc(n+l(c=d/2-a*d)*i,h+o(c)*i,t,c-=d/2,c+d));if(e.fill(),G&&B<.5&&(P=v),o(P+o(Math.PI*(3*H|0)/4)/6)**2*s*2>x*x+(b-r/2)**2){e.beginPath();for(let n=4;n--;e.arc(a+l(c=d/2-n*d)*i,h+o(c)*i,t,c-=d/2,c+d));e.fill()}}else e.fillRect(n-32|0,h-32|0,64,64),G&&B<.5&&(P=v),o(P+o(Math.PI*(3*H|0)/4)/6)**2*s*2>x*x+(b-r/2)**2&&e.fillRect(a-32|0,h-32|0,64,64),++J,m||++E,m=1}}}const a=S()<.5,h=a?n-3:n/2-1|0,r=a?n/2-1|0:n-3,s=n,d=(S(1,.8),k?.2:.05);let g=z?w(t,z+1,z):0;g*=.5*o(20*t);let m=-o(U)/2;for(let t=10;t--;){let e=t/8,n=0-.8*(2*D-1)*(t/9-.5)+g-g/4*(t/9-.7),o=0-.8*(2*V-1)*(t/9-.5)+m-m/2*(t/9-.6);i(n,o,1,e),t||i(n,o,0,e)}}(i,B),G){u=I,i.globalCompositeOperation="difference";const e=c.width,n=c.height;for(let l=20;l--;){let l=S()<.5;i.fillStyle=a(S(255),S(255),S(255));let h=o(S(e)+t/20)*S(e/4)+S()**.1*m()*e/2+e/2,c=o(S(n)+t/20)*S(n/4)+S()**.1*m()*n/2+n/2,r=S(e)*(l?1:.05),s=S(n)*(l?.05:1);i.fillRect(h-r/2,c-s/2,r,s)}i.globalCompositeOperation="source-over"}};let E=0,J=0;let K,Q=(t=1,e=.05,n=220,i=0,o=0,l=.1,a=0,h=1,c=0,r=0,s=0,d=0,w=0,f=0,g=0,u=0,S=0,m=1,C=0,p=0)=>{K||(K=new(window.AudioContext||webkitAudioContext));let x,b,R=Math,M=44100,y=2*R.PI,L=c*=500*y/M/M,G=n*=(1-e+2*e*R.random(e=[]))*y/M,$=0,k=0,O=0,P=1,v=0,B=0,A=0;for(r*=500*y/M**3,g*=y/M,s*=y/M,d*=M,w=M*w|0,b=(i=M*i+9)+(C*=M)+(o*=M)+(l*=M)+(S*=M)|0;O<b;e[O++]=A)++B%(100*u|0)||(A=a?1<a?2<a?3<a?R.sin(($%y)**3):R.max(R.min(R.tan($),1),-1):1-(2*$/y%2+2)%2:1-4*R.abs(R.round($/y)-$/y):R.sin($),A=(w?1-p+p*R.sin(y*O/w):1)*(0<A?1:-1)*R.abs(A)**h*t*.2*(O<i?O/i:O<i+C?1-(O-i)/C*(1-m):O<i+C+o?m:O<b-S?(b-O-S)/l*m:0),A=S?A/2+(S>O?0:(O<b-S?1:(b-O)/S)*e[O-S|0]/2):A),x=(n+=c+=r)*R.cos(g*k++),$+=x-x*f*(1-1e9*(R.sin(O)+1)%2),P&&++P>d&&(n+=s,G+=s,P=0),!w||++v%w||(n=G,c=L,P=P||1);return(t=K.createBuffer(1,b,M)).getChannelData(0).set(e),(n=K.createBufferSource()).buffer=t,n.connect(K.destination),n.start(),n};h()
+
+</script>
+</body>
+</html>

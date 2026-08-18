@@ -1,0 +1,57 @@
+<html><head><title>Roil</title>
+    <script id="fxhash-snippet">
+      let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+      var fxhash = new URLSearchParams(window.location.search).get('fxhash')
+      let b58dec = str=>[...str].reduce((p,c)=>p*alphabet.length+alphabet.indexOf(c)|0, 0)
+      let fxhashTrunc = fxhash.slice(2)
+      let regex = new RegExp(".{" + ((fxhashTrunc.length/4)|0) + "}", 'g')
+      let hashes = fxhashTrunc.match(regex).map(h => b58dec(h))
+      let sfc32 = (a, b, c, d) => {
+        return () => {
+          a |= 0; b |= 0; c |= 0; d |= 0
+          var t = (a + b | 0) + d | 0
+          d = d + 1 | 0
+          a = b ^ b >>> 9
+          b = c + (c << 3) | 0
+          c = c << 21 | c >>> 11
+          c = c + t | 0
+          return (t >>> 0) / 4294967296
+        }
+      }
+      var fxrand = sfc32(...hashes)
+      // used to get features during token mint
+      window.addEventListener("message", (event) => {
+        if (event.data === "fxhash_getFeatures") {
+          parent.postMessage({
+            id: "fxhash_getFeatures",
+            data: window.$fxhashFeatures
+          }, "*")
+        }
+      })
+      var isFxpreview = new URLSearchParams(window.location.search).get('preview') === "1"
+      function fxpreview() {
+        window.dispatchEvent(new Event("fxhash-preview"))
+        setTimeout(() => fxpreview(), 500)
+      }
+</script>
+<style>
+html, body
+{
+    height: 100%;
+    margin: 0;
+    background:#333;
+	display: flex; 
+	justify-content: center;
+	align-items: center;
+}
+canvas
+{ 
+    box-shadow: 0px 0px 20px 9px #000;
+    max-width: 100%;
+    max-height: 100%;
+}
+</style></head><body>
+<canvas id=canvas></canvas>
+<script>
+"use strict";const e=new class{constructor(e){this.setSeed(e)}setSeed(e){this.startSeed=this.seed=0|e}resetSeed(){this.seed=this.startSeed}saveSeed(){this.startSeed=this.seed}float(e=1,t=0){return this.seed^=this.seed<<13,this.seed^=this.seed>>>17,this.seed^=this.seed<<5,t+(e-t)*Math.abs(this.seed%1e7)/1e7}floatSign(e,t){return this.float(e,t)*this.sign()}int(e=1,t=0){return 0|this.float(e,t)}bool(e=.5){return this.float()<e}sign(){return this.bool()?-1:1}angle(e=1){return this.float(2*le*e)}circle(e,t=.5){const n=this.float()**t*e,o=this.float(2*le);return fe(n*Math.cos(o),n*Math.sin(o))}color(){return new he(this.float(),this.float(),this.float())}}(1e9*fxrand()),t=canvas.getContext("2d");document.body.appendChild(canvas);let n,o,l,i,s,a,r,h,f,c,g,d,w,u,p,y,m,S,b,x,M,v,C,k,F,R,$,D,L,O,A,I,P,q,E,N,T,B,G,H,W,z,J,U,Y,j,K=2;function Q(){const t=(e,t,n,o)=>(o||(o=n[n.length-1].copy()),{name:e,weight:t,colors:n,marginColor:o}),n=[t("Prism",.5,[new he(e.float(),1,.5)],new he(e.float(),0,0)),t("Atomic",2,[new he(0,1,.5),new he(.15,1,.5),new he(.65,1,.5)],new he([0,.15,.65][e.int(3)],0,0)),t("Gray",1,[new he(e.float(),0,e.float()),new he(e.float(),0,e.float())],new he(e.float(),0,0)),t("Random",2,[new he]),t("Lunar",2,[new he(.6,0,0),new he(.11,0,1)]),t("Stormy",2,[new he(.6,0,.2)],new he(.12,1,.5)),t("Shorelines",1,[new he(.1,.3,.6)],new he(.6,1,.2)),t("Cellular",2,[new he(.99,.9,.2)],new he(.6,.9,.4)),t("Oceanic",2,[new he(.58,.8,.2)],new he(.5,.5,1)),t("Wooden",1,[new he(.05,.5,.2)],new he(.6,1,.5)),t("Jungle",2,[new he(.4,.9,.2)],new he(.05,.9,.3)),t("Golden",1,[new he(.13,.8,.4)],new he(.6,.2,.8)),t("Sky",1,[new he(.6,.5,.6)],new he(.11,.95,.5)),t("Night",1,[new he(.7,.9,.25)],new he(.08,.95,.5)),t("Frozen",2,[new he(.6,0,.6)],new he(0,.9,.3)),t("Tropical",1,[new he(.45,.9,.25),new he(0,.8,.6)],new he(.12,.9,.5)),t("Fire",2,[new he(0,1,.4),new he(.1,1,.7)],new he(.65,1,0)),t("Mountain",2,[new he(.08,.8,.2),new he(.35,.4,.3)]),t("Canyon",2,[new he(.08,.8,.2),new he(.6,.1,.4)],new he(.6,.95,.4)),t("Earthly",1,[new he(.35,.6,.2),new he(.6,.9,.4),new he(.1,.5,.3)])];let o;G=0,A=[];{let t=0;for(let e=n.length;e--;){t+=n[e].weight}let l=e.float(t);Y=0;for(let e=n.length;e--;){if(l-=n[e].weight,l<=0){Y=e;break}}let i=n[Y];j=i.name;i.weight;let s=i.colors;o=s.length;for(let e=o;e--;)A[e]=s[e];if(J=i.marginColor,U=0,0==Y&&(U=.15*e.sign()),1==Y&&(U=1e-4*e.sign(),re(A)),2==Y&&(G=1),3==Y){o=e.int(1,3),A=[];for(let t=o;t--;)A.push(new he(e.float(),e.float(.5,1),e.float(.2,.5)));J=A[o-1].copy(),1==o&&(J=new he(e.float(),e.float(.5,1),e.float(.5))),U=0,j="Random"}}let l=["One","Some","Many"],i=e.int(l.length);p=1,0==i&&(p=1),1==i&&(p=e.int(2,6)),2==i&&(p=e.int(10,30)),b=.02,x=.02,1==o&&(b*=2,x*=2),m=e.float(.02,.03),S=e.float(.02,.03),g=e.float(.001,.005),d=e.float(1e-5,1e-4),G&&(m*=2,S*=2),w=e.float(.001,.01),u=e.float(1e-4,.001),C=e.float(),y=e.float(.05),M=e.bool(.3),q=e.int(5e5,1e6),!M&&e.bool(.2)&&(q=e.int(1e6,2e6)),(M&&e.bool(.05)||!M&&e.bool(.7))&&(q=0),I=e.float(.2,.9),T=e.bool(.3),B=o>1&&i>0,k=e.int(3);let s=["Front","Back","Shuffle"][k];F=R=0,e.bool()&&(F=e.int(1,1e3),s="Interval",e.bool()&&(R=e.float()**2*e.sign(),s="Changing"));H=20,v=!M&&e.bool();const a=ie(1575,2048);c=f=a/2-60;let r="Square";$=0,P=.1,e.bool(.6)?(r="Thin",f=727.5,c=964,e.bool(.3)&&(r="Thick",H*=2,f=667.5,c=904)):e.bool(.7)?(r="Minimal",f=787.5-2*H,c=1024-2*H,H=0):e.bool(.4)?(r="Circle",$=1,P=.4):P=e.float(.2,.4);let h="None";D=0,e.bool(.6)?(D=le/4,h="45"):e.bool(.5)&&(D=e.angle(),h="Random"),L=e.bool()?D&&e.bool(.4)?0:le/4:e.angle(),E=0,N=0,e.bool()&&(E=e.floatSign(.1)),e.bool()&&(N=e.floatSign(.1)),e.bool(.3)&&(E*=3,N*=3),E&&(h="Spin"),window.$fxhashFeatures={Palette:j,Border:r,Starts:l[i],Spread:q?"Mix":M?"Radial":"Linear",Directions:s,Angle:h,Overdraw:T?"Yes":"No"},document.title="ROIL - "+j}function V(){innerWidth,innerHeight;let g=K;t.fillRect(0,0,canvas.width=1575*g,canvas.height=2048*g),t.scale(g,g),W=e.float(30,100),z=e.float(1e3),s=Date.now(),a=[],r=[],n=[],l=[[]],n.length=3225600,O=0,i=0,h=0,o=[fe(1,0),fe(-1,0),fe(0,1),fe(0,-1)],re(o);let d=0;const w=fe(787.5,1024);for(let t=p;t--;){const n=$&&!t?e.circle(.95*f):fe(e.floatSign(f),e.floatSign(c));oe(w.add(n),A[d].copy()),B&&(d=se(d+1,A.length))}}function X(t,n,o){for(let l=n;l--&&t.length;){let n;if(o){let o=ae(e.int(t.length/I|0),0,t.length-1);n=t[o],t[o]=0}else n=t.pop();n&&Z(n)}return t.filter(e=>e)}function Z(n){let l=n.pos,i=n.color,s=te(l);if(T&&!n.margin||!s){if(n.margin){if(l.x>1575-H||l.x<H||l.y>2048-H||l.y<H)return}else if(a&&!n.spill){if($?l.add(fe(-787.5,-1024)).length()>f:l.x<787.5-f||l.x>787.5+f||l.y<1024-c||l.y>1024+c){if(!(((e,t)=>{const n=e=>e*e*(3-2*e),o=n(se(e)),l=n(se(t)),i=(e,t)=>(1e5*Math.sin(Math.floor(e)**2^Math.floor(t)**3)+1e5)%1,s=(e,t)=>(1-o)*i(e,t)+o*i(e+1,t);return(1-l)*s(e,t)+l*s(e,t+1)})(l.x/W+z,l.y/W)<.5))return n.color=J.copy(),n.margin=1,void a.push(n);n.spill=1,r.push(n)}}M||n.margin||!e.bool(d)||(i=A[e.int(A.length)].copy()),e.bool(g)&&(i=i.copy());{const t=n.margin?S:m,o=n.margin?x:b;i.h+=o*e.float(.006)*(U||e.sign()),i.s=ae(i.s+t*e.floatSign(.1)),i.l=ae(i.l+t*e.floatSign(.1))}{const n=i.copy();n.h=n.h+e.floatSign(.02),n.s=G?e.float(.1):n.s+e.floatSign(.03),n.l=n.l+e.floatSign(.04),t.fillStyle=n,t.beginPath(),t.ellipse(l.x,l.y,e.float(1,1.5),e.float(1,1.5),e.angle(),0,7),t.fill()}if((O++%(0|F)==0||!F&&e.bool(w))&&(2==k?re(o):k?o.push(o.shift()):o.unshift(o.pop())),!s){q&&++h%q==0&&(M=!M),ne(l);for(const e of o){const t=n.margin?L:D;oe(l.add(e.rotate(t)),i,n.spill,n.margin)}}}}const _=e=>(0|e.x)>=0&&(0|e.y)>=0&&(0|e.x)<1575&&(0|e.y)<2048,ee=e=>(0|e.x)+1575*(0|e.y),te=e=>_(e)?n[ee(e)]:1,ne=e=>_(e)?n[ee(e)]=1:0;function oe(e,t,n,o){if(te(e))return;const i={pos:e,color:t,margin:o};if(n&&r)return i.spill=1,r.push(i),i;return l[l.length-1].push(i),i}const le=Math.PI,ie=(e,t)=>e<t?e:t,se=(e,t=1)=>(e%t+t)%t,ae=(e,t=0,n=1)=>e<t?t:e>n?n:e,re=t=>{for(let n=t.length;n;){const o=e.int(n--);[t[n],t[o]]=[t[o],t[n]]}return t};class he{constructor(e=0,t=0,n=0,o=1){this.h=e,this.s=t,this.l=n,this.a=o}copy(){return new he(this.h,this.s,this.l,this.a)}add(e){return new he(this.h+e.h,this.s+e.s,this.l+e.l,this.a+e.a)}toString(){return`hsla(${360*se(this.h)|0},${100*ae(this.s)|0}%,${100*ae(this.l)|0}%,${ae(this.a)})`}}const fe=(e,t)=>new ce(e,t);class ce{constructor(e=0,t=0){this.x=e,this.y=t}copy(){return fe(this.x,this.y)}add(e){return fe(this.x+e.x,this.y+e.y)}length(){return Math.hypot(this.x,this.y)}rotate(e){const t=Math.cos(e),n=Math.sin(e);return fe(this.x*t-this.y*n,this.x*n+this.y*t)}}e.saveSeed(),Q(),V(),console.log("ROIL - Frank Force 2022"),requestAnimationFrame((function t(){!function(){if(i)return;w+=e.floatSign(u),w=ae(w,0,.1),D+=E,L+=N,F&&(F+=R,F<1&&(F=1,R*=-1)),e.bool(C)&&re(l);let t=l[l.length-1];if(r&&r.length){let e=t&&t.length||a?500*P|0:5e3;r=X(r,e,M)}if(t&&(t=X(t,5e3,a?M:v),l[l.length-1]=t),t&&t.length){if(a&&e.bool(y)){let n=e.int(t.length),o=t.splice(n,1)[0];l.push([o])}}else if(l.pop(),!l.length)if(a)l.push(a),a=0;else if(r)r.length||(r=0);else if(te(fe(2,2))){if(!r){fxpreview(),i=1;const e=(Date.now()-s)/1e3;console.log(`Finished drawing in ${e.toFixed(2)} seconds.`)}}else r=[],oe(fe(2,2),A[0],1),l.push(r),r=0}(),requestAnimationFrame(t)}));const ge=document.createElement("a"),de=()=>{ge.download=fxhash+".png",ge.href=canvas.toDataURL("image/png").replace("image/png","image/octet-stream"),ge.click(),console.log("Saved "+ge.download)};onkeydown=t=>{49==t.keyCode&&de(),50==t.keyCode&&(console.log("Sim Restarted."),e.resetSeed(),Q(),e.seed=1e9*Math.random()|0,V()),51==t.keyCode&&(K=4,e.resetSeed(),Q(),V(),console.log("HD Enabled. ("+canvas.width+"x"+canvas.height+")"))}
+</script></body></html>

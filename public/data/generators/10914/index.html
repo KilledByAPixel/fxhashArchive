@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset=utf-8>
+    <title>Byte City Night</title>
+    <script id="fxhash-snippet">
+      let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+      var fxhash = new URLSearchParams(window.location.search).get('fxhash')
+      let b58dec = str=>[...str].reduce((p,c)=>p*alphabet.length+alphabet.indexOf(c)|0, 0)
+      let fxhashTrunc = fxhash.slice(2)
+      let regex = new RegExp(".{" + ((fxhashTrunc.length/4)|0) + "}", 'g')
+      let hashes = fxhashTrunc.match(regex).map(h => b58dec(h))
+      let sfc32 = (a, b, c, d) => {
+        return () => {
+          a |= 0; b |= 0; c |= 0; d |= 0
+          var t = (a + b | 0) + d | 0
+          d = d + 1 | 0
+          a = b ^ b >>> 9
+          b = c + (c << 3) | 0
+          c = c << 21 | c >>> 11
+          c = c + t | 0
+          return (t >>> 0) / 4294967296
+        }
+      }
+      var fxrand = sfc32(...hashes)
+      // used to get features during token mint
+      window.addEventListener("message", (event) => {
+        if (event.data === "fxhash_getFeatures") {
+          parent.postMessage({
+            id: "fxhash_getFeatures",
+            data: window.$fxhashFeatures
+          }, "*")
+        }
+      })
+      var isFxpreview = new URLSearchParams(window.location.search).get('preview') === "1"
+      function fxpreview() {
+        window.dispatchEvent(new Event("fxhash-preview"))
+        setTimeout(() => fxpreview(), 500)
+      }
+</script>
+<style>
+html { height: 100%; }
+body
+{
+    height: 100%;
+    margin: 0;
+    background:#111;
+	display: flex; 
+	justify-content: center;
+	align-items: center;
+}
+canvas
+{
+    max-height: 100%;
+    max-width: 100%;
+}
+</style>
+</head>
+<body>
+<canvas id=mainCanvas width=4096 height=2048></canvas>
+<script>
+"use strict";let t,e,a,n,i,l,o,s,h,f,r,d,c,g,m,u,w,v,C=0,b=0;function p(e){mainCanvas.style.boxShadow=`0px 0px 50px ${10+5*Math.sin(e*y/2)}px `+B((h?e/60:0)+v,1,b?1:.5);let a=w?I.int(1,4):I.int(5,12),n=r+10*e|0,c=I.float(-200,$.width+200),g=I.int(1e6),p=i+60*e*7*a/s;if(p>$.height)return;let S=2*a+1;E.save(),m&&E.rotate(I.floatSign(.1)),u&&(E.globalCompositeOperation="difference");for(let a=1e4;a--;){let i=a%S,s=a/S|0,r=x(t,i,s),w=Math.cos(r*g),v=o-.001*s+w*(.15-o);h&&(v+=e);let C=d+I.floatSign(.1),b=w;i*s%2!=0||l||(b=u?1:0,C=0),E.fillStyle=B(v+f,C,b),E.fillRect(i*n+c|0,s*n+p|0,n+m,n+m)}E.restore(),function(){mainCanvas.width|=0,R.fillStyle="#fff",R.fillRect(0,0,mainCanvas.width,mainCanvas.height),R.drawImage($,0,0,mainCanvas.width,mainCanvas.height),b&&(R.save(),R.fillStyle="#fff",R.globalCompositeOperation="saturation",R.fillRect(0,0,mainCanvas.width,mainCanvas.height),R.restore());C&&(R.save(),R.fillStyle="#fff",R.globalCompositeOperation="difference",R.fillRect(0,0,mainCanvas.width,mainCanvas.height),R.restore());R.save(),R.globalAlpha=.1,R.drawImage(k,0,0),R.restore()}()}function x(t,e,i){return e+=a,i+=n,0==t?e&i:1==t?e|i:2==t?e^i:3==t?e+i:4==t?e*i:5==t?e/i+i/e:6==t?e-i^e+i:0}const y=Math.PI,S=(t,e=1)=>(t%e+e)%e,M=(t,e=0,a=1)=>t<e?e:t>a?a:t,B=(t=0,e=0,a=0,n=1)=>`hsla(${360*S(t)},${100*M(e)}%,${100*M(a)}%,${M(n)})`;const I=new class{constructor(t){this.setSeed(t)}setSeed(t){this.seed=0|t}float(t=1,e=0){return this.seed^=this.seed<<13,this.seed^=this.seed>>>17,this.seed^=this.seed<<5,e+(t-e)*Math.abs(this.seed%1e9)/1e9}floatSign(t,e){return this.float(t,e)*this.sign()}int(t=1,e=0){return 0|this.float(t,e)}bool(t=.5){return this.float()<t}sign(){return this.bool()?-1:1}angle(t=1){return this.float(2*y*t)}circle(t,e=.5){const a=this.float()**e*t,n=this.float(2*y);return{x:a*Math.cos(n),y:a*Math.sin(n)}}}(1e9*fxrand());let A=0,O=0;const R=mainCanvas.getContext("2d"),$=document.createElement("canvas"),E=$.getContext("2d"),F=document.createElement("canvas"),P=F.getContext("2d");const k=document.createElement("canvas");function N(t,e=1,a=.5,n=.5,i=.5,l=.5,o=.5,s=.5,h=.5,f=.5){const r=2**e,d=new ImageData(F.width=t.width/r,F.height=t.height/r);for(let t=0;t<d.data.length;t+=4){const e=S(a+I.float(n,-n)),r=M(i+I.float(l,-l)),c=M(o+I.float(s,-s)),g=M(h+I.float(f,-f)),m=c<.5?c*(1+r):c+r-c*r,u=2*c-m,w=(t,e,a)=>(a=(a%1+1)%1)<1/6?t+6*(e-t)*a:a<.5?e:a<2/3?t+(e-t)*(2/3-a)*6:t,v=[255*w(u,m,e+1/3),255*w(u,m,e),255*w(u,m,e-1/3),255*g];d.data.set(v,t)}P.putImageData(d,0,0),t.getContext("2d").drawImage(F,0,0,t.width,t.height)}{let t="";t+="Byte City Night\n",t+="By Frank Force @KilledByAPixel\n",t+="https://www.fxhash.xyz/u/KilledByAPixel\n",t+="https://twitter.com/KilledByAPixel\n",t+="https://generative.3d2k.com\n",console.log(t)}!function(){$.width=mainCanvas.width,$.height=mainCanvas.height,k.width=mainCanvas.width,k.height=mainCanvas.height,function(t,e=1,a=3,n=.5,i=.5,l=.5,o=.5,s=.5,h=.5,f=.5,r=.5){for(let d=a;d>=e;--d)N(t,d,n,i,l,o,s,h,f,r)}(k,1,4,I.float(),I.float(.1,.5));let p=["&","|","^","+","*","/","-^+"];t=I.int(p.length),e=I.int(p.length),r=I.int(5,9);let y=I.int(1,4);I.bool(.05)&&(y=I.int(30,60)),I.bool(.04)&&(y=0),I.bool(.05)&&(y=1,g=1),l=I.bool(.05),C=I.bool(.04),m=I.bool(.04),u=I.bool(.03),u=0,w=I.bool(.03),b=I.bool(.1),h=!b&&I.bool(.03),c=!h&&!b&&I.bool(.1);let S="";m&&(S+=(S.length?" ":"")+"Earthquake"),C&&(S+=(S.length?" ":"")+"Inverted"),l&&(S+=(S.length?" ":"")+"Bright Windows"),w&&(S+=(S.length?" ":"")+"Thin"),u&&(S+=(S.length?" ":"")+"Difference"),""==S&&(S="None");let M=b?"Grayscale":h?"Rainbow":c?"Shifted":"Normal";window.$fxhashFeatures={"Window Operator":p[t],"Background Operator":p[e],Moons:g?"Big":y>5?"Many":y||"None",Colors:M,Extras:S},v=I.float();let A=I.int(8,33),O=Math.ceil($.width/A),R=Math.ceil($.height/A);f=c?.5:h?I.float():0;let F=I.int(50,100),P=I.float(0,.2),q=I.float(.2,.9),D=I.float(.4,.75),K=I.float(200,600);a=I.int(1e3),n=I.int(1e3),o=I.float(0,.15),s=I.float(2,3),i=I.float(99,400);let W=I.int(500,2e3);d=I.float(h?.4:.1,1);let z=I.int(1e6);for(let t=O*R;t--;){let a=t%O,n=t/O|0,i=x(e,a,n),l=Math.cos(i*z)*F;E.fillStyle=B(f+D+l/800+n/(h?100:300),q+l/1800,P+l/W+n/K),E.fillRect(a*A,n*A,A,A)}E.save(),E.globalCompositeOperation="difference",E.fillStyle="#fff";for(let t=y;t--;){let t=99,e=g?I.float(500,700):I.float(150,300),a=I.float(2*t+e,$.width-2*t-e),n=I.float(t+e,t+e+300);E.beginPath(),E.arc(a,n,e,0,9),E.fill()}E.restore()}(),requestAnimationFrame((function t(e){O=A++/60,p(O),requestAnimationFrame(t)}))
+</script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html><head>
+    <meta charset=utf-8>
+    <meta name=viewport content=width=device-width,height=device-height,initial-scale=1,maximum-scale=1>
+    <meta name=apple-mobile-web-app-capable content=yes>
+    <meta name=mobile-web-app-capable content=yes>
+    <title>Spirography</title>
+    <script id="fxhash-snippet">
+      let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+      var fxhash = new URLSearchParams(window.location.search).get('fxhash')
+      let b58dec = (str) => str.split('').reduce((p,c,i) => p + alphabet.indexOf(c) * (Math.pow(alphabet.length, str.length-i-1)), 0)
+      let fxhashTrunc = fxhash.slice(2)
+      let regex = new RegExp(".{" + ((fxhashTrunc.length/4)|0) + "}", 'g')
+      let hashes = fxhashTrunc.match(regex).map(h => b58dec(h))
+      let sfc32 = (a, b, c, d) => {
+        return () => {
+          a |= 0; b |= 0; c |= 0; d |= 0
+          var t = (a + b | 0) + d | 0
+          d = d + 1 | 0
+          a = b ^ b >>> 9
+          b = c + (c << 3) | 0
+          c = c << 21 | c >>> 11
+          c = c + t | 0
+          return (t >>> 0) / 4294967296
+        }
+      }
+      var fxrand = sfc32(...hashes)
+      // used to get features during token mint
+      window.addEventListener("message", (event) => {
+        if (event.data === "fxhash_getFeatures") {
+          parent.postMessage({
+            id: "fxhash_getFeatures",
+            data: window.$fxhashFeatures
+          }, "*")
+        }
+      })
+</script>
+</head>
+<body>
+<canvas id=c width=2048 height=2048></canvas>
+<script>
+c.style="position:absolute;transform:translate(-50%,-50%);top:50%;left:50%",c.title="Click to download HD image.",document.body.style="background:#000;margin:0;overflow:hidden";const t=document.createElement("a");c.onclick=e=>{t.download=fxhash+".png",t.href=c.toDataURL("image/png").replace("image/png","image/octet-stream"),t.click()};let e=1;const i=(t=1,i=0)=>(e^=e<<13,e^=e>>>17,e^=e<<5,i+(t-i)*Math.abs(e%1e9)/1e9),l=t=>i()>.5?1:-1,a=(Math.PI,(t,e)=>t>e?t:e),o=(t,e=1)=>(t%e+e)%e,n=(t,e=0,i=1)=>t<e?e:t>i?i:t,s=(t,e=0,i=1)=>e+n(t)*(i-e),h=document.createElement("canvas");h.width=c.width,h.height=c.height;let r=h.getContext("2d"),f=0,d=0,g=0;Math.sin,Math.cos,Math.tan;const u=c.getContext("2d");class m{constructor(t=0,e=1,i=1,l=1){this.h=t,this.s=e,this.l=i,this.a=l}copy(){return new m(this.h,this.s,this.l,this.a)}mutate(t=.1,e=0){return new m(o(this.h+i(t,e)*l()),n(this.s+i(t,e)*l()),n(this.l+i(t,e)*l()),this.a)}add(t){return new m(this.h+t.h,this.s+t.s,this.l+t.l,this.a+t.a)}setH(t){return new m(t,this.s,this.l,this.a)}setS(t){return new m(this.h,t,this.l,this.a)}setL(t){return new m(this.h,this.s,t,this.a)}setA(t){return new m(this.h,this.s,this.l,t)}getCSS(){return`hsla(${360*o(this.h)|0},${100*n(this.s)|0}%,${100*n(this.l)|0}%,${n(this.a)})`}lerp(t,e){let i=this.h,l=t.h;l-i>.5&&l--,i-l>.5&&i--;n(e);return new m(o(s(e,i,l)),s(e,this.s,t.s),s(e,this.l,t.l),s(e,this.a,t.a))}}let S=t=>{if(requestAnimationFrame(S),t<g-2)return;g=Math.max(g+1e3/60,t),f=d++/60,60*f|0==d-2&&(f+=1e-6),q(f);const e=1>innerWidth/innerHeight?innerWidth:1*innerHeight;c.style.width=e+"px",u.fillStyle="#fff",u.fillRect(0,0,c.width,c.height),u.drawImage(h,0,0),k&&(u.fillStyle="#fff",u.globalCompositeOperation="saturation",u.fillRect(0,0,c.width,c.height),u.globalCompositeOperation="source-over"),u.globalAlpha=.1,u.drawImage(B,0,0,c.width,c.height),u.globalAlpha=1,b&&(u.fillStyle="#fff",u.globalCompositeOperation="difference",u.fillRect(0,0,c.width,c.height),u.globalCompositeOperation="source-over")};e=1e9*fxrand()|0;const p=1e9*fxrand()|0,w=i()<.02?0:i()<.3?3:i()<.5?1:2,C=i()<.3?0:i()<.3?1:2,y=i()<.2?3:i()<.4?2:i()<.4?0:1,b=i()<.4,M=0|i(4),x=i()<.02,v=i()<.1,k=!x&&i()<.02,I=!x&&!v&&i()<.03,O=i()<.02;let R=i()<.6?1:i()<.7?0:2,G=0|i(32,128),L=4*R*(I?.5:1)|0,P=0|(I?i(28,40):i(12,17));const A=I?0:i()<.02?1:i()<.1?2:i()<.3?4:3,H=new m(i(),i(),v?i(.3):i());let N=[],$=[];((t=8)=>{const e=new m(i(),i(),i());for(let t=P;t--;)for(let i=P;i--;)N[t+i*P]=1,$[t+i*P]=e.copy();for(let t=1e5;t--;){const t=0|i(P),e=0|i(P);let l=N[t+e*P];if(!l)continue;const a=$[t+e*P];if(l>1&&i()<.1){for(let i=0;i<l;++i)for(let o=0;o<l;++o){let l=t+i,n=e+o;N[l+n*P]=1,$[l+n*P]=a.mutate()}continue}const o=l;if(l+=0|i(1,6),t+l>P)continue;if(e+l>P)continue;let n=1;for(let i=0;i<l;++i)for(let a=0;a<l;++a){if(i<o&&a<o)continue;if(1!=N[t+i+(e+a)*P]){n=0;break}}if(n){for(let i=0;i<l;++i)for(let a=0;a<l;++a){N[t+i+(e+a)*P]=0}N[t+e*P]=l,$[t+e*P]=a.mutate()}}})();let D=1;for(let t=P;t--;)for(let e=P;e--;){O&&i()<.1&&(N[t+e*P]=0);const l=N[t+e*P];l&&0,D=a(l,D)}const F=x?"Glitch":I?"Only Background":k?"Grayscale":O?"Holes":v?"Additive":"You are";window.$fxhashFeatures={Padding:["None","Thin","Fat"][R],Borders:["None","Thin","Fat","Mixed"][M],Inverted:b?"Yeah":"Nah",Complexity:["Simple","Normal","Complex","Mixed"][y],Backgrounds:["Squares","Circles","Squares and Circles"][C],Gradients:["No","Linear","Radial","Mixed"][w],Special:F,Layers:A};const q=t=>{if(e=p,t>20&&!I)return;I&&(h.width|=0);const o=H.mutate(.2),f=H.mutate(.2);if(!t||I){if(0==w)r.fillStyle=H.getCSS();else{let t=r.createLinearGradient(0,0,0,c.height);t.addColorStop(0,o.getCSS()),t.addColorStop(1,f.getCSS()),r.fillStyle=t}r.fillRect(0,0,c.width,c.height)}const g=i(.5,1.5);let u=(c.width-2*G)/P|0;for(let o=P;o--;)for(let h=P;h--;){const c=N[o+h*P];if(!c)continue;let f=G+L+o*u|0,S=G+L+h*u|0,b=u*c-2*L|0;const k=$[o+h*P];let O=b/2;if(!t||I){if(I){let e=Math.sin(t*i(1,.5)+i(1e3))/4+.75;f+=O,S+=O,b=b*e|0,O=O*e|0,f-=O,S-=O}r.globalCompositeOperation="source-over";let l=e;e=p+1e3*(o+h*P);const a=i(.1,g),n=H.lerp(k,a),s=i()<.5,c=k.copy();if(c.s=i(),c.l=1-c.l,c.a=i(.5,1),0==w)r.fillStyle=n.mutate(.2).getCSS();else{let t;t=1==w||3==w&&i()<.5?r.createLinearGradient(f,S,f,S+b):r.createRadialGradient(f+O,S+O,0,f+O,S+O,O);let e=n.mutate(.3,.1),l=n.mutate(.3,.1);v&&(e.l/=4,l.l/=4),t.addColorStop(0,e.getCSS()),t.addColorStop(1,l.getCSS()),r.fillStyle=t}let d=0==M?0:1==M?i(6,11):2==M?i(24,30):i()<.2?0:i(10,50);d|=0,r.beginPath(),0==C||2==C&&s?r.rect(f,S,b,b):r.arc(f+O,S+O,O,0,9),r.fill(),M>0&&(r.fillStyle=c.getCSS(),r.beginPath(),0==C||2==C&&s?(r.rect(f,S,b,b),b-2*d>0&&r.rect(f+d,S+d,b-2*d,b-2*d)):(r.arc(f+O,S+O,O,0,9),O-d>0&&r.arc(f+O,S+O,O-d,0,9)),r.fill("evenodd")),e=l}if(I)continue;f+=O,S+=O;const R=16,D=t/5|0,F=1-D/3,q=x?i(1e3):0,B=d%300*R*(x?i()<.7?i(.05,.3):i(2,4):1),E=(0|i(1e9))+D,T=3==y?0|i(2,5):0==y?2:(0|i(2,4))+(0|(2==y?i(0,2):0)),W=12,Y=i()<.5?1:-1,U=i()<.5?1:-1,j=i()<.5,z=e;e=E;const J=new m(i(),i(),i());v?J.l=a(.01,J.l*i(.01,.02)):J.a=i()<.1?1:i(.03,1),v||x||(J.h=k.h+i()**4*l());const K=n(O*i(.05,s(F,.1,.3))|0,3,16),Q=O-K;if(D>A-1)continue;v&&(r.globalCompositeOperation="lighter");const V=(t,a)=>{e=E;let o=0,n=0;for(let e=T;e--;){let e=i(Q);n+=e,o+=e*t(q+Math.PI*(0|i(2,W+1))*l()*a/R/W/12)}return o*=Q/n,o*=i(1,.5),o};r.fillStyle=J.getCSS();for(let t=0;t<R;++t){let e=U*V(j?Math.cos:Math.sin,B+t),i=Y*V(j?Math.sin:Math.cos,B+t);Math.atan2(e,i);r.beginPath(),r.arc(f+e,S+i,K/2,0,9),r.fill()}e=z}},B=document.createElement("canvas");{const t=i()<.5?1:2,e=i()<.5;B.width=c.width/t,B.height=c.height/t;let l=new ImageData(B.width,B.height),a=[1,1,1,1];(e||i()<.7)&&(a=[i()**.2,i()**.2,i()**.2,1]);for(let t=0;t<l.data.length;t+=4){let o=i(255);for(let n=4;n--;){let s=a[n];l.data[t+n]=s*(3==n?255:e?i(255):o)}}B.getContext("2d").putImageData(l,0,0)}S()
+</script>
+</body>
+</html>

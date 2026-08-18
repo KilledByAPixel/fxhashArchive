@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html><head>
+    <meta charset=utf-8>
+    <meta name=viewport content=width=device-width,height=device-height,initial-scale=1,maximum-scale=1>
+    <meta name=apple-mobile-web-app-capable content=yes>
+    <meta name=mobile-web-app-capable content=yes>
+    <title>Molecular Geometries</title>
+    <script id="fxhash-snippet">
+      let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+      var fxhash = new URLSearchParams(window.location.search).get('fxhash')
+      let b58dec = (str) => str.split('').reduce((p,c,i) => p + alphabet.indexOf(c) * (Math.pow(alphabet.length, str.length-i-1)), 0)
+      let fxhashTrunc = fxhash.slice(2)
+      let regex = new RegExp(".{" + ((fxhashTrunc.length/4)|0) + "}", 'g')
+      let hashes = fxhashTrunc.match(regex).map(h => b58dec(h))
+      let sfc32 = (a, b, c, d) => {
+        return () => {
+          a |= 0; b |= 0; c |= 0; d |= 0
+          var t = (a + b | 0) + d | 0
+          d = d + 1 | 0
+          a = b ^ b >>> 9
+          b = c + (c << 3) | 0
+          c = c << 21 | c >>> 11
+          c = c + t | 0
+          return (t >>> 0) / 4294967296
+        }
+      }
+      var fxrand = sfc32(...hashes)
+      // used to get features during token mint
+      window.addEventListener("message", (event) => {
+        if (event.data === "fxhash_getFeatures") {
+          parent.postMessage({
+            id: "fxhash_getFeatures",
+            data: window.$fxhashFeatures
+          }, "*")
+        }
+      })
+</script>
+</head>
+<body>
+<canvas id=c width=2048 height=2048></canvas>
+<script>
+c.style="position:absolute;transform:translate(-50%,-50%);top:50%;left:50%",c.title="Click to download HD image.",document.body.style="background:#000;margin:0;overflow:hidden";const e=document.createElement("a");c.onclick=t=>{e.download=fxhash+".png",e.href=c.toDataURL("image/png").replace("image/png","image/octet-stream"),e.click()};const t=document.createElement("canvas");t.width=c.width,t.height=c.height;let a=t.getContext("2d");const i=c.getContext("2d");let l=0,h=0,n=Math.sin,o=Math.cos,r=Math.tan,d=e=>{l=h++/60,ie(l);const a=1>innerWidth/innerHeight?innerWidth:1*innerHeight;c.style.width=a+"px",c.width|=0,i.fillStyle="#fff",i.fillRect(0,0,c.width,c.height),i.drawImage(t,0,0),g=R+1e4,T?(i.fillStyle=C(s(),1,s(.5,1)),i.globalCompositeOperation="difference",i.fillRect(0,0,c.width,c.height)):F?z&&(i.fillStyle=C(s(),1,s(.6,.9)),i.globalCompositeOperation="multiply",i.fillRect(0,0,c.width,c.height)):(i.fillStyle="#fff",i.globalCompositeOperation="saturation",i.fillRect(0,0,c.width,c.height)),i.globalCompositeOperation="source-over",i.drawImage(y,0,0,c.width,c.height),M&&(i.fillStyle="#fff",i.globalCompositeOperation="difference",i.fillRect(0,0,c.width,c.height),i.globalCompositeOperation="source-over"),requestAnimationFrame(d)};let g=1e9*fxrand()|0;const s=(e=1,t=0)=>(g^=g<<13,g^=g>>>17,g^=g<<5,t+(e-t)*Math.abs(g%1e9)/1e9),f=(e=1,t=0)=>0|s(e,t),w=Math.PI,p=(e,t)=>e>t?e:t,m=(e,t=1)=>(e%t+t)%t,S=(e,t=0,a=1)=>e<t?t:e>a?a:e,u=(e,t=0,a=1)=>t+S(e)*(a-t),C=(e=0,t=0,a=1,i=1)=>`hsla(${360*m(e)},${100*S(t)}%,${100*S(a)}%,${S(i)})`,y=document.createElement("canvas"),x=(e=2,t=1)=>{const a=t*s(.07,.1),i=s()<.6;y.width=c.width/e,y.height=c.height/e;let l=new ImageData(y.width,y.height),h=s(),n=s(.3),o=s(),r=s();for(let e=0;e<l.data.length;e+=4){let t=m(h+s(n,-n)),c=i?o+s(r,-r):0,d=s();const g=d<.5?d*(1+c):d+c-d*c,f=2*d-g,w=(e,t,a)=>(a=(a%1+1)%1)<1/6?e+6*(t-e)*a:a<.5?t:a<2/3?e+(t-e)*(2/3-a)*6:e;l.data[e+0]=255*w(f,g,t+1/3),l.data[e+1]=255*w(f,g,t),l.data[e+2]=255*w(f,g,t-1/3),l.data[e+3]=255*s(a)}y.getContext("2d").putImageData(l,0,0)},R=1e9*fxrand(),M=s()<.5,b=s()<.03,v=!b&&s()<.03,T=!b&&!v&&s()<.1,z=!T&&!b&&!v&&s()<.1,I=["None","Sine","Tangent","Triangles","Hexagons","Pentagrams","Squares","Mix"],D=f(I.length),O=3==D,V=4==D,H=5==D,$=6==D;let k=s()<0?0:s()<.2?1:s()<.5?2:s()<.6?3:4;const F=!v&&s()<.02?0:0==k?1:1+f(6);let E=0==k?1:1==k?5:2==k?13:30;E=E*s(1,1.2)|0;const N=f(E<=1?3:4),P=3==N,U=(0==N?8:1==N?15:30)*s(1,1.5),q=4==k,A=[],G=f(1,4),L=3==G;window.$fxhashFeatures={Inverted:M?"Yes":"No",Special:b?"Glitch":v?"Rainbow":T?"Difference":z?"Additive":"None",Brushes:["One","Few","Some","Many","Copious"][k],Scale:["Small","Medium","Large","Vary"][N],Hues:F,Seeds:L?"Many":G,Function:I[D]};const W=s(.1,.2),B=s(1e3),Y=s()<.5,j=[0];for(let e=G;e--;)j[e]=f(1e9);const J=[0];s(1);for(let e=F;e--;)J[e]=s();const K=s()<.5?2:4,Q=s(.5,1)*(s()>.5?1:-1)/200,X=s()<.7;let Z=e=>{if(e.x=c.width*s(W,1-W),e.y=c.height*s(W,1-W),Y){let t=(1-2*W)*c.width/2*s()**.5,a=s(1e3);e.x=c.width/2+t*o(a),e.y=c.height/2+t*n(a)}e.a=f(1e3),e.seed=L?f(1e9):j[f(G)],e.frame=f(1e5),X&&(O||V?e.a=B+f(1e3)*w/3:H?e.a=B+f(1e3)*w/5:$&&(e.a=B+f(1e3)*w/K)),_(e),v&&q&&(e.hue+=l*Q*200);let t=[3,5,7,11];e.shapeDivisor=t[f(t.length)]},_=e=>{e.hue=J[e.i%J.length]+s(.05,-.05),e.sat=v?s(.3,.7):e.i/E+s(.3,-.3),e.lit=s()**.5,e.litChangeRate=0,e.alphaChangeRate=0,e.alpha=0==e.i?s(.1,.3):s(.02,.3),e.alphaTarget=e.alpha,e.litVariance=s(.1,1),e.litMin=s(.2),e.litMax=S(s(.5,1)),e.litTarget=s(e.litMin,e.litMax),e.drawSizeScale=1,e.drawSizeChangeRate=0,v&&(e.lit=S(e.lit,.3,.7),e.litVariance=0)};const ee=f(10,30);let te=f(1e9),ae=f(1e9);const ie=e=>{if(e>10)return;if(!e){g=te;const e=c.width*s(.4,.6),t=c.height*s(.4,.6),i=a.createRadialGradient(e,t,0,e,t,c.width*s(1,1.5));let l=0,h=0;s()<.1&&(l=s(.5)),s()<.1&&(h=s(.5));let n=C(s(),s(),l+s(.2,.1)*(M?2:1)),o=C(s(),s(),h+s(.3)*(M?2:1));i.addColorStop(0,n),i.addColorStop(1,o),a.fillStyle=i,a.fillRect(0,0,c.width,c.height),x(4,.1),a.drawImage(y,0,0,c.width,c.height),x(8,.3),a.drawImage(y,0,0,c.width,c.height),x(16,.1),a.drawImage(y,0,0,c.width,c.height),x(4,.7),te=g}if(!e||q&&h%ee==0){g=te;for(let e=0;e<E;++e){let t=A[e]={};t.i=e,Z(t)}te=g}g=R,b&&(g+=97*h),z&&(a.globalCompositeOperation="lighter");const t=s(.5,3);for(let e=0;e<E;++e){let i=e;const l=5*(P?s(5,30):U);let c=s(.8,1)*l,d=s(1,4)**2;d*=l/30,d=p(3,d);let y=A[i],x=p(0|c,1),R=D;7==D&&(R=f(D));for(let e=0|p(1,800/E/x);e--;){let i=y.x,l=y.y;y.x+=c*o(y.a),y.y+=c*n(y.a);let f=y.seed|++y.frame;1==R?f=o(f):2==R?f=r(f):3==R?f=m(f,3)*w/3:4==R?f=f*w/3:5==R?f=m(f,y.shapeDivisor)*w/5:6==R&&(f=m(f,y.shapeDivisor)*w/2),y.a+=f;{let a=g;g=ae,b&&(g+=97*h),s()<.001*t*y.litVariance&&(y.hue=J[e%J.length]+s(.05,-.05)),s()<.05*t*y.litVariance&&(y.litTarget=s(y.litMin,y.litMax),y.litChangeRate=.05*s(.5,1)),y.lit=u(y.litChangeRate,y.lit,y.litTarget),s()<.01*t*y.litVariance&&(y.alphaTarget=s(0==e?.1:.02,.3),y.alphaChangeRate=.05*s(.5,1)),y.alpha=u(y.alphaChangeRate,y.alpha,y.alphaTarget),s()<.1*y.litVariance&&(y.drawSizeTarget=s(.2,2),y.drawSizeChangeRate=.1*s(.5,1)),y.drawSizeScale=u(y.drawSizeChangeRate,y.drawSizeScale,y.drawSizeTarget),s()<.001&&_(y),ae=g,g=a}v&&(y.hue+=Q);let p=.03,M=y.hue+s(.01,-.01),T=S(y.sat+s(-p,p)),I=S(y.lit+s(-p,p),.03,.97),D=y.alpha,O=y.drawSizeScale,V=y.h1,H=y.s1,$=y.l1,k=y.a1,F=y.d1;y.wasUpdated||(y.wasUpdated=1,V=M,H=T,$=I,k=D,F=O),y.h1=M,y.s1=T,y.l1=I,y.a1=D,y.d1=O;for(let e=x;e--;){0;let t=e/x,h=u(t,i,y.x),n=u(t,l,y.y);V=m(V),M=m(M),M-V>.5&&M--,V-M>.5&&V--;let o=g;g=le;let c=he,r=m(u(t,V,M))+s(-c,c),f=u(t,H,T)+s(-c,c),w=u(t,$,I)+s(-c,c),p=u(t,k,D)+s(-c,c),R=u(t,F,O)+s(-c,c);z&&(w=S(.05*w*p,.02,.03),p=1),a.fillStyle=C(r,f,w,p),le=g,g=o,a.beginPath(),a.arc(h,n,R*d*s(.9,1.1)/2,0,9),a.fill()}}}};let le=f(1e9),he=s(.005);d()
+</script>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset=utf-8>
+    <title>Chaospill</title>
+    <script id="fxhash-snippet">
+      let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+      var fxhash = new URLSearchParams(window.location.search).get('fxhash')
+      let b58dec = str=>[...str].reduce((p,c)=>p*alphabet.length+alphabet.indexOf(c)|0, 0)
+      let fxhashTrunc = fxhash.slice(2)
+      let regex = new RegExp(".{" + ((fxhashTrunc.length/4)|0) + "}", 'g')
+      let hashes = fxhashTrunc.match(regex).map(h => b58dec(h))
+      let sfc32 = (a, b, c, d) => {
+        return () => {
+          a |= 0; b |= 0; c |= 0; d |= 0
+          var t = (a + b | 0) + d | 0
+          d = d + 1 | 0
+          a = b ^ b >>> 9
+          b = c + (c << 3) | 0
+          c = c << 21 | c >>> 11
+          c = c + t | 0
+          return (t >>> 0) / 4294967296
+        }
+      }
+      var fxrand = sfc32(...hashes)
+      // used to get features during token mint
+      window.addEventListener("message", (event) => {
+        if (event.data === "fxhash_getFeatures") {
+          parent.postMessage({
+            id: "fxhash_getFeatures",
+            data: window.$fxhashFeatures
+          }, "*")
+        }
+      })
+      var isFxpreview = new URLSearchParams(window.location.search).get('preview') === "1"
+      function fxpreview() {
+        window.dispatchEvent(new Event("fxhash-preview"))
+        setTimeout(() => fxpreview(), 500)
+      }
+</script>
+<style>
+html { height: 100%; }
+body
+{
+    height: 100%;
+    margin: 0;
+    background:#222;
+	display: flex; 
+	justify-content: center;
+	align-items: center;
+}
+canvas
+{ 
+    box-shadow: 0px 0px 50px 20px #000;
+    max-height: 100%;
+    max-width: 100%;
+}
+</style>
+</head>
+<body>
+<canvas id=mainCanvas width=2048 height=2048></canvas>
+<script>
+"use strict";let t=2;let e,o,l,a,n,i,s,h,r,f,d,u,g,c,m,b,w,C,v,y,x,S,p,M,k,A,O,R,I,P,B=1,D=0,E=0;function F(){mainCanvas.width=1024*t,mainCanvas.height=1024*t,Y.width=mainCanvas.width,Y.height=mainCanvas.height,j.setSeed(k),Y.width|=0,_.width|=0,Q=V=0,n=[],e=[],function(){o=[];const t=j.sign(),e=j.float();if(l<=1){let t=l&&!D?j.float(.4,.6):w?j.float(.9,1):j.float(.2);return void o.push(new J(e,l?1:0,t))}for(let a=0;a<l;++a){let n=G(a,0,l-1),i=a==l-1?j.float(.95,1):j.float(.5,1),s=a/l+j.floatSign(.05,.1),h=.5;D&&l>=2&&(h=U(W(w?1-n:n,.05,.95)+j.floatSign(.05))),!a&&(D||l>=4||j.bool(w?.5:1))&&(h=w?j.float(.9,1):j.float(.2)),1==a&&l>=4&&(h=w?j.float(.2):j.float(.9,1)),m&&(s=a/l,h=.5,i=1),o.push(new J(K(s*t+e),i,h))}z(o)}(),function(t,e){const a=t.width=mainCanvas.width,n=t.height=mainCanvas.height;let i=o[j.int(o.length)].h+j.floatSign(.1,.2),s=o[j.int(o.length)].h+j.floatSign(.1,.2);l<=1&&(i=o[0].h+j.float(.4,.6),s=o[0].h+j.float(.4,.6));let h=j.float(),r=j.float(),f=w?j.float(.05,.3):j.float(.5,.95),d=(C?!w:w)?j.float(.05):j.float(.5,.95),u=new J(i,h,f).mutate(.05),g=new J(s,r,d).mutate(.05);j.setSeed(A);let c=j.float(.4,.6)*a,m=j.float(.4,.6)*n,b=e.createRadialGradient(c,m,0,c,m,a*j.float(.7,.9));b.addColorStop(0,u.get()),b.addColorStop(1,g.get()),e.fillStyle=b,e.fillRect(0,0,t.width,t.height)}(_,tt),j.setSeed(A);{let t=j.angle();u&&(t=j.int(4)*q/2);let e=j.bool(),f=j.bool();for(let u=0,g=0;g<b;++g){const c=G(u,0,b);let m=l?l-1-g%l:0;(y||x)&&(m=g/b*l|0);let w=b>6,C={x:U(w?j.float():j.float(.2,.8),i,1024-i),y:U(w?j.float():j.float(.2,.8),s,1024-s)};if(h&&(C=j.circle(h*(w?1:.8)),C.x+=512,C.y+=512),d&&(t=j.angle()),S)C.x=512,C.y=512;else if(y||x){let t=i,o=s;h&&(t=o=512-h,f&&(t=o=512-h*2**.5/2)),C.x=U(c,t,1024-t),C.y=f?U(c,o,1024-o):512;let a=e;x&&(u%2&&(a=!a),m=l?u%l:0),a&&(C.y=U(c,o,1024-o),C.x=f?U(1-c,t,1024-t):512)}let v=(g+1)/b*1024,p=o[m].mutate(.01,.02);for(;u<v||u<1024&&g==b-1;){let e=t+(u^a)*(r?2*q/r:1);n[u]={x:C.x,y:C.y,a:e,color:p,seed:a},++u}}}}function T(e){Z.globalCompositeOperation="destination-over";for(let e=0;e<1024;++e){const o=n[e];let l=o.outside||0;const i=o.x,s=o.y,h=l?H(.001,1-f):f,r=o.a+=Math.tan(e|a)*h,d=Math.cos(r),u=Math.sin(r),g=o.x+=2*d,m=o.y+=2*u,b=()=>{let e=U(w,t,0);Z.lineWidth=e,Z.beginPath(),Z.lineTo(i*t,s*t),Z.lineTo(g*t,m*t),Z.lineCap="round",Z.strokeStyle=o.color.get(),Z.stroke(),tt.lineWidth=4*e,tt.beginPath(),tt.lineTo(i*t,s*t),tt.lineTo(g*t,m*t),tt.lineCap="round",tt.stroke()};let w=G(l,0,M);if(!P&&w<1&&b(),o.outside?o.outside++:L(g,m)||(o.outside=1),p&&o.outside||!p&&w>=1||N(g,m)||N(g+d,m+u)){const t=r,o=n[K(e-1,n.length)],l=o.x,a=o.y;n[e]={x:l,y:a,a:t,color:o.color.mutate(...O?[.01,.03]:[v]),outside:o.outside+1}}else c||$(i+d,s+u),$(g,m),P&&w<1&&b()}!function(){mainCanvas.width|=0,X.drawImage(_,0,0,mainCanvas.width,mainCanvas.height),X.drawImage(Y,0,0,mainCanvas.width,mainCanvas.height),D&&(X.save(),X.fillStyle="#fff",X.globalCompositeOperation="saturation",X.fillRect(0,0,mainCanvas.width,mainCanvas.height),X.restore());B&&(X.save(),X.globalAlpha=.08,X.drawImage(ot,0,0,mainCanvas.width,mainCanvas.height),X.restore())}(),g&&a++}function L(t,e){if(h){if((t-512)**2+(e-512)**2>h**2)return 0}else if(t<i||e<s||t>=1024-i||e>=1024-s)return 0;return 1}function N(t,o){return o|=0,(t|=0)<0||o<0||t>=1024||o>=1024?1:e[t+1024*o]}function $(t,o,l=1){o|=0,(t|=0)<0||o<0||t>=1024||o>=1024||(e[t+1024*o]=l)}const q=Math.PI,H=(t,e)=>t>e?t:e,K=(t,e=1)=>(t%e+e)%e,W=(t,e=0,o=1)=>t<e?e:t>o?o:t,G=(t,e=0,o=1)=>o-e?W((t-e)/(o-e)):0,U=(t,e=0,o=1)=>e+W(t)*(o-e),z=t=>{for(let e=t.length;e;){const o=j.int(e--);[t[e],t[o]]=[t[o],t[e]]}return t};const j=new class{constructor(t=1e9*fxrand()){this.setSeed(t)}setSeed(t){this.seed=0|t}float(t=1,e=0){return this.seed^=this.seed<<13,this.seed^=this.seed>>>17,this.seed^=this.seed<<5,e+(t-e)*Math.abs(this.seed%1e9)/1e9}floatSign(t,e){return this.float(t,e)*this.sign()}int(t=1,e=0){return 0|this.float(t,e)}bool(t=.5){return this.float()<t}sign(){return this.bool()?-1:1}angle(t=1){return this.float(2*q*t)}circle(t,e=.5){const o=this.float()**e*t,l=this.float(2*q);return{x:o*Math.cos(l),y:o*Math.sin(l)}}};class J{constructor(t=0,e=0,o=0,l=1){this.h=t,this.s=e,this.l=o,this.a=l}get(){return`hsla(${360*K(this.h)|0},${100*W(this.s)|0}%,${100*W(this.l)|0}%,${W(this.a)})`}copy(){return new J(this.h,this.s,this.l,this.a)}add(t){return new J(this.h+t.h,this.s+t.s,this.l+t.l,this.a+t.a)}setH(t){return new J(t,this.s,this.l,this.a)}setS(t){return new J(this.h,t,this.l,this.a)}setL(t){return new J(this.h,this.s,t,this.a)}setA(t){return new J(this.h,this.s,this.l,t)}lerp(t,e){return new J(((t,e,o,l=1)=>(e=K(e/l),(o=K(o/l))-e>.5&&e++,e-o>.5&&o++,K(U(t,e,o))*l))(e,h1,h2),U(e,this.s,t.s),U(e,this.l,t.l),U(e,this.a,t.a))}mutate(t=.1,e=0,o=j){return new J(K(this.h+o.float(e,t)*o.sign()),W(W(this.s,t,1-t)+o.float(e,t)*o.sign()),W(W(this.l,t,1-t)+o.float(e,t)*o.sign()),this.a)}}let Q=0,V=0;const X=mainCanvas.getContext("2d"),Y=document.createElement("canvas"),Z=Y.getContext("2d"),_=document.createElement("canvas"),tt=_.getContext("2d");let et=0;const ot=document.createElement("canvas");function lt(t,e=1,o=.5,l=.5,a=.5,n=.5,i=.5,s=.5,h=.5,r=.5){const f=2**e,d=new ImageData(_.width=2048/f,_.height=2048/f);for(let t=0;t<d.data.length;t+=4){const e=K(o+j.float(l,-l)),f=W(a+j.float(n,-n)),u=W(i+j.float(s,-s)),g=W(h+j.float(r,-r)),c=u<.5?u*(1+f):u+f-u*f,m=2*u-c,b=(t,e,o)=>(o=(o%1+1)%1)<1/6?t+6*(e-t)*o:o<.5?e:o<2/3?t+(e-t)*(2/3-o)*6:t,w=[255*b(m,c,e+1/3),255*b(m,c,e),255*b(m,c,e-1/3),255*g];d.data.set(w,t)}tt.putImageData(d,0,0),t.getContext("2d").drawImage(_,0,0,t.width,t.height)}function at(){nt.download=fxhash+".png",nt.href=mainCanvas.toDataURL("image/png").replace("image/png","image/octet-stream"),nt.click()}!function(){ot.width=2048,ot.height=2048,B&&function(t,e=1,o=3,l=.5,a=.5,n=.5,i=.5,s=.5,h=.5,r=.5,f=.5){for(let d=o;d>=e;--d)lt(t,d,l,a,n,i,s,h,r,f)}(ot,1,4,j.float(),j.float(.1,.5));let t=1;j.bool(.2)&&(t=2),j.bool(.2)&&(t=3),j.bool(.2)&&(t=4),j.bool(.03)&&(t=0),j.bool(.03)&&(t=5),g=5==t;let e=1;j.bool(.5)&&(e=2),j.bool(.1)&&(e=3),j.bool(.1)&&(e=0);let o=["Clean","Short","Medium","Long"],n=2;0==e||j.bool(.03)?(n=0,0==e&&(o[0]="None")):(j.bool(.1)&&(n=1),j.bool(.1)&&(n=3)),M=1==n?50:3==n?200:100,r=4,j.bool(.2)&&(r=6),j.bool(.1)&&(r=8),j.bool(.05)&&(r=0),j.bool(.04)&&(r=3),j.bool(.04)&&(r=5),j.bool(.02)&&t>2&&(r=1),j.bool(.02)&&t>1&&(r=2),j.bool(.01)&&(r=7),4==t&&(r=0),l=3,j.bool(.1)&&(l=1),j.bool(.4)&&(l=2),j.bool(.05)&&(l=4),j.bool(.03)&&(l=0),j.bool(.01)&&(l=5);let R=1;if(j.bool(.1)&&(R=0),j.bool(.2)&&(R=2),j.bool(.1)&&(R=3),j.bool(.1)&&(R=5),j.bool(.1)&&(R=4),0==t&&(R=j.int(2,6)),b=1,S=0,0==R?(l=W(l,0,1),S=1):1==R?b=H(1,l):2==R?b=12:R>=3&&(b=1024),y=0,4==R&&(y=1,r&&(r=H(3,r))),x=0,5==R&&(x=1,l=W(l,0,2),r&&(r=H(3,r))),m=!x&&!S&&j.bool(.02),m&&(l=6,1==R&&(b=l)),D=!m&&j.bool(.03),c=j.bool(.02),d=r&&b>1&&j.bool(.3),u=!d&&r&&j.bool(.2),O=j.bool(.02),P=j.bool(.02),w=j.bool(.7),C=j.bool(.05),p=0==n,f=[0,1e-4,.002,.02,1,.001][t],i=s=h=0,1==e?i=s=1024*j.float(.05,.1)|0:2==e?h=1024*j.float(.4,.45)|0:3==e&&(i=1024*j.float(.05,.08)|0,s=1024*j.float(.15,.2)|0,j.bool()&&([i,s]=[s,i])),v=m?.01:l?.005:.02,p){let t=81.92;h&&(h=1024*j.float(.45,.48)|0),i&&(i=H(i-t,40.96)),s&&(s=H(s-t,40.96))}let I="";c&&(I+=(I.length?" ":"")+"Porous"),d&&(I+=(I.length?" ":"")+"Mix Angles"),u&&(I+=(I.length?" ":"")+"Orthogonal Angles"),D&&(I+=(I.length?" ":"")+"Grayscale"),O&&(I+=(I.length?" ":"")+"Mutate Colors"),P&&(I+=(I.length?" ":"")+"Detailed"),""==I&&(I="None");let E=C?"Mixed":w?"Dark":"Light",T=m?"Rainbow":l||"None";window.$fxhashFeatures={Shape:["Unbound","Square","Circle","Rectangle"][e],Boundary:o[n],Start:["Center","Regions","Many","Everywhere","Line","Cross"][R],Curve:["Straight","Slight","Medium","Heavy","Full","Wander"][t],Background:E,Effects:I,Spokes:r||"None",Colors:T},a=j.int(1e9),k=j.int(1e9),A=j.int(1e9),F()}(),requestAnimationFrame((function e(o){I&&V>30&&(A=1e9*Math.random(),F());let l=o-et;et=o,V=Q++/60,T(),requestAnimationFrame(e),E+=l/1e3,E<0&&(X.save(),X.scale(t,t),X.font='60px"',X.fillStyle="#000",X.fillText(R,20,90),X.fillStyle="#fff",X.fillText(R,22,92),X.restore())}));const nt=document.createElement("a");onmousedown=t=>{if(0==t.button)return A=1e9*Math.random(),void F()},onkeydown=e=>{49==e.keyCode&&(T(),at(),R="Saved",E=-3),50==e.keyCode&&(t=8==t?2:8,F(),R="HD "+(8==t?"On":"Off"),R+=" ("+mainCanvas.width+"x"+mainCanvas.height+")",E=-3),51==e.keyCode&&(B=!B,R="Noise "+(B?"On":"Off"),E=-3),52==e.keyCode&&(I=!I,R="Auto Restart "+(I?"On":"Off"),E=-3)};{let t="";t+="Chaospill\n",t+="By Frank Force @KilledByAPixel\n",t+="https://generative.3d2k.com\n",t+="https://twitter.com/KilledByAPixel\n",t+="https://www.fxhash.xyz/u/KilledByAPixel\n",console.log(t)}
+</script>
+</body>
+</html>

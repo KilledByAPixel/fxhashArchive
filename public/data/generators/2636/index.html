@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html><head>
+    <meta charset=utf-8>
+    <meta name=viewport content=width=device-width,height=device-height,initial-scale=1,maximum-scale=1>
+    <meta name=apple-mobile-web-app-capable content=yes>
+    <meta name=mobile-web-app-capable content=yes>
+    <title>Infrastructures</title>
+    <script id="fxhash-snippet">
+      let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+      var fxhash = new URLSearchParams(window.location.search).get('fxhash')
+      let b58dec = (str) => str.split('').reduce((p,c,i) => p + alphabet.indexOf(c) * (Math.pow(alphabet.length, str.length-i-1)), 0)
+      let fxhashTrunc = fxhash.slice(2)
+      let regex = new RegExp(".{" + ((fxhashTrunc.length/4)|0) + "}", 'g')
+      let hashes = fxhashTrunc.match(regex).map(h => b58dec(h))
+      let sfc32 = (a, b, c, d) => {
+        return () => {
+          a |= 0; b |= 0; c |= 0; d |= 0
+          var t = (a + b | 0) + d | 0
+          d = d + 1 | 0
+          a = b ^ b >>> 9
+          b = c + (c << 3) | 0
+          c = c << 21 | c >>> 11
+          c = c + t | 0
+          return (t >>> 0) / 4294967296
+        }
+      }
+      var fxrand = sfc32(...hashes)
+      // used to get features during token mint
+      window.addEventListener("message", (event) => {
+        if (event.data === "fxhash_getFeatures") {
+          parent.postMessage({
+            id: "fxhash_getFeatures",
+            data: window.$fxhashFeatures
+          }, "*")
+        }
+      })
+</script>
+</head>
+<body>
+<canvas id=c width=1080 height=1080></canvas>
+<script>
+let t=1e9*fxrand()|0;const e=(e=1,a=0)=>(t^=t<<13,t^=t>>>17,t^=t<<5,a+(e-a)*Math.abs(t%1e9)/1e9),a=document.createElement("canvas");a.width=c.width,a.height=c.height,c.style="position:absolute;transform:translate(-50%,-50%);top:50%;left:50%",c.title="Click to download.",document.body.style="background:#111;margin:0;overflow:hidden";const n=document.createElement("a");c.onclick=t=>{n.download=fxhash+".png",n.href=c.toDataURL("image/png").replace("image/png","image/octet-stream"),n.click()};let l=0,o=0,i=0,r=a.getContext("2d"),d=Math.sin,h=Math.cos;Math.tan;const f=c.getContext("2d");let s=t=>{if(requestAnimationFrame(s),t<i-2)return;i=Math.max(i+1e3/60,t),l=o++/60,60*l|0==o-2&&(l+=1e-6),O(l),f.fillStyle="#fff",f.fillRect(0,0,c.width,c.height),f.drawImage(a,0,0),f.globalAlpha=.1,f.drawImage(k,0,0,c.width,c.height),f.globalAlpha=1;const e=1>innerWidth/innerHeight?innerWidth:1*innerHeight;c.style.width=e+"px",m&&(f.fillStyle="#fff",f.globalCompositeOperation="difference",f.fillRect(0,0,c.width,c.height),f.globalCompositeOperation="source-over")};const g=1e9*fxrand()|0,x=fxrand()<.5,m=fxrand()<.5,w=fxrand()<.9?fxrand()<.4?2:1:0,p=fxrand()<.5?1:fxrand()<.4?2:0,y=fxrand()<.3?1:fxrand()<.4?2:fxrand()<.6?3:0,u=fxrand()<.3?0:fxrand()<.4?1:2,b=fxrand()<.4?0:fxrand()<.4?1:2,M=fxrand()<.7?0:fxrand()<.6?1:2,$=fxrand()<.3,S=w&&fxrand()<.05,C=!S&&fxrand()<.05,R=!S&&!C&&fxrand()<.05,A=0==p?20:1==p?40:80,I=R?.5:1;window.$fxhashFeatures={Color:["Grayscale","Single","Vary"][w],Scale:["Tight","Normal","Loose","Mixed"][y],Seeds:["Few","Some","Many"][p],Weight:["Pencil","Pen","Mixed"][b],Rotate:["No","45","Random"][u],Operator:["Xor","Or","And"][M],Special:S?"Rainbow":C?"Glitch":R?"Tiny":"None",Inverted:m,Additive:$};let v=[];const O=a=>{if(a>20)return;if(!a){t=1e9*fxrand(),r.fillStyle=0==w?"#000":`hsl(${e(1e9)},${e(100)}%,${e(15)}%)`,r.fillRect(0,0,c.width,c.height);const a=u?1==u?Math.PI/4:e(Math.PI/4):0;r.translate(c.width/2,c.height/2),r.rotate(a);for(let t=A;t--;)v[t]={x:e(.8*c.width,.8*-c.width),y:e(.8*c.width,.8*-c.width),a:e(1e3)}}t=g,C&&(t+=1e9*(a/2|0));const n=[];for(let t=3;t--;)n[t]=0|e(1e4);const l=[];for(let t=3;t--;)l[t]=100*t/3|0;const o=0|e(1e9),i=0|e(1e9);$&&(r.globalCompositeOperation="lighter");let f=e(2,5)*(y+1)*10,s=S?a*(30*(e()<.5?1:-1)):0;r.fillStyle="#fff";const x=e(1e9)+s,m=e(100,30);r.globalAlpha=1==b?.4:.1;for(let t=0;t<A;++t){3==y&&(f=e()**1.1*1e3),2==b&&(r.globalAlpha=.05+.5*t/A),r.fillStyle=1==w?`hsl(${x+e(50)},${m}%,${e(50,$||S?60:90)}%)`:2==w?`hsl(${n[t%n.length]+s+e(30)},${e(100)}%,${e(50,S?60:$?70:100)}%)`:`hsl(0,0%,${e(30,100)}%)`;let a=v[t];for(let t=1e4/A|0;t--;){let t=a.x+o,e=a.y+i,n=0==M?t^e:1==M?t|e:t&e;a.a+=n/f,r.fillRect(a.x+=I*h(a.a),a.y+=I*d(a.a),I,I)}}},k=document.createElement("canvas");{const t=fxrand()<.5?1:2;k.width=c.width/t,k.height=c.height/t;let e=new ImageData(k.width,k.height);for(let t=0;t<e.data.length;t+=4){let a=255*Math.random();for(let n=4;n--;)e.data[t+n]=3==n?255:x?255*Math.random():a}k.getContext("2d").putImageData(e,0,0)}s()
+</script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Zpritez</title>
+    <script id="fxhash-snippet">
+      let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+      var fxhash = new URLSearchParams(window.location.search).get('fxhash')
+      let b58dec = (str) => str.split('').reduce((p,c,i) => p + alphabet.indexOf(c) * (Math.pow(alphabet.length, str.length-i-1)), 0)
+      let fxhashTrunc = fxhash.slice(2)
+      let regex = new RegExp(".{" + ((fxhashTrunc.length/4)|0) + "}", 'g')
+      let hashes = fxhashTrunc.match(regex).map(h => b58dec(h))
+      let sfc32 = (a, b, c, d) => {
+        return () => {
+          a |= 0; b |= 0; c |= 0; d |= 0
+          var t = (a + b | 0) + d | 0
+          d = d + 1 | 0
+          a = b ^ b >>> 9
+          b = c + (c << 3) | 0
+          c = c << 21 | c >>> 11
+          c = c + t | 0
+          return (t >>> 0) / 4294967296
+        }
+      }
+      var fxrand = sfc32(...hashes)
+      // used to get features during token mint
+      window.addEventListener("message", (event) => {
+        if (event.data === "fxhash_getFeatures") {
+          parent.postMessage({
+            id: "fxhash_getFeatures",
+            data: window.$fxhashFeatures
+          }, "*")
+        }
+      })
+</script>
+
+<style>
+
+body
+{
+    background: #000;
+    margin: 0;
+    overflow: hidden;
+}
+canvas
+{
+    position: absolute;
+    transform: translate(-50%,0%);
+    height: 100%;
+    left: 50%;
+}
+</style>
+</head>
+<body>
+<canvas id=c width=1080 height=1080></canvas>
+<a id=downloadLink style=display:none></a>
+<script>
+
+onclick=t=>{downloadLink.download="zpritez.png",downloadLink.href=c.toDataURL("image/png").replace("image/png","image/octet-stream"),downloadLink.click()};const t=(t,e=0,i=1)=>t<e?e:t>i?i:t;let e=1e9*fxrand()|0;function i(t=1,i=0){return e^=e<<13,e^=e>>>17,e^=e<<5,i+(t-i)*Math.abs(e%1e9)/1e9}class r{constructor(t=1,e=1,i=1,r=1){this.r=t,this.g=e,this.b=i,this.a=r}copy(){return new r(this.r,this.g,this.b,this.a)}add(t){return new r(this.r+t.r,this.g+t.g,this.b+t.b,this.a+t.a)}subtract(t){return new r(this.r-t.r,this.g-t.g,this.b-t.b,this.a-t.a)}multiply(t){return new r(this.r*t.r,this.g*t.g,this.b*t.b,this.a*t.a)}divide(t){return new r(this.r/t.r,this.g/t.g,this.b/t.b,this.a/t.a)}scale(t,e=t){return new r(this.r*t,this.g*t,this.b*t,this.a*e)}clamp(){return new r(t(this.r),t(this.g),t(this.b),t(this.a))}clamp2(){return new r(t(this.r,.1,.9),t(this.g,.1,.9),t(this.b,.1,.9),t(this.a))}lerp(e,i){return this.add(e.subtract(this).scale(t(i)))}setHSLA(t=0,e=0,i=1,r=1){const a=i<.5?i*(1+e):i+e-i*e,s=2*i-a,n=(t,e,i)=>(i=(i%1+1)%1)<1/6?t+6*(e-t)*i:i<.5?e:i<2/3?t+(e-t)*(2/3-i)*6:t;return this.r=n(s,a,t+1/3),this.g=n(s,a,t),this.b=n(s,a,t-1/3),this.a=r,this}mutate(t=.05,e=0){return new r(this.r+i(t,t/2)*(i()<.5?1:-1),this.g+i(t,t/2)*(i()<.5?1:-1),this.b+i(t,t/2)*(i()<.5?1:-1),this.a+i(e,-e)).clamp()}rgba(){return`rgb(${255*this.r|0},${255*this.g|0},${255*this.b|0},${this.a})`}rgbaInt(){return(255*this.r|0)+(255*this.g<<8)+(255*this.b<<16)+(255*this.a<<24)}}const a=[["Light",new r(.9,.9,.9)],["Dark",new r(.2,.2,.2)],["Red",new r(1,0,0)],["Orange",new r(1,.5,0)],["Yellow",new r(1,1,0)],["Green",new r(0,1,0)],["Blue",new r(0,.5,1)],["Purple",new r(.5,0,1)]],s=fxrand()<.2,n=0|i(a.length),h=a[n][1],l=a[n][0],o=0|i(3),g=fxrand()<.5,d=1e9*fxrand()|0;let u=0,w=0,b=0;let f=c.getContext("2d"),m=Math.sin,p=Math.cos;Math.tan;(t=>{if(t)return;e=d;const a=f.fillStyle=f.createLinearGradient(0,0,0,c.height);a.addColorStop(0,h.mutate(.2).clamp2().rgba()),a.addColorStop(1,h.mutate(.2).clamp2().rgba()),f.fillRect(0,0,c.width,c.height),f.save(),f.translate(c.width/2,c.height/2),f.scale(60,60),function(t,a=0,n=0,h=16){let l=s;const o=i()<.5,c=o?h-3:h/2-1|0,b=o?h/2-1|0:h-3,f=h,S=i(1,.8),L=i(.1,-.1),k=s?.1:.04;function x(a,s,n){let x;e=d,s-=h/4+(1-2*L)*b/4|0,u=0,w=0;for(let d=0;d<c*b;++d){const y=o?d/c|0:d%c,C=o?d%c:d/c|0,M=e;let $=(new r).setHSLA(i(1),l?0:i(1),i(.2,1));if(n&&($=new r(0,0,0)),n)t.fillStyle="#000";else if(!d||i()<k){x=0;const e=t.fillStyle=t.createLinearGradient(0,-h/4,0,h/4);e.addColorStop(0,$.mutate(l?.03:.5).clamp2().rgba()),e.addColorStop(1,$.mutate(l?.03:.5).clamp2().rgba())}e=M;const R=i()>S;if(i(f/2)**2>y*y+(C-(1-2*L)*b/2)**2&&!R)if(n){let e,i=a+y-g/2,r=s+C,n=.3,h=1.3;const l=Math.PI/2;t.beginPath();for(let a=4;a--;t.arc(i+p(e=l/2-a*l)*h,r+m(e)*h,n,e-=l/2,e+l));t.fill(),i=a-y+g/2,t.beginPath();for(let a=4;a--;t.arc(i+p(e=l/2-a*l)*h,r+m(e)*h,n,e-=l/2,e+l));t.fill()}else t.fillRect(a+y-g/2-.5,s+C-.5,1,1),t.fillRect(a-y+g/2-.5,s+C-.5,1,1),++w,x||++u,x=1}}3!=l&&x(a,n-0,1);x(a,n-0)}(f,0,0,12+o),f.restore()})(0);const S=["Tiny","Small","Medium","Large","Huge"];b=(w-10)/3|0,b<0&&(b=0),b>S.length-1&&(b=S.length-1);const L=S[b];window.$fxhashFeatures={Size:L,Center:g?"Wide":"Normal",Grayscale:s,Background:l},console.log(window.$fxhashFeatures)
+
+</script>
+</body>
+</html>

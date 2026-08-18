@@ -1,0 +1,64 @@
+<html><head><title>Tilemoji</title>
+<meta charset=utf-8>
+<meta name=viewport content=initial-scale=1,minimum-scale=1,maximum-scale=1>
+<script id="fxhash-snippet">
+      let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+      var fxhash = new URLSearchParams(window.location.search).get('fxhash')
+      let b58dec = str=>[...str].reduce((p,c)=>p*alphabet.length+alphabet.indexOf(c)|0, 0)
+      let fxhashTrunc = fxhash.slice(2)
+      let regex = new RegExp(".{" + ((fxhashTrunc.length/4)|0) + "}", 'g')
+      let hashes = fxhashTrunc.match(regex).map(h => b58dec(h))
+      let sfc32 = (a, b, c, d) => {
+        return () => {
+          a |= 0; b |= 0; c |= 0; d |= 0
+          var t = (a + b | 0) + d | 0
+          d = d + 1 | 0
+          a = b ^ b >>> 9
+          b = c + (c << 3) | 0
+          c = c << 21 | c >>> 11
+          c = c + t | 0
+          return (t >>> 0) / 4294967296
+        }
+      }
+      var fxrand = sfc32(...hashes)
+      // used to get features during token mint
+      window.addEventListener("message", (event) => {
+        if (event.data === "fxhash_getFeatures") {
+          parent.postMessage({
+            id: "fxhash_getFeatures",
+            data: window.$fxhashFeatures
+          }, "*")
+        }
+      })
+      var isFxpreview = new URLSearchParams(window.location.search).get('preview') === "1"
+      function fxpreview() {
+        window.dispatchEvent(new Event("fxhash-preview"))
+        setTimeout(() => fxpreview(), 500)
+      }
+</script><style>
+@font-face
+{
+    font-family: 'emoji';
+    src: url('twemoji.ttf');
+}
+body
+{
+    background: #000;
+    color: #fff;
+    overflow: hidden;
+    margin: 0;
+    font-family: 'emoji';
+}
+.pictureContainer2 {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+.pictureContainer {
+  flex: 1;
+  width: 100%;
+  text-align: center;
+}
+</style></head><body><script>
+"use strict";let o,t;const e=[],l=(l,n,i=1)=>l<0||l>=o||n<0||n>=t?0:e[l+n*o]=i,n=(l,n)=>l<0||l>=o||n<0||n>=t?0:e[l+n*o]||0;let i,r,s,a,c,f,b,d,h,u,x,y,g;const S=document.createElement("div");S.className="pictureContainer";const $=document.createElement("div");function m(){N.resetSeed(),o=N.bool(.3)?10:11,t=N.bool(.2)?11:12,b="Normal",y=N.bool(.35);let e=0,$=0,m=0,T=0;if(N.bool(.1)&&(m=1,b="Small",t=N.int(7,10),o=N.int(7,t)),N.bool(.07)){e=1,b="Large";let l=N.float(2,4);o=11*l*N.float(.9,1)|0,t=12*l|0}if(N.bool(.04)){$=e=1,b="Huge";let l=N.float(7,10);o=11*l*N.float(.9,1)|0,t=12*l|0,y=0}if(N.bool(.02)){$=e=T=1,b="Giant";let l=N.float(17,20);o=11*l*N.float(.9,1)|0,t=12*l|0,y=0}N.bool(.02)&&(m=1,b="Tiny",t=N.int(5,7),o=N.int(5,t)),N.bool(.01)&&(m=1,b="Micro",t=o=N.bool()?3:4),i=N.int(1e9);const C=a=N.bool(.35);if(f=N.bool(.02)?5:N.bool(.2)?2:N.int(3,5),r=T?0:e?N.int(4):N.bool(.65)?N.bool(.55)?0:1:N.bool(.6)?2:3,$&&N.bool()&&(r=0),T||m||!N.bool($?.1:e?.2:.1)||(r=4,f=N.int(3,6),a=!a),c=N.int(2,6),g=!$&&N.bool(.3),x=0,$?(T||N.bool(.9))&&(x=N.int(1,4)):e?(N.bool(.5)&&(x=1),N.bool(.4)&&(x=2),N.bool(.2)&&(x=3)):N.bool(.2)&&(x=1),h=N.bool(.1),!h&&N.bool(.1)&&(u=N.int(1,3)),s=e?N.int(1,o>50?5:4):N.bool(.01)?3:N.bool(.2)?0:N.bool()?1:2,d=0,N.bool(.9)&&(d=1,N.bool(.1)&&(d=2),N.bool(.09)&&(d=5),N.bool(.07)&&(d=4),N.bool(.05)&&(d=3),N.bool(.02)&&(d=6),N.bool(.02)&&(d=7),N.bool(m||e?.3:.04)&&(d=8)),s>=2){let e=N.bool(s>2?.5:.2)?1:0;for(let n=t;n--;)for(let i=o;i--;)((n==e||n==t-1-e)&&i>=e&&i<=o-1-e||(i==e||i==o-1-e)&&n>=e&&n<=t-1-e)&&l(i,n,1)}0==r?function o(t,e,n,i,r=1,s=0){if(s==c||n<3&&i<3){if(x)return 1==x&&F(t,e,n,i),2==x&&w(t,e,n,i),void(3==x&&v(t,e,n,i));for(let o=0;o<n;++o)for(let n=0;n<i;++n){l(t+o,e+n,r)}return}s++,N.bool(.5)&&(r=N.int(1,f));let a=N.bool(.5),b=!a&&N.bool(.5);N.bool()&&([a,b]=[b,a]);let d=n<3||a?n:N.int(1,n-1),h=i<3||b?i:N.int(1,i-1);o(t,e,d,h,r,s),n-d-1>0&&o(t+d+1,e,n-d-1,h,r,s);i-h-1>0&&o(t,e+h+1,d,i-h-1,r,s);n-d-1>0&&i-h-1>0&&o(t+d+1,e+h+1,n-d-1,i-h-1,r,s)}(s,s,o-2*s,t-2*s):1==r?F(s,s,o-2*s,t-2*s):2==r?w(s,s,o-2*s,t-2*s):3==r?v(s,s,o-2*s,t-2*s):4==r&&function(o,t,e,n){let r=new M(i),s=e/2|0,a=n/2-.5,c=o+(e/2|0),b=(o,t,e,n=0)=>{for(let i=o-n;i<=o+n;++i)for(let o=t-n;o<=t+n;++o)l(i,o,e)};const d=e%2?0:1;for(let o=2;o--;)for(let l=2;l--;){let i=0;r.resetSeed();for(let h=0;h<n;++h)for(let n=0;n<e/2;++n){const e=n**2+(h-a)**2;r.float(s**2)>e&&r.bool(.5)&&(o?b(c+(l?n:-n-d),t+h,1,1):b(c+(l?n:-n-d),t+h,i),f>2&&r.bool()&&(i=r.int(2,f)))}}}(s,s,o-2*s,t-2*s);const k=[["⬜","⚪","🤍","🐇","🥚","💀","😶‍🌫️","🌼"],["⬛","⚫","🖤","🕷️","🍳","👽","😎","⛰️"],["🟫","🟤","🤎","🐒","🍩","💩","🤠","🌴"],["🟥","🔴","❤️","🐦","🍄","💥","😡","🌹"],["🟧","🟠","🧡","🐖","🍔","🔥","🤩","🏵️"],["🟨","🟡","💛","🐈","🍌","✨","😄","🌻"],["🟩","🟢","💚","🐢","🥦","🌵","🤢","🌳"],["🟦","🔵","💙","🐋","🧊","🌀","😭","🌊"],["🟪","🟣","💜","🐙","🍆","🦄","🥳","🌺"]];p(k);const z=8==d;let A="";const P=[];let B=0,D=[];for(let e=t;e--;A+="\n")for(let t=o;t--;){let o,l=n(t,e),i=z?N.int(1,8):d,r=k[l];o=a?l?0:i:l?i:0,o&&(B=1,D.indexOf(i)<0&&D.push(i)),P.indexOf(r)<0&&P.push(r),A+=r[o]}const E=P.length;B||(d=0),z&&1==D.length&&(d=D[0]);const H=h?N.int(50,95):N.int(30);let q=`hsl(${N.int(1e4)},${N.int(99)}%,${H}%)`;const I=N.float(.1,e?.2:.3),L=N.floatSign(.03,.05),O=N.floatSign(.03,.05),j=`hsl(${N.int(1e4)},${N.int(99)}%,${H<20?N.int(40,99):N.int(10)}%)`,K=N.bool()?0:N.float(.1),Y=()=>{const o=Math.min(innerWidth,innerHeight)*(1-I)/t;S.style.fontSize=o+"px",S.style.lineHeight=o+.05*o+"px",S.style.letterSpacing=.05*o+"px",y&&(S.style.textShadow=`${o*L}px ${o*O}px ${o*K}px ${j}`)};if(onresize=()=>Y(),Y(),S.innerText=A,u){let o=`hsl(${N.int(1e4)},${N.int(99)}%,${N.int(30)}%)`,t=`hsl(${N.int(1e4)},${N.int(99)}%,${N.int(50,95)}%)`;N.bool()&&([o,t]=[t,o]);const e=N.bool(.3)?.25:0;q=1==u?e||N.bool(.3)?`linear-gradient(${e}turn, ${o}, ${t}, ${o})`:`linear-gradient(${e}turn, ${o}, ${t})`:`radial-gradient(circle at center, ${o}, ${t})`}document.body.style.background=q,E<2&&(s=0),$||console.log(A),console.log("Tilemoji by Frank Force ✌️😄"),console.log("www.frankforce.com"),console.log("www.twitter.com/KilledByAPixel"),console.log("www.fxhash.xyz/u/KilledByAPixel");const G=E<2?"None":t<=6&&o<=6?"Minimal":["Divide","Maze","Stripe","Fade","Sprite"][r]+(x>0&&0==r?" + "+["Divide","Maze","Stripe","Fade","Sprite"][x]:"");window.$fxhashFeatures={Style:G,Emojis:["Square","Circle","Heart","Animal","Food","Pop","Face","Nature","Mix"][d],Colors:["Zero","One","Two","Three","Four","Five","Six","Seven","Eight","Nine"][E],Size:b,Border:s>3?"Thick":["None","Single","Double","Triple"][s],Background:1==u?"Linear":2==u?"Radial":h?"Light":"Dark",Invert:C?"Yes":"No",Shadow:y?"Yes":"No"},requestAnimationFrame(()=>setTimeout(()=>fxpreview(),1e4))}$.className="pictureContainer2",document.body.appendChild($),$.appendChild(S);const p=o=>{for(let t=o.length;t;){const e=N.int(t--);[o[t],o[e]]=[o[e],o[t]]}return o};function w(o,t,e,n){const i=N.int(1e3),r=N.int(1e3),s=N.bool(.2)?3:N.int(1,3),a=N.int(4),c=2==f||N.bool(.3),b=c?f:f-1;for(let f=0;f<n;++f)for(let n=0;n<e;++n){const d=(1==a?e-n:n)/s+i,h=(f+r)/s;let u=(d+h|0)%b;2==a&&(u=(0|d)%b),3==a&&(u=(0|h)%b),c||++u,l(o+n,t+f,u)}}function v(o,t,e,n){let i=e>20?.5:0;const r=N.bool(),s=N.bool(),a=N.bool(),c=N.bool(.3),b=f>2&&!c?N.int(2,f):0;if(a)for(let a=0;a<e;++a)for(let c=0;c<n;++c){i+=s?(r?e-a-1:a)/(e-1):(r?n-c-1:c)/(n-1);let f=b;i>.5&&(i-=1,f=1),l(o+a,t+c,f)}else for(let a=0;a<n;++a)for(let b=0;b<e;++b){i+=s?(r?e-b-1:b)/(e-1):(r?n-a-1:a)/(n-1);let d=f>2&&!c?2:0;i>.5&&(i-=1,d=1),l(o+b,t+a,d)}}function F(o,t,e,i){const r=[{x:1,y:0},{x:-1,y:0},{x:0,y:-1},{x:0,y:1}];p(r);let s=N.int(1,f),a=N.bool(.7),c=(b,d,h=0)=>{if(h>3e3||b<o||b>=o+e||d<t||d>=t+i)return;l(b,d,a?1+(b+d)%(f-1):s);const u=[...r];g||p(u);for(let o of u)n(b+o.x,d+o.y)||n(b+o.x+o.y,d+o.y+o.x)||n(b+o.x-o.y,d+o.y-o.x)||n(b+2*o.x,d+2*o.y)||n(b+2*o.x+o.y,d+2*o.y+o.x)||n(b+2*o.x-o.y,d+2*o.y-o.x)||c(b+o.x,d+o.y,h+1)};const b=e>2?o+N.int(1,e-1):o+N.int(e),d=i>2?t+N.int(1,i-1):t+N.int(i);c(b,d)}class M{constructor(o){this.setSeed(o)}setSeed(o){this.startSeed=this.seed=0|o}resetSeed(){this.seed=this.startSeed}saveSeed(){this.startSeed=this.seed}float(o=1,t=0){return this.seed^=this.seed<<13,this.seed^=this.seed>>>17,this.seed^=this.seed<<5,t+(o-t)*Math.abs(this.seed%1e7)/1e7}floatSign(o,t){return this.float(o,t)*this.sign()}int(o=1,t=0){return 0|this.float(o,t)}bool(o=.5){return this.float()<o}sign(){return this.bool()?-1:1}angle(o=1){return this.float(2*PI*o)}circle(o,t=.5){const e=this.float()**t*o,l=this.float(2*PI);return vec2(e*Math.cos(l),e*Math.sin(l))}color(){return new Color(this.float(),this.float(),this.float())}}const N=new M(1e9*fxrand());requestAnimationFrame(()=>m())
+</script></body></html>

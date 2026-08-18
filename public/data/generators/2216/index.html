@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html><head>
+    <meta charset=utf-8>
+    <meta name=viewport content=width=device-width,height=device-height,initial-scale=1,maximum-scale=1>
+    <meta name=apple-mobile-web-app-capable content=yes>
+    <meta name=mobile-web-app-capable content=yes>
+    <title>Iris Variations</title>
+    <script id="fxhash-snippet">
+      let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+      var fxhash = new URLSearchParams(window.location.search).get('fxhash')
+      let b58dec = (str) => str.split('').reduce((p,c,i) => p + alphabet.indexOf(c) * (Math.pow(alphabet.length, str.length-i-1)), 0)
+      let fxhashTrunc = fxhash.slice(2)
+      let regex = new RegExp(".{" + ((fxhashTrunc.length/4)|0) + "}", 'g')
+      let hashes = fxhashTrunc.match(regex).map(h => b58dec(h))
+      let sfc32 = (a, b, c, d) => {
+        return () => {
+          a |= 0; b |= 0; c |= 0; d |= 0
+          var t = (a + b | 0) + d | 0
+          d = d + 1 | 0
+          a = b ^ b >>> 9
+          b = c + (c << 3) | 0
+          c = c << 21 | c >>> 11
+          c = c + t | 0
+          return (t >>> 0) / 4294967296
+        }
+      }
+      var fxrand = sfc32(...hashes)
+      // used to get features during token mint
+      window.addEventListener("message", (event) => {
+        if (event.data === "fxhash_getFeatures") {
+          parent.postMessage({
+            id: "fxhash_getFeatures",
+            data: window.$fxhashFeatures
+          }, "*")
+        }
+      })
+</script>
+</head>
+<body>
+<canvas id=c width=2048 height=2048></canvas>
+<script>
+
+"use strict";c.style="background:#fff;position:absolute;transform:translate(-50%,0%);left:50%;height:100%",document.body.style="background:#000;margin:0;overflow:hidden",document.body.appendChild(c);const t=document.createElement("a");c.onclick=e=>{t.download="iris.png",t.href=c.toDataURL("image/png").replace("image/png","image/octet-stream"),t.click()};Math.PI;const e=(t,e)=>t>e?t:e,i=(t,e=1)=>(t%e+e)%e,a=(t,e=0,i=1)=>t<e?e:t>i?i:t,h=(t,e=0,i=1)=>e+a(t)*(i-e),l=(t=1,e=0)=>e+(t-e)*fxrand();let n=1e9*fxrand()|0;const o=(t=1,e=0)=>(n^=n<<13,n^=n>>>17,n^=n<<5,e+(t-e)*Math.abs(n%1e9)/1e9),s=t=>o()>.5?1:-1;class r{constructor(t=0,e=1,i=1,a=1){this.h=t,this.s=e,this.l=i,this.a=a}mutate(t=.05,e=0){return new r(this.h+o(t,e)*s(),this.s+o(t,e)*s(),this.l+o(t,e)*s(),this.a)}setH(t){return new r(t,this.s,this.l,this.a)}setS(t){return new r(this.h,t,this.l,this.a)}setL(t){return new r(this.h,this.s,t,this.a)}setA(t){return new r(this.h,this.s,this.l,t)}getCSS(){return`hsla(${360*i(this.h)|0},${100*a(this.s)|0}%,${100*a(this.l)|0}%,${a(this.a)})`}lerp(t,e){return new r(h(e,this.h+t.h),h(e,this.s+t.s),h(e,this.l+t.l),h(e,this.a+t.a))}}const d=0|l(1e9),g=l()<.05?1:l(5)+2|0,S=g>2&&l()<.1?3:l()<.8?1:l()<.5?0:2,w=l()<.3?0:l()<.4?2:1,f=80+130*w,m=0|e(2,16/g+(0==S?-2:1==S?0:2));const u=l()<.7,C=u&&l()<.5,p=g>1&&l()<.4,b=g>2&&l()<.15,k=!b&&l()<.5,y=l()<.6,M=new r(l(),l(),b?l(.2):l(.7,1));window.$fxhashFeatures={Background:u?C?"Radial Gradient":"Linear Gradient":"Solid",Columns:g,Margin:["Small","Medium","Large"][w],"Circle Color":b?"Rainbow":p?"Random":"Uniform","Line Width":["Thin","Normal","Thick","Varied"][S],"Draw Circles":y?"Yes":"No",Inverted:k?"Yes":"No"};const R=document.createElement("canvas");{R.width=c.width/2,R.height=c.height/2;let t=new ImageData(R.width,R.height);for(let e=0;e<t.data.length;e+=4)for(let i=4;i--;)t.data[e+i]=3==i?255:255*Math.random();R.getContext("2d").putImageData(t,0,0)}let I=0,x=0,L=0,v=c.getContext("2d"),P=Math.sin,$=Math.cos,D=(Math.tan,t=>{requestAnimationFrame(D),t<L-2||(L=Math.max(L+1e3/60,t),I=x++/60,60*I|0==x-2&&(I+=1e-6),(t=>{if(c.width|=0,n=d,v.fillStyle=M.getCSS(),u){let t;if(C){t=v.createRadialGradient(c.width/2,c.height/2,0,c.width/2,c.height/2,c.height);let e=M,i=e.mutate(.3,.2);i.l=b?o(.2,.05):o(.5,.9),t.addColorStop(0,e.getCSS()),t.addColorStop(1,i.getCSS())}else{t=v.createLinearGradient(0,0,0,c.height);let e=M,i=e.mutate(.3,.2);if(i.l=b?o(.2,.05):o(.5,.85),o()<.5){let t=e;e=i,i=t}t.addColorStop(0,e.getCSS()),t.addColorStop(1,i.getCSS())}v.fillStyle=t,v.fillRect(0,0,c.width,c.height)}else v.fillStyle=M.getCSS(),v.fillRect(0,0,c.width,c.height);v.globalCompositeOperation="source-over";let a,h=(c.width-2*f)/g,l=c.width/2,s=c.width/2;l=l-h*g/2+h/2,s=s-h*g/2+h/2,a=b?new r(o(),o(.95,.8),.55):new r(o(),o(),o(.3)),v.strokeStyle=a.getCSS();for(let n=g*g;n--;){const c=S<3?m:e(2,m+o(-3,3));let d=h/2-c/2;v.lineWidth=c;let w=l+n%g*h,f=s+(n/g|0)*h,u=0|o(35,120);b?v.strokeStyle=new r(a.h+n/(g*g),a.s,a.l).getCSS():p&&(v.strokeStyle=new r(o(),o(),o(.3)).getCSS());let C=o(1e3),k=o()<.5?1:-1,M=1+o(u)|0;v.beginPath();for(let e=u;e--;){let a=e/u,h=i(a*M+(t+C)*k/8,1);h*=2*Math.PI,a*=2*Math.PI,v.moveTo(w+d*$(a),f+d*P(a)),v.lineTo(w+d*$(h),f+d*P(h))}v.stroke(),y&&(v.beginPath(),v.arc(w,f,d,0,9),v.stroke())}k&&(v.fillStyle="#fff",v.globalCompositeOperation="difference",v.fillRect(0,0,c.width,c.height)),v.globalAlpha=.1,v.drawImage(R,0,0,c.width,c.height)})(I))});D()
+
+</script>
+</body>
+</html>
