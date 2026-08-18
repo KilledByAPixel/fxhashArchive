@@ -1,0 +1,59 @@
+<!doctype html><html><head><title>adrift</title><meta name="keywords" content="generative art, generative token, clean nft, tezos"><meta name="author" content="mrkswcz + tender_art"><meta charset="utf-8"><meta name="description" content="
+    All drawing and geometric methods written by mrkswcz except for the following:
+
+    - For pseudorandom terrain generation, I adapted Hydraulic-Erosion by Sebastian
+    Lague. The decision was inspired by Reconnaissance by TENDER x Nat Sarkissian.
+    (MIT License)
+
+    - For finding paths that simulate connections in terrain and potential locations
+    of cities, I adapted a C# script from the article Pathfinding Algorithms in C#
+    by Kristian Ekman published in Code Project licensed under The Code Project Open
+    License (CPOL). The code was translated to javascript and simplified for
+    performance.
+
+    - Many pseudorandom effects are achieved with perlin-simplex by David Guttman
+    and seedrandom by David Bau (both MIT Licenses)
+
+    The event of heat death is our small tribute to fxhash project by lunarean. The
+    code that generates the disintegration effect is an interpretation of a fragment
+    of the original code. My contributions are its adaptation for 3d transformations
+    and its recursive character that modifies certain parameters in time.
+
+    For more information, please see the ./bundle.js.LICENSE.txt file included in
+    the package.
+
+    "><script id="fxhash-snippet">
+      let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+      var fxhash = new URLSearchParams(window.location.search).get('fxhash')
+      let b58dec = str=>[...str].reduce((p,c)=>p*alphabet.length+alphabet.indexOf(c)|0, 0)
+      let fxhashTrunc = fxhash.slice(2)
+      let regex = new RegExp(".{" + ((fxhashTrunc.length/4)|0) + "}", 'g')
+      let hashes = fxhashTrunc.match(regex).map(h => b58dec(h))
+      let sfc32 = (a, b, c, d) => {
+        return () => {
+          a |= 0; b |= 0; c |= 0; d |= 0
+          var t = (a + b | 0) + d | 0
+          d = d + 1 | 0
+          a = b ^ b >>> 9
+          b = c + (c << 3) | 0
+          c = c << 21 | c >>> 11
+          c = c + t | 0
+          return (t >>> 0) / 4294967296
+        }
+      }
+      var fxrand = sfc32(...hashes)
+      // used to get features during token mint
+      window.addEventListener("message", (event) => {
+        if (event.data === "fxhash_getFeatures") {
+          parent.postMessage({
+            id: "fxhash_getFeatures",
+            data: window.$fxhashFeatures
+          }, "*")
+        }
+      })
+      var isFxpreview = new URLSearchParams(window.location.search).get('preview') === "1"
+      function fxpreview() {
+        window.dispatchEvent(new Event("fxhash-preview"))
+        setTimeout(() => fxpreview(), 500)
+      }
+</script><link rel="stylesheet" href="./style.css"></head><body><span id="rendering">RENDERING</span><div id="wait"><div id="waitbackground"></div><img src="./wait/wait-04.png" class="spinner" id="w04" style="display: block;"> <img src="./wait/wait-05.png" class="spinner" id="w05" style="display: block;"> <img src="./wait/wait-06.png" class="spinner" id="w06" style="display: block;"> <img src="./wait/wait-07.png" class="spinner" id="w07" style="display: block;"> <img src="./wait/wait-08.png" class="spinner" id="w08" style="display: block;"> <img src="./wait/wait-01.png" class="spinner" id="w01" style="display: block;"> <img src="./wait/wait-02.png" class="spinner" id="w02" style="display: block;"> <img src="./wait/wait-03.png" class="spinner" id="w03" style="display: block;"> <span id="ttl">ADRIFT</span><div id="overlay"></div></div><div id="menu" style="display: none;"><div id="background"></div><div id="buttons"><button id="closemenu" class="break" style="display: block;">[..]</button> <button id="LQ" style="display: block;" disabled="disabled">1920 PX</button> <button id="MQ" style="display: block;">3840 PX</button> <button id="HQ" class="break" style="display: block;">5760 PX</button> <button id="PNG" class="break" style="display: block;">PNG</button> <a id="LIC" href="./bundle.js.LICENSE.txt" style="display: block;" target="_blank">LICENSE.TXT</a></div></div><script defer="defer" src="./bundle.js"></script></body></html>

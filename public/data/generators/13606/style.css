@@ -1,0 +1,25 @@
+body {
+  background-color: #222222;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+  /* leave it to hide the scrollbars */
+  overflow: hidden;
+}
+
+main {
+  padding: 20px;
+}
+
+#defaultCanvas0 {
+  box-shadow: 5px 10px 20px 0;
+  max-width: 95% !important;
+  height: auto !important;
+  width: auto !important;
+  max-height: 95% !important;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  -ms-transform: translateY(-50%) translateX(-50%);
+  transform: translateY(-50%) translateX(-50%);
+}

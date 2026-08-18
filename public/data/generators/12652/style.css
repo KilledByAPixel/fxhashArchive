@@ -1,0 +1,23 @@
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+canvas {
+  padding: 0;
+  margin: auto;
+  display: block;
+}
+
+.rate {
+  width: 75px;
+  border: none;
+}
+
+#rate1 {
+  background-color: #ffecec;
+}
+
+#rate5 {
+  background-color: #ecffea;
+}

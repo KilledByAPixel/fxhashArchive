@@ -1,0 +1,237 @@
+body {
+  background-color: #000000;
+  padding: 0px;
+  margin: 0px;
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+#mainCanvas{
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 100%;
+  max-height: 100%;
+  margin: 0px;
+  padding: 0px;
+  width: auto;
+  height: auto;
+}
+
+.buffer{
+  display: none;
+}
+
+#wait{
+  z-index: 997;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: black;
+}
+
+#wait img{
+  z-index: 998;
+  position: absolute;
+  max-width: 30%;
+  max-height: 30%;
+  width: 128px;
+  height: auto;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+
+  animation-name: load2;
+  animation-duration: 5s;
+  animation-iteration-count: infinite;
+  animation-timing-function: linear;
+  animation-fill-mode: backwards;
+
+}
+
+#w01{
+  animation-delay:0s;
+}
+
+#w02{
+  animation-delay: 0.375s;
+}
+
+#w03{
+  animation-delay: 0.75s;
+}
+
+#w04{
+  animation-delay: 1.125s;
+}
+
+#w05{
+  animation-delay: 1.5s;
+}
+
+#w06{
+  animation-delay: 1.875s;
+}
+
+#w07{
+  animation-delay: 2.25s;
+}
+
+#w08{
+  animation-delay: 2.625s;
+}
+
+#overlay{
+  z-index: 1001;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #FFFFFF;
+  mix-blend-mode: multiply;
+  border: none;
+}
+
+#ttl{
+  z-index: 1000;
+  font-family: "Arial Narrow", sans-serif;
+  color: #FFFFFF;
+  font-size: min(10px, 4vw);
+  letter-spacing: 0.3em;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -27px);
+  animation: ttanim 3s infinite linear;
+}
+
+#rendering{
+  display: none;
+  z-index: 1000;
+  font-family: "Arial Narrow", sans-serif;
+  padding: 5px;
+  color: #000000;
+  background-color: #FFFFFF;
+  font-size: min(10px, 4vw);
+  letter-spacing: 0.3em;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+#menu{
+  z-index: 991;
+  
+}
+
+#background, #waitbackground{
+  z-index: 992;
+  position: absolute;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #000000;
+}
+
+#buttons{
+  z-index: 993;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+button{
+  font-family: "Arial Narrow", sans-serif;
+  color: #000000;
+  font-size: 3vh;
+  letter-spacing: 0.3em;
+  margin-top: 0.75vh;
+  padding: 0px;
+  background: none;
+  border-color: #000000;
+  border: none;
+  cursor: pointer;
+}
+
+#LIC{
+  font-family: "Arial Narrow", sans-serif;
+  color: #FFFFFF;
+  opacity: 0.2;
+  font-size: 1.5vh;
+  letter-spacing: 0.3em;
+  margin-top: 0.75vh;
+  padding: 0px;
+  background: none;
+  border-color: #000000;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+button:disabled{
+  cursor: default;
+  font-style: italic;
+  border-bottom: solid 1px;
+}
+
+.break{
+  margin-bottom: 5vh;
+}
+
+@keyframes load2 {
+  0% {
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.75;
+  }
+  60% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes ttanim {
+  0% {
+    opacity: 0.9;
+  }
+  10% {
+    opacity: 0.75;
+  }
+  20% {
+    opacity: 0.95;
+  }
+  30% {
+    opacity: 0.78;
+  }
+  40% {
+    opacity: 0.67;
+  }
+  50% {
+    opacity: 0.85;
+  }
+  60% {
+    opacity: 0.95;
+  }
+  70% {
+    opacity: 0.75;
+  }
+  80% {
+    opacity: 0.99;
+  }
+  90% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0.9;
+  }
+}

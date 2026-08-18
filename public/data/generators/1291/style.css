@@ -1,0 +1,12 @@
+* { margin: 0; padding: 0; }
+
+body { background: #222; } 
+
+img {
+  /*position: fixed; top: 0; left: 0;*/
+  display: block;
+  /*width: 98vw;*/
+  height: 98vw;
+  padding-top: 1vh;
+  margin: 0 auto;
+}
