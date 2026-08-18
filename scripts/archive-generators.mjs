@@ -159,7 +159,10 @@ function buildPriorityList(projects, volumes, rules, explicit) {
 
 async function fetchTar(cid, maxBytes) {
   let lastErr
+  let tooBig = false
+  let received = 0
   for (let attempt = 0; attempt < GATEWAYS.length * 2; attempt++) {
+    received = 0
     const gateway = GATEWAYS[attempt % GATEWAYS.length]
     const ac = new AbortController()
     // Generous, because the tail of the size distribution is what times out:
@@ -174,17 +177,24 @@ async function fetchTar(cid, maxBytes) {
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const chunks = []
-      let n = 0
       for await (const c of res.body) {
-        n += c.length
-        if (n > maxBytes) {
-          ac.abort()
-          return { tooBig: true, bytes: n }
+        received += c.length
+        if (received > maxBytes) {
+          // Breaking cancels the stream on its own. Calling ac.abort() here
+          // instead makes the loop's own cleanup reject with AbortError, which
+          // then reads as a network failure — that is what made oversized
+          // projects report as FAIL and burn a retry on every gateway, rather
+          // than being skipped once and cheaply.
+          tooBig = true
+          break
         }
         chunks.push(c)
       }
-      return { buffer: Buffer.concat(chunks), bytes: n }
+      if (tooBig) return { tooBig: true, bytes: received }
+      return { buffer: Buffer.concat(chunks), bytes: received }
     } catch (err) {
+      // A cancelled stream can still surface as a rejection after the break.
+      if (tooBig) return { tooBig: true, bytes: received }
       lastErr = err
       if (attempt < GATEWAYS.length * 2 - 1) await sleep(1000 * (attempt + 1))
     } finally {
