@@ -136,6 +136,44 @@ export async function loadIterationContract(projectId: number): Promise<string |
   return contracts[index] ?? null
 }
 
+/**
+ * Captured seeds, chunked by tokenId in blocks of this size per gentk contract.
+ * Must match CHUNK in scripts/snapshot-seeds.mjs.
+ */
+const SEED_CHUNK = 10000
+
+interface SeedChunk {
+  contract: number
+  address: string
+  from: number
+  size: number
+  seeds: Array<string | null>
+}
+
+const loadSeedChunk = (contractIndex: number, chunk: number) =>
+  getJson<SeedChunk>(`seeds/${contractIndex}/${String(chunk).padStart(4, '0')}.json`)
+
+/**
+ * A minted iteration's seed, read entirely from this repository.
+ *
+ * This is what lets an archived project run with no network at all: the seed is
+ * the only thing besides the generator that a piece cannot be recreated without,
+ * and it is not on chain — see scripts/snapshot-seeds.mjs.
+ *
+ * Returns null rather than throwing for the two honest "no seed" cases: a project
+ * whose contract we do not know, and a token that was minted but never signed, so
+ * no seed was ever assigned to it.
+ */
+export async function loadProjectSeed(projectId: number, tokenId: number): Promise<string | null> {
+  const { byProject } = await loadIterationContracts()
+  const contractIndex = byProject[String(projectId)]
+  if (contractIndex === undefined) return null
+  const chunk = await loadSeedChunk(contractIndex, Math.floor(tokenId / SEED_CHUNK))
+  // Indexed off the chunk's own `from`: one contract's ids start mid-chunk, so
+  // `tokenId % SEED_CHUNK` would silently read the wrong slot for every token in it.
+  return chunk.seeds[tokenId - chunk.from] ?? null
+}
+
 /** Market stats sharded to mirror `tokens/index-NNN.json`. */
 const loadMarketShard = (i: number) =>
   getJson<Record<string, MarketStats | null>>(`market/stats-${String(i).padStart(3, '0')}.json`)

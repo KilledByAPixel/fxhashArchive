@@ -67,3 +67,9 @@ img { max-width: 100%; }
 }
 .archived-filter { display: inline-flex; align-items: center; gap: 0.35rem; }
 .browse-note { opacity: 0.8; font-size: 0.9rem; margin: 0.5rem 0 0; }
+.archived-player { margin: 1.5rem 0; }
+.archived-frame {
+  width: 100%; aspect-ratio: 1 / 1; max-width: 640px;
+  border: 1px solid #333; border-radius: 8px; background: #000; display: block;
+}
+.archived-player code { font-size: 0.85em; opacity: 0.85; word-break: break-all; }

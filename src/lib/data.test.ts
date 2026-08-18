@@ -1,7 +1,7 @@
 import { test, expect, vi, beforeEach } from 'vitest'
 import {
   loadMeta, loadShard, findTokenBySlug, isVisible, loadIterationIds,
-  loadIterationContract, loadSummary, loadProjectMarketStats, _resetCache,
+  loadIterationContract, loadSummary, loadProjectMarketStats, loadProjectSeed, _resetCache,
 } from './data'
 import type { LeanToken } from './types'
 
@@ -225,4 +225,42 @@ test('loadProjectMarketStats returns null for an unknown project', async () => {
   _resetCache()
 
   await expect(loadProjectMarketStats('nope', 999)).resolves.toBeNull()
+})
+
+test('loadProjectSeed reads the seed out of the local chunk, by tokenId', async () => {
+  const chunk = { contract: 1, address: 'KT1U6', from: 589146, size: 3, seeds: ['ooA', null, 'ooC'] }
+  const fetchMock = vi.fn().mockImplementation((url: string) => {
+    if (String(url).includes('contracts.json')) {
+      return Promise.resolve({ ok: true, json: async () => ({ contracts: ['KT1K', 'KT1U6'], byProject: { '5': 1 } }) })
+    }
+    return Promise.resolve({ ok: true, json: async () => chunk })
+  })
+  vi.stubGlobal('fetch', fetchMock)
+  _resetCache()
+
+  // Indexed by the chunk's own `from`, not by tokenId modulo the chunk size — the
+  // second contract starts at 589146, which is not on a chunk boundary.
+  await expect(loadProjectSeed(5, 589148)).resolves.toBe('ooC')
+  expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('seeds/1/0058.json'))).toBe(true)
+})
+
+test('loadProjectSeed returns null for an unsigned mint, not undefined', async () => {
+  const chunk = { contract: 0, address: 'KT1K', from: 0, size: 3, seeds: ['ooA', null, 'ooC'] }
+  vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) =>
+    Promise.resolve({
+      ok: true,
+      json: async () => (String(url).includes('contracts.json')
+        ? { contracts: ['KT1K'], byProject: { '5': 0 } }
+        : chunk),
+    })))
+  _resetCache()
+  await expect(loadProjectSeed(5, 1)).resolves.toBeNull()
+})
+
+test('loadProjectSeed returns null when the project has no known contract', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+    ok: true, json: async () => ({ contracts: ['KT1K'], byProject: {} }),
+  }))
+  _resetCache()
+  await expect(loadProjectSeed(999, 1)).resolves.toBeNull()
 })

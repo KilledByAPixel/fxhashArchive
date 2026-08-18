@@ -59,6 +59,10 @@ beforeEach(() => {
   // endpoint below, so the market-stats loader — which is unrelated to what this
   // file tests — must not add a fetch of its own to that count.
   vi.spyOn(data, 'loadProjectMarketStats').mockResolvedValue(null)
+  // Mocked so the archived-player lookup does not add a second real fetch and
+  // break this test's "exactly one TzKT call" assertion, which exists because a
+  // whole gentk contract was once unreachable.
+  vi.spyOn(data, 'loadSummary').mockRejectedValue(new Error('not needed here'))
 })
 
 afterEach(() => {
