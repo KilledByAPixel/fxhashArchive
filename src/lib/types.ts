@@ -56,6 +56,12 @@ export interface Summary {
     iterations: number
     seeds: number
     archived: number
+    /**
+     * Percentage of all collector spending the archived projects account for.
+     * The archive is a small fraction of the catalog by count but most of it by
+     * engagement, and this is the number that says so.
+     */
+    archivedShareOfVolume: number
   }
   /** Project ids, highest collector spending first. Position is the rank. */
   ranked: number[]

@@ -8,33 +8,28 @@ import TokenCard from '../components/TokenCard'
 const STRIP = 8
 const n = (value: number) => value.toLocaleString()
 
-/** The curve as an SVG polyline plus one dot per sampled point. */
-function ConcentrationCurve({ curve }: { curve: Summary['curve'] }) {
-  // Two points are needed to span an axis; one would divide by zero below.
-  if (curve.length < 2) return null
-
-  const w = 320
-  const h = 120
-  // Rank position is plotted on a log scale: the interesting behaviour is all in
-  // the first few percent, which a linear axis would squash into the left edge.
-  const x = (p: number) => (Math.log10(p) - Math.log10(curve[0].p)) /
-    (Math.log10(100) - Math.log10(curve[0].p)) * w
-  const y = (share: number) => h - (share / 100) * h
-  const points = curve.map((c) => `${x(c.p).toFixed(1)},${y(c.share).toFixed(1)}`).join(' ')
-
+/**
+ * One labelled proportion bar.
+ *
+ * These replaced a log-scale concentration curve, which plotted the right data
+ * but was unreadable: a visitor could not tell what the axes meant. Two of
+ * these side by side carry the same argument directly — a small share of the
+ * catalog, most of the engagement — with nothing to decode.
+ */
+function ShareBar({ label, percent, testId }: { label: string; percent: number; testId: string }) {
+  const clamped = Math.max(0, Math.min(100, percent))
   return (
-    <svg
-      className="curve"
-      data-testid="concentration-curve"
-      viewBox={`0 0 ${w} ${h}`}
-      role="img"
-      aria-label="Share of collector spending held by the top-ranked projects"
-    >
-      <polyline points={points} fill="none" stroke="currentColor" strokeWidth="2" />
-      {curve.map((c) => (
-        <circle key={c.p} cx={x(c.p)} cy={y(c.share)} r="3" fill="currentColor" />
-      ))}
-    </svg>
+    <div className="share-row" data-testid={testId}>
+      <span className="share-label">{label}</span>
+      <div
+        className="bar"
+        role="img"
+        aria-label={`${label}: ${clamped.toFixed(1)} percent`}
+      >
+        <div className="bar-fill" style={{ width: `${clamped.toFixed(2)}%` }} />
+      </div>
+      <span className="share-value">{clamped.toFixed(1)}%</span>
+    </div>
   )
 }
 
@@ -51,6 +46,11 @@ export default function LandingPage() {
     loadAllTokens().then(setTokens, () => setTokens(null))
   }, [])
 
+  // The strips are where the badge matters most: the most-collected strip is
+  // almost entirely archived projects, so omitting this rendered zero badges on
+  // the one row where nearly every card should carry one.
+  const archivedIds = useMemo(() => new Set(summary?.archived ?? []), [summary])
+
   const shown = useMemo(() => (tokens ?? []).filter(isVisible), [tokens])
   const random = useMemo(() => seededShuffle(shown, seed).slice(0, STRIP), [shown, seed])
   const collected = useMemo(() => {
@@ -62,13 +62,6 @@ export default function LandingPage() {
   const archivedPct = summary
     ? (100 * summary.counts.archived) / summary.counts.projects
     : 0
-
-  // The headline argument is "the top 1% accounts for most of the spending", which
-  // is specifically the p:1 sample — not curve[0], which is the finest point on the
-  // chart's axis (currently p:0.25) and reads as a much smaller, less compelling slice.
-  const headlinePoint = summary
-    ? summary.curve.find((c) => c.p === 1) ?? summary.curve[0]
-    : undefined
 
   return (
     <div className="landing">
@@ -97,7 +90,9 @@ export default function LandingPage() {
         <section>
           <h2>Random from the archive</h2>
           <div className="token-grid" data-testid="landing-random">
-            {random.map((t) => <TokenCard key={t.id} token={t} />)}
+            {random.map((t) => (
+              <TokenCard key={t.id} token={t} archived={archivedIds.has(t.id)} />
+            ))}
           </div>
         </section>
       )}
@@ -111,20 +106,22 @@ export default function LandingPage() {
             selectively: {n(summary.counts.archived)} projects run with
             no network at all, while the rest still depend on IPFS staying up.
           </p>
-          <div className="bar" title="Share of projects playable offline">
-            <div className="bar-fill" style={{ width: `${archivedPct.toFixed(2)}%` }} />
+          <div className="share-bars">
+            <ShareBar
+              label="of projects archived"
+              percent={archivedPct}
+              testId="share-projects"
+            />
+            <ShareBar
+              label="of collector interest covered"
+              percent={summary.counts.archivedShareOfVolume}
+              testId="share-interest"
+            />
           </div>
           <p className="landing-note">
-            Those projects are chosen by how much collectors engaged with them, which is
-            concentrated enough that a small archive covers most of it:
+            Those two numbers are the whole idea: the archived projects are a sliver of
+            the catalog, but they are the ones people actually engaged with.
           </p>
-          <ConcentrationCurve curve={summary.curve} />
-          {headlinePoint && (
-            <p className="landing-note">
-              The top {headlinePoint.p}% of projects account for {headlinePoint.share}%
-              of all collector spending on the platform.
-            </p>
-          )}
         </section>
       )}
 
@@ -132,7 +129,9 @@ export default function LandingPage() {
         <section>
           <h2>Most collected</h2>
           <div className="token-grid" data-testid="landing-collected">
-            {collected.map((t) => <TokenCard key={t.id} token={t} />)}
+            {collected.map((t) => (
+              <TokenCard key={t.id} token={t} archived={archivedIds.has(t.id)} />
+            ))}
           </div>
           <Link to="/artwork">Browse all {n(summary?.counts.projects ?? 0)} projects →</Link>
         </section>

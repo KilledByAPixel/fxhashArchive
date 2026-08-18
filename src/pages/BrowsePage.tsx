@@ -83,7 +83,7 @@ export default function BrowsePage() {
             checked={archivedOnly}
             onChange={(e) => { setArchivedOnly(e.target.checked); setShown(PAGE) }}
           />
-          Fully archived only
+          Fully archived only{archivedIds.size > 0 && ` (${archivedIds.size})`}
         </label>
         <span className="count">{visible.length} projects</span>
       </div>

@@ -1,5 +1,5 @@
 import { test, expect } from 'vitest'
-import { buildRanking, buildCurve, buildSummary, CURVE_POINTS } from './summary-lib.mjs'
+import { buildRanking, buildCurve, buildSummary, buildArchivedVolumeShare, CURVE_POINTS } from './summary-lib.mjs'
 
 const volumes = new Map([[1, 500], [2, 300], [3, 200], [4, 0]])
 
@@ -29,9 +29,35 @@ test('buildSummary assembles counts, ranking, archived set and curve', () => {
     projectCount: 4, artistCount: 2, iterationCount: 10, seedCount: 9,
     volumes, archivedIds: [3, 1], generatedAt: '2026-08-18T00:00:00.000Z',
   })
-  expect(s.counts).toEqual({ projects: 4, artists: 2, iterations: 10, seeds: 9, archived: 2 })
+  expect(s.counts).toEqual({
+    projects: 4, artists: 2, iterations: 10, seeds: 9, archived: 2,
+    // ids 1 and 3 of the fixture hold 700 of its 1000 total volume
+    archivedShareOfVolume: 70,
+  })
   expect(s.ranked).toEqual([1, 2, 3])
   expect(s.archived).toEqual([1, 3]) // sorted ascending
   expect(s.curve.length).toBe(CURVE_POINTS.length)
   expect(s.generatedAt).toBe('2026-08-18T00:00:00.000Z')
+})
+
+test('buildArchivedVolumeShare reports what fraction of spending the archive covers', () => {
+  // 1000 tez total; archiving ids 1 and 3 covers 500 + 200 = 700.
+  expect(buildArchivedVolumeShare(volumes, [1, 3])).toBe(70)
+})
+
+test('buildArchivedVolumeShare ignores archived ids with no recorded volume', () => {
+  // id 4 has zero volume and id 99 is not a project at all — neither adds share.
+  expect(buildArchivedVolumeShare(volumes, [1, 4, 99])).toBe(50)
+})
+
+test('buildArchivedVolumeShare is 0 when nothing traded, rather than NaN', () => {
+  expect(buildArchivedVolumeShare(new Map([[1, 0]]), [1])).toBe(0)
+})
+
+test('buildSummary exposes the archived share of spending', () => {
+  const s = buildSummary({
+    projectCount: 4, artistCount: 2, iterationCount: 10, seedCount: 9,
+    volumes, archivedIds: [1, 3], generatedAt: '2026-08-18T00:00:00.000Z',
+  })
+  expect(s.counts.archivedShareOfVolume).toBe(70)
 })

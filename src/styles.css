@@ -4,6 +4,9 @@ a { color: #9ecbff; text-decoration: none; }
 img { max-width: 100%; }
 
 .site-header { display: flex; gap: 1.5rem; align-items: baseline; padding: 1rem 1.5rem; border-bottom: 1px solid #333; }
+/* The header's own gap only separates the brand from <nav>; without this the two
+   nav links render flush against each other. */
+.site-header nav { display: flex; gap: 1.25rem; }
 .brand { font-weight: 700; color: #fff; }
 .site-main { padding: 1.5rem; max-width: 1200px; margin: 0 auto; }
 .site-footer { padding: 1rem 1.5rem; color: #888; font-size: 0.85rem; border-top: 1px solid #333; margin-top: 3rem; }
@@ -36,7 +39,13 @@ img { max-width: 100%; }
 .avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; }
 .avatar-lg { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; }
 
-.landing { display: flex; flex-direction: column; gap: 2.5rem; }
+.landing { display: flex; flex-direction: column; gap: 1.5rem; }
+/* Default margins stack on top of the flex gap, which doubled the space between
+   every block on the page. The gap is the single source of vertical rhythm. */
+.landing > * { margin: 0; }
+.landing h1 { margin: 0; line-height: 1.2; }
+.landing section > h2 { margin: 0 0 0.75rem; }
+.landing section > p { margin: 0 0 0.75rem; }
 .landing-intro { max-width: 42rem; }
 .landing-stats { display: flex; flex-wrap: wrap; gap: 1.5rem; list-style: none; padding: 0; }
 .landing-stats strong { display: block; font-size: 1.5rem; }
@@ -45,7 +54,11 @@ img { max-width: 100%; }
 .bar { background: rgba(127, 127, 127, 0.25); border-radius: 3px; height: 10px; overflow: hidden; }
 /* Archived share is well under 2%, so guarantee the fill stays visible. */
 .bar-fill { background: currentColor; height: 100%; min-width: 2px; }
-.curve { color: inherit; max-width: 320px; width: 100%; }
+.share-bars { display: flex; flex-direction: column; gap: 0.5rem; max-width: 34rem; }
+.share-row { display: grid; grid-template-columns: 14rem 1fr 3.5rem; gap: 0.75rem; align-items: center; }
+.share-label { opacity: 0.8; }
+.share-value { text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 34rem) { .share-row { grid-template-columns: 1fr 3.5rem; } .share-label { grid-column: 1 / -1; } }
 .token-card { position: relative; }
 .token-badge {
   position: absolute; top: 6px; right: 6px;
@@ -53,3 +66,4 @@ img { max-width: 100%; }
   border-radius: 3px; font-size: 0.7rem; padding: 2px 6px;
 }
 .archived-filter { display: inline-flex; align-items: center; gap: 0.35rem; }
+.browse-note { opacity: 0.8; font-size: 0.9rem; margin: 0.5rem 0 0; }

@@ -169,7 +169,10 @@ export default function TokenPage() {
           </p>
           <p className="muted">
             edition of {project.supply}
-            {iterations && iterations.length > 0 && ` · ${iterations.length} iterations loaded`}
+            {/* The authoritative mint count from the captured mapping — not how many rows
+                this page happens to have paged in, which changes as you scroll and tells
+                a visitor nothing about the artwork itself. */}
+            {Array.isArray(objktIds) && ` · ${objktIds.length} minted`}
           </p>
           {project.tags.length > 0 && <p className="muted">{project.tags.join(', ')}</p>}
           {market && market.pv + market.sv > 0 && (

@@ -57,10 +57,13 @@ test('renders project info and iterations from tzkt', async () => {
   expect(await screen.findByText('Tok 5 #1')).toBeTruthy()
   expect(screen.getByRole('link', { name: /Tok 5 #1/ }).getAttribute('href')).toContain('/gentk/KT1x/9')
 
-  // Ruling 1: edition size (supply) plus the *loaded* tzkt count, never the
-  // structurally-zero `iterationsCount` field (which is 2 on this fixture).
+  // Edition size (supply) plus the authoritative mint count from the captured
+  // mapping — never the structurally-zero `iterationsCount` field (2 on this
+  // fixture), and never how many rows happen to be paged in, which changes as
+  // you scroll. This fixture has no mapping entry, so no mint count shows.
   const editionLine = await screen.findByText(/edition of/i)
-  expect(editionLine.textContent).toBe('edition of 10 · 1 iterations loaded')
+  expect(editionLine.textContent).toBe('edition of 10')
+  expect(screen.queryByText(/iterations loaded/i)).toBeNull()
   expect(screen.queryByText(/2 iterations · supply/i)).toBeNull()
 })
 
@@ -143,7 +146,9 @@ test('renders iterations sourced from the mapping, not the generatorUri join', a
   expect(byIds).toHaveBeenCalledWith(['FX0-955', 'FX0-960'], PROJECT_CONTRACT, 0, 48)
   // The lossy join must not be consulted when the mapping answered.
   expect(join).not.toHaveBeenCalled()
-  expect((await screen.findByText(/edition of/i)).textContent).toBe('edition of 10 · 2 iterations loaded')
+  // Two ids in the mapping, so "2 minted" — the count of what was actually
+  // minted, which stays put regardless of how far the iteration list is paged.
+  expect((await screen.findByText(/edition of/i)).textContent).toBe('edition of 10 · 2 minted')
 })
 
 test('an empty mapping is the one case that may claim the project was never minted', async () => {

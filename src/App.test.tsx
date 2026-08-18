@@ -11,7 +11,10 @@ afterEach(() => {
 
 const summary = {
   generatedAt: '2026-08-18T00:00:00.000Z',
-  counts: { projects: 27430, artists: 5407, iterations: 1845509, seeds: 1802387, archived: 396 },
+  counts: {
+    projects: 27430, artists: 5407, iterations: 1845509, seeds: 1802387, archived: 396,
+    archivedShareOfVolume: 70.5,
+  },
   ranked: [1], archived: [1], curve: [{ p: 1, share: 67.9 }],
 }
 

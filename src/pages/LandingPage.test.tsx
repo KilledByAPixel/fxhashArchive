@@ -13,7 +13,10 @@ const token = (id: number): LeanToken => ({
 
 const summary = {
   generatedAt: '2026-08-18T00:00:00.000Z',
-  counts: { projects: 27430, artists: 5407, iterations: 1845509, seeds: 1802387, archived: 396 },
+  counts: {
+    projects: 27430, artists: 5407, iterations: 1845509, seeds: 1802387, archived: 396,
+    archivedShareOfVolume: 70.5,
+  },
   ranked: [3, 1, 2],
   archived: [1],
   // Deliberately does NOT start at p:1 — the real curve starts at p:0.25 (see
@@ -47,12 +50,34 @@ test('shows the headline counts', async () => {
   expect(screen.getByText('396')).toBeTruthy()
 })
 
-test('draws the concentration curve as inline svg with one point per sample', async () => {
+test('contrasts share of projects against share of collector interest', async () => {
   renderPage()
-  // findByTestId, not findByTitle: for SVG, Testing Library's ByTitle matches the
-  // <title> node itself, so querying its children for circles would find none.
-  const chart = await screen.findByTestId('concentration-curve')
-  expect(chart.querySelectorAll('circle')).toHaveLength(summary.curve.length)
+  // 396 archived of 27,430 catalogued = 1.4% of projects, against 70.5% of all
+  // collector spending. The whole point of showing them together is that the
+  // second dwarfs the first, so assert both — either one alone proves nothing.
+  const projects = await screen.findByTestId('share-projects')
+  const interest = screen.getByTestId('share-interest')
+  expect(projects.textContent).toContain('1.4%')
+  expect(interest.textContent).toContain('70.5%')
+})
+
+test('bar widths reflect their percentages', async () => {
+  renderPage()
+  const interest = await screen.findByTestId('share-interest')
+  const fill = interest.querySelector('.bar-fill') as HTMLElement
+  // jsdom normalises the trailing zero from '70.50%'
+  expect(fill.style.width).toBe('70.5%')
+})
+
+test('a percentage outside 0-100 cannot overflow its bar', async () => {
+  vi.spyOn(data, 'loadSummary').mockResolvedValue({
+    ...summary,
+    counts: { ...summary.counts, archivedShareOfVolume: 140 },
+  })
+  renderPage()
+  const interest = await screen.findByTestId('share-interest')
+  const fill = interest.querySelector('.bar-fill') as HTMLElement
+  expect(fill.style.width).toBe('100%')
 })
 
 test('shows a random strip and a most-collected strip', async () => {
@@ -76,13 +101,15 @@ test('survives the catalog failing to load', async () => {
   expect(await screen.findByText('27,430')).toBeTruthy()
 })
 
-test('headline prose quotes the p=1 point, not the first curve sample', async () => {
+test('badges the archived projects in the strips', async () => {
   renderPage()
-  // The fixture's first curve point is p:0.25/45.6 — the finest sampled point,
-  // correct for the chart's axis but NOT the headline argument. The prose must
-  // quote the p:1/67.1 point instead.
-  expect(
-    await screen.findByText(/The top 1% of projects account for 67\.1% of all collector spending/),
-  ).toBeTruthy()
-  expect(screen.queryByText(/The top 0\.25% of projects account for 45\.6%/)).toBeNull()
+  await screen.findByRole('heading', { name: /collected/i })
+  // The fixture archives exactly one project (id 1), which appears in both
+  // strips. The most-collected strip is where this matters most: in production
+  // it is almost entirely archived projects, and omitting the prop rendered
+  // zero badges on the one row where nearly every card should carry one.
+  const collected = screen.getByTestId('landing-collected')
+  const random = screen.getByTestId('landing-random')
+  expect(collected.querySelectorAll('.token-badge')).toHaveLength(1)
+  expect(random.querySelectorAll('.token-badge')).toHaveLength(1)
 })

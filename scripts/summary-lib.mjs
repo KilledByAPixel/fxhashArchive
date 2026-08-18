@@ -28,6 +28,22 @@ export function buildCurve(volumes, points = CURVE_POINTS) {
   })
 }
 
+/**
+ * What percentage of all collector spending the archived projects account for.
+ *
+ * This is the number that justifies a selective archive: the archived set is a
+ * fraction of the catalog by count, but most of it by engagement. Reported as a
+ * percentage with one decimal, and 0 rather than NaN when nothing ever traded.
+ */
+export function buildArchivedVolumeShare(volumes, archivedIds) {
+  let total = 0
+  for (const v of volumes.values()) total += v
+  if (total === 0) return 0
+  let covered = 0
+  for (const id of new Set(archivedIds)) covered += volumes.get(id) ?? 0
+  return Math.round((1000 * covered) / total) / 10
+}
+
 export function buildSummary({
   projectCount, artistCount, iterationCount, seedCount, volumes, archivedIds, generatedAt,
 }) {
@@ -40,6 +56,7 @@ export function buildSummary({
       iterations: iterationCount,
       seeds: seedCount,
       archived: archived.length,
+      archivedShareOfVolume: buildArchivedVolumeShare(volumes, archivedIds),
     },
     ranked: buildRanking(volumes),
     archived,
