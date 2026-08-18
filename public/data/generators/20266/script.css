@@ -1,0 +1,1 @@
+document,body{margin:0}body{height:100vh;height:calc(var(--vh,1vh)*100);color:#fff;background:#000;justify-content:center;align-items:center;font-family:sans-serif;display:flex}body,html{margin:0;padding:0;overflow:hidden}canvas{max-width:100%;max-height:100%;touch-action:none;margin:0 auto;display:block}

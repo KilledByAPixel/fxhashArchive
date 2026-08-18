@@ -1,0 +1,1 @@
+Inigo Quilez's function collection: https://www.iquilezles.org/www/articles/functions/functions.htm

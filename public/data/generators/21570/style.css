@@ -1,0 +1,202 @@
+/* These first two are just styling the page */
+
+body {
+  padding: 0;
+  margin: 0;
+}
+
+a {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+canvas {
+  display: block;
+}
+
+ 
+/* From here on it's styling the sliders */
+
+
+/* Styles the whole slider */
+.mySliders {
+  width: 80px;
+  background-color: transparent;
+  opacity: 1;
+  -webkit-transition: .2s;
+  transition: opacity .2s;
+
+  /* Removes some defaults */
+  -webkit-appearance: none;
+}
+
+
+/* These styles affect what happens when the cursor is focused on the slider (i.e. clicking it) */
+.mySliders:focus {
+  /* Stops the default outline showing up */
+  outline: none;
+  opacity: 1;
+}
+
+/* This is the "track" that the slider sits on  */
+.mySliders::-webkit-slider-runnable-track {
+  background: #000000;
+  height: 1px;
+  -webkit-appearance: none;
+
+  /* Turns the cursor into the hand pointer icon when hovering over the slider  */
+  cursor: pointer;
+
+}
+
+/* This is the moveable bit of the slider, known as the "thumb"*/
+.mySliders::-webkit-slider-thumb {
+  width: 4px;
+  height: 15px;
+  background: #000000;
+  /*cursor: pointer;*/
+  -webkit-appearance: none;
+
+  /* negative top padding moves it up */
+  margin-top: -6px;
+
+  /* Border radius gives rounded corners, if they're big enough, you end up with circles */
+  /*border-radius: 8px;*/
+
+}
+
+/*MOZILLA SUPPORT*/
+.mySliders::-moz-range-track {
+  background-color: black;
+  height: 1px;
+  border-radius: 0px;
+}
+
+.mySliders::-moz-range-thumb {
+  width: 4px;
+  height: 15px;
+  background: #000000;
+  border-radius: 0px;
+  border: none;
+}
+
+/* IE + EDGE SUPPORT*/
+.mySliders::-ms-track {
+  background-color: black;
+  height: 1px;
+}
+
+
+#defaultCanvas0{
+
+
+    overflow: hidden;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    position: absolute;
+    margin: auto;
+
+}
+
+#row {
+  /*
+	overflow: hidden;
+	display: table;
+  clear: both;
+	/*margin-top:427px;
+	margin-left:403px;*/
+  /*margin:0px;
+  padding:0px;
+  margin: 2.5%;
+  padding: 5%;*/
+  /*
+  border: solid;
+  border-width: 1px;
+  border-color:black;
+  */
+}
+
+#container.fullscreen {
+  /*
+  margin:50%;
+  border-top: 0px;
+  border-left: 0px;
+  padding: 10px;
+  */
+}
+
+#container {
+  /*margin:25px
+  position: fixed;
+  transition: all 5.15s linear;*/
+
+}
+
+#container2 {
+  /*margin:25px
+  position: fixed;
+  transition: all 5.15s linear;*/
+  overflow: hidden;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+
+  margin: auto;
+  /* Hide scrollbars */
+
+}
+
+.loader {
+  border: 10px solid #f3f3f3;
+  border-radius: 50%;
+  border-top: 10px solid #808080;
+  width: 120px;
+  height: 120px;
+  overflow: hidden;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  margin: auto;
+  display:none;
+
+
+  -webkit-animation: spin 2s linear infinite;
+  /* Safari */
+  animation: spin 2s linear infinite;
+}
+
+/* Safari */
+@-webkit-keyframes spin {
+  0% {
+    -webkit-transform: rotate(0deg);
+  }
+
+  100% {
+    -webkit-transform: rotate(360deg);
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+
+.loadBK{
+position: absolute;
+background: #f3f3f3;
+width: 100%;
+height: 100%;
+z-index: 5;
+display:none;
+}

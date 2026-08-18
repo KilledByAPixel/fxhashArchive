@@ -1,0 +1,37 @@
+<html>
+<head>
+  <style>
+    body{
+      background: #eee;
+      color: #000;
+      font: 18px/24px sans-serif;
+      padding: 24px 5%;
+    }
+    pre,code { white-space: pre-wrap;  background: #fff; }
+  </style>
+</head>
+<body>
+<h1 id="notes-about-the-universal-rayhatcher-dev-environment">Notes about the Universal Rayhatcher dev environment</h1>
+<p>The <em><strong>Universal Rayhatcher dev environment</strong></em> is a modified version of the official fx(lens) development environment with some extra features. It&#39;s not hosted by fx(hash).</p>
+<p>But it&#39;s way easier to use so it is generally recommended to develop your SDFs there, and then copy over the params to the fx(hash) minting page. If you do so, be sure to set the correct <a href="#minter-address">Minter address</a>.</p>
+<h2 id="links">Links</h2>
+<ul>
+<li><p><a href="https://extreme-rayhatching.netlify.app/">Universal Rayhatcher dev environment</a></p>
+</li>
+<li><p><a href="https://gist.github.com/tripzilch/9042195ae6f62901909ff7c99aeb8fcc">Documentation</a></p>
+</li>
+</ul>
+<h2 id="keyboard-shortcuts">Keyboard shortcuts</h2>
+<ul>
+<li><strong>ctrl-enter</strong> to click the &quot;Refresh&quot; button.</li>
+<li><strong>ctrl-,</strong> and <strong>ctrl-.</strong> will page the params through a sort of undo history (especially useful if you accidentally close or reload).</li>
+</ul>
+<h2 id="presets">Presets</h2>
+<p>The numbered buttons are &quot;presets&quot; you can shift-click to save, click to load, alt-click to clear and ctrl-click to copy the params as JSON to your clipboard.</p>
+<p>The presets are saved in the browser&#39;s <code>localStorage</code> which gets cleared when you clear cookies and sometimes when you restart the browser. Be sure to back up your favourite formulas in a text file!</p>
+<h2 id="minter-address">Minter address</h2>
+<p>The <em>Title Seed</em> and the <em>Minter address</em> are concatenated to seed the PRNG for everything. This includes the camera viewpoint, the light source location and the exact shapes in the noise function.</p>
+<p>When developing SDFs in the <em><strong>Universal Rayhatcher dev environment</strong></em>, make sure to set the <em>Minter address</em> to the wallet address that you will mint from.</p>
+<p>If you want to automatically set the <em>Minter address</em>, you can use a URL like this:</p>
+<p><a href="https://extreme-rayhatching.netlify.app/?target=https://extreme-rayhatching.netlify.app/dist?fxminter=tz1YOURWALLETADDRESSHERE">https://extreme-rayhatching.netlify.app/?target=https://extreme-rayhatching.netlify.app/dist?fxminter=tz1YOURWALLETADDRESSHERE</a></p>
+</body></html>

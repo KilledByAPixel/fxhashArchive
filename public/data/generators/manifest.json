@@ -1,4 +1,12 @@
 {
+  "0": {
+    "slug": "fxhash-generative-logo",
+    "name": "FXHASH Generative Logo",
+    "cid": "Qmc4tMDF2ff8efhi7ybAZTWucQXbuUk9z7DozAUfFgWDZB",
+    "entry": "index.html",
+    "bytes": 10609,
+    "reason": "top volume (55,330 tez)"
+  },
   "2": {
     "slug": "rgb-elementary-cellular-automaton",
     "name": "RGB Elementary Cellular Automaton",
@@ -151,6 +159,14 @@
     "bytes": 4604,
     "reason": "artist: KilledByAPixel"
   },
+  "2675": {
+    "slug": "tych",
+    "name": "Tych",
+    "cid": "QmQ3QyNMoCKEukSjW4TXzzr264pGDmZSGiwGfNg6aCPJcn",
+    "entry": "index.html",
+    "bytes": 3422095,
+    "reason": "top volume (50,082 tez)"
+  },
   "2927": {
     "slug": "spirography",
     "name": "Spirography",
@@ -166,6 +182,14 @@
     "entry": "index.html",
     "bytes": 820776,
     "reason": "top volume (77,393 tez)"
+  },
+  "2968": {
+    "slug": "repeater",
+    "name": "Repeater",
+    "cid": "Qmbj7mmhVQTBtnpEikgdmkiLBss25U1V5PR9cVFXZ5ck6Z",
+    "entry": "index.html",
+    "bytes": 3611936,
+    "reason": "top volume (48,600 tez)"
   },
   "2969": {
     "slug": "garden-monoliths",
@@ -190,6 +214,14 @@
     "entry": "index.html",
     "bytes": 7345,
     "reason": "artist: KilledByAPixel"
+  },
+  "3177": {
+    "slug": "unfolded",
+    "name": "Unfolded",
+    "cid": "QmNhLK8N1w19yUqTKTt9PrUzhp58icUyPkwypogrv2kdbo",
+    "entry": "index.html",
+    "bytes": 20560,
+    "reason": "top volume (46,498 tez)"
   },
   "3360": {
     "slug": "indifferent-strokes",
@@ -255,6 +287,22 @@
     "bytes": 2043,
     "reason": "artist: KilledByAPixel"
   },
+  "5101": {
+    "slug": "chaos-research",
+    "name": "Chaos Research",
+    "cid": "QmeALg31LnC9tAQAhFEp6pGvpCMboZUEAM8H5gpZBSsWKz",
+    "entry": "index.html",
+    "bytes": 7809406,
+    "reason": "top volume (44,618 tez)"
+  },
+  "5345": {
+    "slug": "lessiframesgreater",
+    "name": "<iframes>",
+    "cid": "QmZyRHjkpoQN4SQSkkjCaUCCKpdNYAdV8WBKcMBFQkhq2V",
+    "entry": "index.html",
+    "bytes": 37907,
+    "reason": "top volume (50,968 tez)"
+  },
   "5845": {
     "slug": "tr4ns4ctions",
     "name": "tr4ns4ctions",
@@ -278,6 +326,14 @@
     "entry": "index.html",
     "bytes": 19555,
     "reason": "artist: KilledByAPixel"
+  },
+  "6902": {
+    "slug": "geode",
+    "name": "Geode",
+    "cid": "QmVpxAAi9ybpNs6Ys9ZfpEKtfChRr99q77RYwrkrRUnp1m",
+    "entry": "index.html",
+    "bytes": 89284,
+    "reason": "top volume (46,465 tez)"
   },
   "7519": {
     "slug": "growth-v02",
@@ -319,6 +375,14 @@
     "bytes": 20150,
     "reason": "artist: KilledByAPixel"
   },
+  "9281": {
+    "slug": "\"unfinished\"",
+    "name": "\"unfinished\"",
+    "cid": "QmfMTqeeEPi5tmdGxmK4GSMKNwWDwDYfBdtwutYAA3BKJF",
+    "entry": "index.html",
+    "bytes": 830979,
+    "reason": "top volume (43,844 tez)"
+  },
   "9286": {
     "slug": "divide-by-circle-unsquared",
     "name": "Divide By Circle Unsquared",
@@ -326,6 +390,14 @@
     "entry": "index.html",
     "bytes": 633143,
     "reason": "artist: KilledByAPixel"
+  },
+  "9504": {
+    "slug": "art-for-walls-in-public-spaces",
+    "name": "Art For Walls In Public Spaces",
+    "cid": "QmYeCR5HeSf2RMkMbsTGJkhkxjcKUtcREzgXzmEMAL9nc2",
+    "entry": "index.html",
+    "bytes": 891532,
+    "reason": "top volume (53,252 tez)"
   },
   "10144": {
     "slug": "tree-skyness",
@@ -383,6 +455,14 @@
     "bytes": 852474,
     "reason": "top volume (276,034 tez)"
   },
+  "11805": {
+    "slug": "collage-1",
+    "name": "Collage",
+    "cid": "Qmc4RPmkfE3AWKPZoJZRJLZ3txihLdkVpLRZJKStPCFXmL",
+    "entry": "index.html",
+    "bytes": 1042299,
+    "reason": "top volume (53,321 tez)"
+  },
   "12431": {
     "slug": "dencity",
     "name": "Dencity",
@@ -430,6 +510,14 @@
     "entry": "index.html",
     "bytes": 25864,
     "reason": "artist: KilledByAPixel"
+  },
+  "13449": {
+    "slug": "microgravity",
+    "name": "Microgravity",
+    "cid": "QmQQXDgS4MPBwMQC5qxcPkX7AAP26zDRsrgUYoY2XGQ38K",
+    "entry": "index.html",
+    "bytes": 20925,
+    "reason": "top volume (46,045 tez)"
   },
   "13484": {
     "slug": "el-inefable-momento",
@@ -575,6 +663,14 @@
     "bytes": 10266,
     "reason": "top volume (66,449 tez)"
   },
+  "16152": {
+    "slug": "rough-cuts",
+    "name": "Rough Cuts",
+    "cid": "QmbicvBxjTTGEDLMGvBjtr3ViPrPQnhEPnzQKp8hEom38Q",
+    "entry": "index.html",
+    "bytes": 823419,
+    "reason": "top volume (45,614 tez)"
+  },
   "16217": {
     "slug": "horizon(te)s",
     "name": "horizon(te)s",
@@ -590,6 +686,14 @@
     "entry": "index.html",
     "bytes": 23881,
     "reason": "artist: KilledByAPixel"
+  },
+  "16467": {
+    "slug": "rococo",
+    "name": "Rococo",
+    "cid": "QmT3AXKP6C3FTWd7Nw3UELFfJTZWRRnrXZtEnPtpon6QTb",
+    "entry": "index.html",
+    "bytes": 3692471,
+    "reason": "top volume (56,627 tez)"
   },
   "17030": {
     "slug": "gerhard",
@@ -607,6 +711,38 @@
     "bytes": 897366,
     "reason": "top volume (142,985 tez)"
   },
+  "17180": {
+    "slug": "planet-error",
+    "name": "PLANET ERROR",
+    "cid": "QmTTqo8M4L9ush1ZumF35JDRnQXvGLuCEqogY2nYjUmMN3",
+    "entry": "index.html",
+    "bytes": 16208,
+    "reason": "top volume (50,004 tez)"
+  },
+  "17605": {
+    "slug": "southern-gothic",
+    "name": "Southern Gothic",
+    "cid": "QmeWRLS57ykfBNZiotoX1UEhkTJcPAfUMit8FfCHjrx2BZ",
+    "entry": "index.html",
+    "bytes": 4561993,
+    "reason": "top volume (54,792 tez)"
+  },
+  "17949": {
+    "slug": "emotional-shell",
+    "name": "Emotional Shell",
+    "cid": "QmdKRyS1mm88TSaLyJLCZHJqxbdBkXoU5yikwJHCnSP1zY",
+    "entry": "index.html",
+    "bytes": 648074,
+    "reason": "top volume (48,061 tez)"
+  },
+  "18133": {
+    "slug": "flower-arrangement",
+    "name": "Flower Arrangement",
+    "cid": "QmaNDDPog7HvUtr5eKwMrwZgXs8CD3aLQvHN4YS6dwUaHn",
+    "entry": "index.html",
+    "bytes": 965935,
+    "reason": "top volume (44,018 tez)"
+  },
   "18601": {
     "slug": "toccata",
     "name": "Toccata",
@@ -623,6 +759,14 @@
     "bytes": 91761,
     "reason": "top volume (58,766 tez)"
   },
+  "19443": {
+    "slug": "impressions-of-order",
+    "name": "Impressions of Order",
+    "cid": "QmVmLjioMSXFNfJUWzrdMdUdcyGpmxoweNZB9rvYTJcXso",
+    "entry": "index.html",
+    "bytes": 845260,
+    "reason": "top volume (54,300 tez)"
+  },
   "19456": {
     "slug": "take-wing",
     "name": "Take Wing",
@@ -630,6 +774,14 @@
     "entry": "index.html",
     "bytes": 1699530,
     "reason": "top volume (81,395 tez)"
+  },
+  "19949": {
+    "slug": "ordinary-places",
+    "name": "Ordinary Places",
+    "cid": "Qmc5ZYDnCcUDZnyVtsmQtDvkvB7qEaaLhckZ29J1kzXSaj",
+    "entry": "index.html",
+    "bytes": 4900397,
+    "reason": "top volume (52,572 tez)"
   },
   "20000": {
     "slug": "september",
@@ -646,6 +798,14 @@
     "entry": "index.html",
     "bytes": 14133,
     "reason": "top volume (81,982 tez)"
+  },
+  "20266": {
+    "slug": "holons",
+    "name": "Holons",
+    "cid": "QmTtiWWYZU6g4Ga7gq4rExJFAPwwXAFuoYThywX2SZCmqW",
+    "entry": "index.html",
+    "bytes": 74642,
+    "reason": "top volume (49,409 tez)"
   },
   "20856": {
     "slug": "coronado",
@@ -687,6 +847,14 @@
     "bytes": 956228,
     "reason": "top volume (178,920 tez)"
   },
+  "21570": {
+    "slug": "henge",
+    "name": "Henge",
+    "cid": "Qmf93kda4WkhvAwsQUkUUW37PqooXSwPJrJQkrXYitF9hL",
+    "entry": "index.html",
+    "bytes": 7386232,
+    "reason": "top volume (56,825 tez)"
+  },
   "21602": {
     "slug": "slumbers",
     "name": "Slumbers",
@@ -703,6 +871,14 @@
     "bytes": 430416,
     "reason": "top volume (59,445 tez)"
   },
+  "22122": {
+    "slug": "nanopanorama",
+    "name": "Nanopanorama",
+    "cid": "QmVj2ByKqNf5WEi7CrvraEpYt9hZT6oyFivS8DJDw6FFDa",
+    "entry": "index.html",
+    "bytes": 7576,
+    "reason": "top volume (52,497 tez)"
+  },
   "22246": {
     "slug": "artifice",
     "name": "Artifice",
@@ -718,6 +894,14 @@
     "entry": "index.html",
     "bytes": 1108402,
     "reason": "top volume (90,215 tez)"
+  },
+  "22782": {
+    "slug": "faux",
+    "name": "Faux",
+    "cid": "QmVkZXw5SQhK46Scok4SxmSdBRSSEABLWdSQe3kVbPhzxs",
+    "entry": "index.html",
+    "bytes": 943628,
+    "reason": "top volume (51,893 tez)"
   },
   "22893": {
     "slug": "geomorphism",
@@ -791,6 +975,14 @@
     "bytes": 754753,
     "reason": "top volume (100,490 tez)"
   },
+  "23869": {
+    "slug": "glossolalia",
+    "name": "Glossolalia",
+    "cid": "QmP3Uuy87piZHq4NJJYRkNdp29yyNYen6qTrHsPhvAfToT",
+    "entry": "index.html",
+    "bytes": 840005,
+    "reason": "top volume (48,968 tez)"
+  },
   "24169": {
     "slug": "perpendicular-inhabitation",
     "name": "Perpendicular Inhabitation",
@@ -814,6 +1006,14 @@
     "entry": "index.html",
     "bytes": 612247,
     "reason": "top volume (525,525 tez)"
+  },
+  "27175": {
+    "slug": "universal-rayhatcher",
+    "name": "Universal Rayhatcher",
+    "cid": "QmdEV5vBcYDBcZGHKfdZbRHgrkgbu7KRzf9JWYc5SaBNV4",
+    "entry": "index.html",
+    "bytes": 83402,
+    "reason": "top volume (48,848 tez)"
   },
   "27696": {
     "slug": "nuages-possibles",

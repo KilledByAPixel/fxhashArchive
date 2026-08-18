@@ -1,0 +1,56 @@
+body {
+  background-color: rgb(33, 33, 33);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+}
+
+.dg {
+  z-index: 999999 !important;
+}
+
+.container-desc {
+  position: absolute;
+  z-index: 999999;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.desc {
+  text-align: center;
+  width: 100%;
+  color: white;
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
+  font-size: 14px;
+  letter-spacing: 2px;
+
+  transition: opacity 0.5s ease-in-out 0.5s;
+  pointer-events: none;
+}
+
+.desc.hide {
+  opacity: 0;
+}
+
+canvas {
+  display: none;
+}
+
+#main-canvas {
+  display: block;
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+}
+
+#main-canvas.show {
+  opacity: 1;
+}
+
+#frame-canvas {
+  display: block;
+}

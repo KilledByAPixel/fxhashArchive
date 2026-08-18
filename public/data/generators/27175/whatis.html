@@ -1,0 +1,201 @@
+<html>
+<head>
+  <style>
+    body{
+      background: #eee;
+      color: #000;
+      font: 18px/24px sans-serif;
+      padding: 24px 5%;
+    }
+    pre,code { white-space: pre-wrap; background: #fff; }
+  </style>
+</head>
+<body>
+<h1 id="fxhatch">fx(hatch)</h1>
+<h2 id="what-is-this">What is this?</h2>
+<p>This is highly experimental code.</p>
+<p>This is a version of my <a href="https://www.fxhash.xyz/article/rayhatching-evolution">rayhatcher framework</a> that can do literally everything. Or, at least anything you can do within 512 characters of Javascript code. Which is slightly more than a mortal brain can comprehend.</p>
+<p>This is my answer to the question: What is the least restrictive set of parameters for fx(params)?</p>
+<h2 id="should-i-be-minting-this">Should I be minting this?</h2>
+<p>Depends if you know and like building SDF formulas. Otherwise probably not. Like I said, this is highly experimental code. But it&#39;s definitely worth checking the collection and/or secondary for cool stuff that is already minted.</p>
+<h2 id="how-does-it-work">How does it work?</h2>
+<p>You design an SDF (Signed Distance Function) and then it renders it using my rayhatcher algorithm. If this confuses you, please refer to the <a href="#should-I-be-minting-this">previous section</a>.</p>
+<p>You enter the SDF formula in the <a href="#sdf-code">SDF Code</a> parameter. It&#39;s not very complicated to write, just efficient. I have provided a great deal of <a href="#list-of-functions-and-definitions">useful functions</a> to help you define your SDF formulas.</p>
+<h2 id="description-of-the-params">Description of the params</h2>
+<h3 id="title-seed">Title Seed</h3>
+<p>The <strong>Title Seed</strong> seeds the pseudo-random number generator. The camera viewpoint and light source position are randomly generated. Modifying this parameter will select a different one. It is always combined with the minter seed (so it&#39;s not really possible to mint the same exact scene from different wallets).</p>
+<p>The <strong>Title Seed</strong> also seeds the provided <a href="#list-of-functions-and-definitions">noise function</a>.</p>
+<p>When minted, the <strong>Title Seed</strong> is saved as the <strong>&quot;Title&quot;</strong> feature! So make it count! </p>
+<h3 id="sdf-code">SDF code</h3>
+<p><strong>SDF code</strong> is the best param ever. This is how you specify the SDF for the scene being rendered. The SDF function is made of Javascript code, and will be initialized like this:</p>
+<pre><code class="language-js">    SDF=Function(`[x,y,z],`+INIT,`return `+BACK.replace(&#39;$&#39;,`(${FUNC})`));
+</code></pre>
+<p>The <code>INIT</code> and <code>FUNC</code> expressions are specified in the <strong>SDF code</strong> parameter, separated by a semicolon <code>;</code>.</p>
+<p>The parameters <code>[x,y,z]</code> are the location in 3D space where the SDF is to be evaluated. It is passed as a 3-element Array, and <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring_assignment">unpacked</a> into local variables <code>x</code>, <code>y</code> and <code>z</code> for ease of calculation. </p>
+<p>After that the (optional) <code>INIT</code> expression is evaluated, which you can use to define your own local variables (for instance for rotated coordinates, see example in the <a href="#a0--r0-and-a1--r1">rotation params section</a>). </p>
+<p>Finally the function returns the value of the <code>BACK</code> expression with the <code>FUNC</code> expression inserted into it (see <a href="#background">background parameter</a>).</p>
+<p>There are many <a href="#list-of-functions-and-definitions">pre-defined functions</a> available. For the following example, it helps to know that <code>B=abs</code> and <code>L</code> means the length of a vector (distance to the origin). Subtracting a value from the length of a vector gives the SDF of a sphere of that radius, centered on the origin.</p>
+<pre><code class="language-js">b=B(y-12)-6;
+L(x,b,z)-6`
+</code></pre>
+<p>In the above example the local variable <code>b</code> is initialized to <code>B(y-12)-6</code>. The <code>FUNC</code> expression describes a sphere of radius 6, using the <code>L</code> length function. However because it uses the newly defined <code>b</code> variable for the 2nd coordinate, this results in a duplicated/reflected sphere in the y-direction.</p>
+<p>Of course you don&#39;t really <em>need</em> the <code>INIT</code> expression in above example (just <code>L(x,B(y-12)-6,z)-6</code> would also work). But sometimes you might want to have some local variables to efficiently re-use certain calculations, or for other reasons. The <code>INIT</code> expression is also useful when used together with the <code>r0</code> or <code>r1</code> <a href="#a0--r0-and-a1--r1">rotation functions</a>. </p>
+<p>Throughout the program, vectors are represented as Arrays of length 2 or 3. Some provided functions do not accept Arrays, but separate <code>x</code>, <code>y</code> and <code>z</code> parameters. If you need to pass them an Array vector anyway, use Javascript&#39;s <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax">spread syntax</a>: <code>L(...p)</code>.</p>
+<p>This syntax and the destructuring assignment (especially for function parameters) makes working with length 2 or 3 Arrays as vectors a breeze, and is therefore my preferred vector representation in Javascript. And of course don&#39;t forget <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/Array#array_literal_notation">Array literal notation</a> to quickly create Arrays on the spot. My experience is that they&#39;re pretty performant, I&#39;m not sure how much of the packing/unpacking is getting optimized away, but I get the feeling it&#39;s quite a whole lot. Also, the Garbage Collector in modern JS engines is really good and I wouldn&#39;t worry about it.</p>
+<h4 id="repetition-macro">Repetition macro</h4>
+<p><em>I&#39;m not going to say this is &quot;advanced&quot;, because you are already advanced, because you&#39;re writing SDFs. But if you want, you can <a href="#background">skip</a> this section for now and return to it later.</em></p>
+<p>In order to facilitate creation of fractal SDFs, as well as compactness of formulas, a repetition macro is provided for both the <code>INIT</code> and the <code>FUNC</code> expressions. It modifies and repeats part of the code before compilation. This macro generally looks like this:</p>
+<pre><code class="language-js">@RANGE{CODE}
+</code></pre>
+<p>Here, <code>RANGE</code> can be a positive integer. In this case, the <code>CODE</code> is repeated that many times. Inside <code>CODE</code> the special macro variable <code>$</code> will be replaced with the loop index (zero based).</p>
+<p>However, <code>RANGE</code> can also be a string of alphabetic characters. In this case, <code>CODE</code> is repeated for each character in the string, and the macro variable <code>$</code> will be replaced with that character. Additionally, the macro variable <code>@</code> will be replaced with the numerical loop index. This can be especially useful if you want to do the same thing to the <code>x</code>, <code>y</code> and <code>z</code> variables, such as in this example, which creates eight mirrored spheres:</p>
+<pre><code class="language-js">@xyz{$=B($)-6,}
+L(x,y,z)-5
+</code></pre>
+<p>The above code macro expands to the following:</p>
+<pre><code class="language-js">x=B(x)-6,y=B(y)-6,z=B(z)-6,
+L(x,y,z)-5
+</code></pre>
+<p>Notice the comma at the end of the <code>CODE</code> string, this is important, otherwise the formula wouldn&#39;t compile. The <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Comma_operator">comma operator</a> in JS is a bit of a weird operator, in an expression like <code>q=2,w=3,x=5+6,a=5,99</code>, the result of the full expression is just the last value (99). But it still evaluates all sub-expressions and assigns the values to the variables (because of the comma&#39;s low precedence, variable <code>a</code> will contain 5, not 99). This makes the comma function a little bit like the semicolon <code>;</code>, except for separating expressions instead of statements.</p>
+<p>You can also nest these macros, for even more repetition. Check out this more complex example making a cool fractal cloud of spheres:</p>
+<pre><code class="language-js">s=1;
+@5{
+  [x,y]=r0(x,y),
+  [x,z]=r1(x,z),
+  @xyz{$=B($*2)-8,}
+  s*=.5,
+}
+(L(x,y,z)-8)*s
+</code></pre>
+<p>This example uses both rotation functions <code>r0</code> and <code>r1</code> to transform the space, and then applies a mirroring operation (remember, <code>B=abs</code>) to each of the <code>x</code>,<code>y</code> and <code>z</code> axes. It also scales each coordinate by 2 (making everything smaller). In order to account for this scaling, the local variable <code>s=1</code> is used, and multiplied by .5 on every step. This procedure is then repeated 5 times. Then, in this folded and scaled space, we evaluate a sphere of radius 8 (which subsequently gets repeated all over the place). Finally the result is multiplied by the scalling correction <code>s</code>.</p>
+<p>Bonus variations: Try using one of the &quot;smooth abs&quot; functions <code>qB</code> or <code>sB</code> (see <a href="(#list-of-functions-and-definitions)">below</a>) instead of the regular abs <code>B</code> instead, for the mirroring. Don&#39;t forget to add the smoothness parameter. This can create wild organic shapes, especially with smoothness values around or even exceeding the sphere radius. Of course don&#39;t forget to tweak the rotation angles <code>r0</code> and <code>r1</code> with the sliders, as well.</p>
+<p>But wait, there is more! :) When in a repetition macro, <code>$</code> is replaced with the current element of the range. But <code>$$</code> will be replaced with the <em>next</em> element, and <code>$$$</code> with the one after that. All this happens modulo the length of the range. So in a range like <code>xyz</code> for the first repetition, <code>$</code> would become <code>x</code>, and <code>$$</code> would become <code>y</code>, and so on. You can use it to efficiently define a cool Menger Sponge fractal like this: </p>
+<pre><code class="language-js">r=bx3(x,y,z,9),s=1;
+@3{
+@xyz{$=(mod($+9,18)-9)*3,}
+s/=3,
+r=k(r,-U(@xyz{bx2($,$$,9),})*s),
+}r
+</code></pre>
+<p>(Thanks to <a href="https://twitter.com/i_dianov">Ivan</a> for the fractal idea and requesting a feature like this)</p>
+<h3 id="background">Background</h3>
+<p>The <strong>Background</strong> parameter picks from a couple of predefined backgrounds, used as the <code>BACK</code> expression:</p>
+<ul>
+<li>podium: <code>min(k(L(x,z)-12-y/5,y+1)-1,$)</code>,</li>
+<li>plane: <code>min(y,$)</code>,</li>
+<li>wall: <code>min(z+12,$)</code>,</li>
+<li>none: <code>$</code></li>
+</ul>
+<p>Here <code>$</code> would be replaced by the <code>FUNC</code> expression. Feel free to use the &quot;none&quot; option though, and create your own backgrounds (for instance you might prefer a smooth minimum with the plane). </p>
+<h3 id="a0--r0-and-a1--r1">a0 / r0 and a1 / r1</h3>
+<p><code>a0</code> and <code>a1</code> are numerical parameters that range from 0..1 for use in your formula as slider-adjustable values. </p>
+<p>Additionally, they are used as the angles for the rotation functions <code>r0</code> and <code>r1</code>. Unlike in shaders/GLSL, evaluating the <code>sin</code> and <code>cos</code> functions is relatively slow in Javascript. When rotating coordinates by a constant angle, it helps to precalculate the sine and cosine of that angle, so they don&#39;t need to be evaluated on every call to the SDF.</p>
+<p>To facilitate this, two rotation functions <code>r0</code> and <code>r1</code> are provided, which perform a precalculated 2D rotation over the angles defined by <code>a0</code> and <code>a1</code>. The functions accept two parameters <code>x</code> and <code>y</code>. The return value is a vec2 Array containing the rotated coordinates.</p>
+<p>Note the <code>r0</code> and <code>r1</code> rotation angles range from 0..1, measured in turns, not radians or degrees. So, 0.5 turns = 180 degrees = PI radians.</p>
+<p>Here&#39;s an example for a rotated cube (<code>bx3</code> is the 3D cube SDF, see <a href="#list-of-functions-and-definitions">below</a>):</p>
+<pre><code class="language-js">[a,b]=r0(x,y-9);
+bx3(a,b,z,4)-.5
+</code></pre>
+<p>This example uses the <code>INIT</code> expression to assign the rotated coordinates to local variables <code>a</code> and <code>b</code>. The <code>FUNC</code> expression then uses these to define a rotated box (with slightly rounded edges).</p>
+<p>Here&#39;s an example of a rotated cube that uses both <code>r0</code> and <code>r1</code> to rotate over two axes:</p>
+<pre><code class="language-js">[a,b]=r0(x,y-9),
+[c,d]=r1(b,z);
+bx3(a,c,d,4)-.5
+</code></pre>
+<p>The above example is probably confusing and might equivalently be rewritten without the <code>INIT</code> expression and local variables, instead overwriting <code>x</code>, <code>y</code> and <code>z</code> directly, like this:</p>
+<pre><code class="language-js">[x,y]=r0(x,y-9),
+[y,z]=r1(y,z),
+bx3(x,y,z,4)-.5
+</code></pre>
+<p>(notice the lack of semicolon <code>;</code> in above formula)</p>
+<h3 id="cam-dist-mult">Cam dist mult</h3>
+<p>Increasing the <strong>Cam dist mult</strong> parameter puts the camera farther away. You can also consider this as scaling the entire scene.</p>
+<h3 id="cam-zoom">Cam zoom</h3>
+<p>The <strong>Cam zoom</strong> parameter zooms in at the image, changing the field of view. Low values = &quot;wide angle&quot;, higher values = &quot;tele-lens&quot; (flattening perspective).</p>
+<h3 id="max-march-dist">Max march dist</h3>
+<p><strong>Max march dist</strong> is the distance the raymarcher will march before it decides it hasn&#39;t hit anything. This is how big your scene can be. Larger values may slow rendering, but usually not by very much.</p>
+<h3 id="mist-start-dist">Mist start dist</h3>
+<p>In order to make everything look nice, the scene is smoothly faded to the <a href="#mist-shade">mist shade</a> at a certain distance. The mist amount is calculated as a smoothstep between the <strong>Mist start dist</strong> and the <a href="#max-march-dist">maximum marching distance</a>.</p>
+<h3 id="fudge-factor">Fudge factor</h3>
+<p>If your SDF isn&#39;t entirely a correct distance function, rendering errors may occur. These can show up as dark blotches, because the shadow casting often fails first. Additionally parts of your scene may be missed entirely.</p>
+<p>Fortunately the raymarching algorithm doesn&#39;t <em>need</em> a perfect SDF, what it really needs is an <em>upper bound</em> of that SDF. Rendering errors will only occur if you <em>overestimate</em> the distance at some point. Of course the closer it is to the exact distance, the more efficient it will render.</p>
+<p>One way to fix overestimation, is to multiply the entire SDF with a factor smaller than 1. This will decrease the distances everywhere, making it less likely that one of them is an overestimate. This will make rendering more accurate but slower, because all raymarching steps get smaller by that factor.</p>
+<p>This factor is called the <strong>Fudge factor</strong>. By default it is set to 0.7, to start out with a little bit of leeway. If you start seeing errors in your render, try setting it to a lower value such as 0.3. If you are really sure about never overestimating the distance and you want slightly faster rendering, set it to 1.</p>
+<p>The fudge factor can be a rather blunt tool but it works well. If you set it low enough you should be able to render highly distorted SDFs or even implicit functions--a.k.a. &quot;signed functions&quot; without the &quot;distance&quot; part, continuous functions that only have the correct sign to indicate inside/outside, and are zero on the surface. Their values don&#39;t indicate a particular distance. Would render very slowly of course.</p>
+<p>In principle the fudge factor would be equivalent to multiplying your entire SDF expression with that factor, so this is a way to apply it manually, or only to parts of your formula. However unlike manual multiplication, the fudge factor param is not applied when casting the shadow ray (for a bit more performance).</p>
+<h3 id="shadows">Shadows</h3>
+<p>The <strong>Shadows</strong> slider sets the amount of shadow. 0.0 are (nearly) black shadows. Set to 1.0 to turn off shadows entirely. You might want to turn off shadows to increase rendering speed, or because they got <a href="#fudge-factor">rendering errors</a>, or because you just don&#39;t like the look of them.</p>
+<h3 id="mist-shade">Mist shade</h3>
+<p>Objects between the <a href="#mist-start-dist">Mist start dist</a> and the <a href="#max-march-dist">Max march dist</a> are faded into the <strong>Mist shade</strong>. By default, this value is 1.0, fading into a white mist in the distance.</p>
+<h3 id="background-color">Background color</h3>
+<p>The <strong>Background color</strong> determines the background colour of the image.</p>
+<h3 id="hatch-color">Hatch color</h3>
+<p>The <strong>Hatch color</strong> determines the stroke colour with which the image is hatched.</p>
+<p>If the <a href="#background-color">Background color</a> is set to a colour darker than the <strong>Hatch color</strong>, the shading will automatically be inverted to make everything look right. In this case it might be useful to also set the <a href="#mist-shade">mist shade</a> to 0, to fade into the darkness.</p>
+<h3 id="line-width">Line width</h3>
+<p>The <strong>Line width</strong> sets the stroke width with which the image is hatched, in millimetres. The default is 0.25, lowering this number will increase the amount of detail, but also increase rendering time. Set to a larger for a more abstract, cartoonish effect.</p>
+<p>In case you intend this piece to be plottable, remember that the plotted piece will only look right if a <a href="https://piterpasma.nl/articles/line-test">pen with the right line width</a> is used. Unless you scale it. Same goes if you use bright hatching on a dark background--it might be hard to find a suitable pen that works well with a plotter on dark paper.</p>
+<h2 id="list-of-functions-and-definitions">List of functions and definitions</h2>
+<p>I made all sorts of useful functions for SDFs available.</p>
+<p><code>max</code>,<code>floor</code>,<code>abs</code>,<code>sin</code>,<code>cos</code>,<code>min</code>,<code>imul</code>,<code>atan2</code>,<code>log</code>,<code>exp</code>,<code>sign</code>,<code>PI</code><br>These functions come from the JS <code>Math</code> object and are put in the global scope. Of course if you need to you can access any other ones from the <code>Math</code> object.</p>
+<p><code>TAU=PI*2</code><br>I hope you like TAU.</p>
+<p><code>F=(N,f)=&gt;[...Array(N)].map((_,i)=&gt;f(i))</code><br>Loop function. Used elsewhere in the program, not sure if it&#39;s useful for SDFs.</p>
+<p><code>L=(x,y,z=0)=&gt;(x*x+y*y+z*z)**.5</code><br>Vec2/3 length (adapted from: Elements, Euclid 300 BC).</p>
+<p><code>H=([x,y,z=0],[a,b,c=0])=&gt;L(x-a,y-b,z-c)</code><br>Vec2/3 distance (H=hypothenuse).</p>
+<p><code>A=([x,y,z=0],[a,b,c=0],t=1)=&gt;[x+a*t,y+b*t,z+c*t]</code><br>Vec3 add + scalar multiply. A(p, q, t) = p + q * t. When unspecified, <code>t=1</code> for regular addition.</p>
+<p><code>mix=(a,b,p)=&gt;a+(b-a)*p</code><br>Mix. Linearly interpolates between <code>a</code> and <code>b</code>, per parameter <code>p</code>.</p>
+<p><code>N=([x,y,z=0])=&gt;[x/(m=1e-99+(x*x+y*y+z*z)**.5),y/m,z/m]</code><br>Vec3 normalize. You can access the length of the vector in global variable <code>m</code>.</p>
+<p><code>X=([x,y,z],[a,b,c])=&gt;[y*c-z*b,z*a-x*c,x*b-y*a]</code><br>Vec3 cross product.</p>
+<p><code>D=([x,y,z=0],[a,b,c=0])=&gt;x*a+y*b+z*c</code><br>Vec2/3 dot product.</p>
+<p><code>mod=(x,m)=&gt;(x%=m,x&lt;0?x+m:x)</code><br>Proper modulo that works for negative values. You can use it to repeat a coordinate like this: <code>x=mod(x,8)-4</code>. The <code>mod</code> function looks like a sawtooth wave, ramping up from 0 to <code>m</code> repeatedly, we subtract half of <code>m</code> to centre it around 0. </p>
+<p><code>cl=(x,a,b)=&gt;x&lt;a?a:x&gt;b?b:x</code><br>Clamp. You can use it (among other things) to stretch space like this: <code>x=x-cl(x,-2,2)</code>.</p>
+<p><code>B=abs</code><br>B is short for absolute. You can use it to mirror coordinates, and create reflected duplicates of things, for example <code>x=B(x)-3</code> puts the centre of the object at <code>x</code> -3 and 3.</p>
+<p><code>B(some_sdf)-r</code><br>Creates a hollow shell of <code>some_sdf</code> with width <code>r</code>. You usually can&#39;t see that it is hollow, unless you cut a hole in the shape. Notice how this formula looks exactly like mirroring a coordinate, in essence, it mirrors the surface. </p>
+<p><code>U=min</code><br>U is short for minimum. It can be used to create the union of two or more SDFs (tip: unlike in GLSL, the Javascript minimum function accepts any number of arguments).</p>
+<p><code>G=max</code><br>G is short for maximum. It can be used to create the intersection of two or more SDFs. Also see the <code>k</code> 2D corner SDF below for another way of doing an intersection.</p>
+<p><code>Z=floor</code><br>Z is short for floor. Can be useful if you need the index of a modulo-repeated value.</p>
+<p><code>FR=fract=x=&gt;x-floor(x)</code><br>FR is short for fract, which gives the fractional value of a number, or the number modulo 1. The fract function looks like a sawtooth wave, ramping up from 0 to 1 repeatedly. You can use it to repeat things, just like with the <code>mod</code> function, except you may need to scale <code>FR</code>.</p>
+<p><code>TR=x=&gt;abs(x-floor(x/4)*4-2)-1</code><br>TR is short for triangle. The triangle function looks like a triangle wave, ramping from 1 to -1 and back to 1, repeatedly. Like <code>FR</code>, you can use it to repeat things, except every other thing will be mirrored. This mirroring helps keep the SDF continuous along the domain boundaries, which again helps with overestimation and possible rendering errors. If you can&#39;t get <code>mod</code> or <code>FR</code> based repetition without errors (happens at certain camera angles), perhaps give <code>TR</code> a try.</p>
+<p><code>x&gt;threshold</code><br>There is no step function because in in JS, in a numerical context, <code>true</code> evaluates to 1 and <code>false</code> evaluates to 0, so you can do this instead.</p>
+<p><code>SM=(a,b,x)=&gt;(x-=a,x/=b-a,x&lt;0?0:x&gt;1?1:x*x*(3-2*x))</code><br><a href="https://en.wikipedia.org/wiki/Smoothstep">Smoothstep</a> function. One of the most, possibly <em>the</em> <a href="https://www.youtube.com/watch?v=60VoL-F-jIQ">most useful function</a>.</p>
+<p><code>g=x=&gt;(x=abs(x-floor(x)-.5)*2)*x*(6-4*x)-1</code><br>Fast fake sine wave. It&#39;s made from alternating smoothsteps. Its period is 0..1 not 0..2π (again, turns not radians). Try this if you need a true sin/cos in your formula and see if it&#39;s faster.</p>
+<p><code>k=(a,b)=&gt;a&gt;0&amp;&amp;b&gt;0?L(a,b):a&gt;b?a:b</code><br>2D corner SDF. This is an extremely useful function for making distance functions. You can use combinations of it to create all sorts of shapes with right angled corners. See the &quot;podium&quot; <a href="#background">background SDF</a> for a nice example. As you play with it, you may find it acts very similar to the <code>max</code> function, and it does. After all, a corner is the intersection of two planes at right angles. The difference, however, is if you &quot;inflate&quot; a corner formed by the <code>max</code> function (by subtracting a small value from it), it will stay a sharp corner (indicating it was not a 100% correct SDF). Whereas the inflated version of this 2D corner SDF will have a rounded corner (this is the expected behaviour).</p>
+<p><code>k3=(a,b,c)=&gt;k(a,k(b,c))</code><br>3D corner SDF. Slightly less useful than the 2D one. Applies the 2D corner SDF <code>k</code> twice, creating a 3D right angled corner. Think of it like the corner point of an infinite cube.</p>
+<p><code>rG=rmax=(a,b,r)=&gt;-a&lt;r&amp;&amp;-b&lt;r?L(r+a,r+b)-r:a&gt;b?a:b</code><br>Round maximum. Uses the 2D corner SDF <code>k</code> as a maximum function, and offsets distances <code>a</code> and <code>b</code> by <code>r</code>, in order to create an intersection with a rounded edge of radius <code>r</code>.</p>
+<p><code>rU=rmin=(a,b,r)=&gt;a&lt;r&amp;&amp;b&lt;r?r-L(r-a,r-b):b&gt;a?a:b</code><br>Round minimum. If you can make a maximum, you can always calculate a minimum with the identity <code>min(a,b)=-max(-a,-b)</code>. This is a slightly rewritten/optimized version of that formula.</p>
+<p><code>bx2=(x,y,a,b=a)=&gt;(x=abs(x)-a,y=abs(y)-b,x&gt;0&amp;&amp;y&gt;0?L(x,y):x&gt;y?x:y)</code><br>2D square/rectangle SDF. It is equivalent to <code>k(B(x)-a,B(y)-b)</code>.</p>
+<p><code>bx3=(a,b,c,d,e=d,f=d)=&gt;k(abs(a)-d,k(abs(b)-e,abs(c)-f))</code><br>3D cube/box SDF. Uses the 2D corner SDF <code>k</code>.</p>
+<p><code>don=(x,y,z,a,b)=&gt;L(L(x,y)-a,z)-b;</code><br>3D donut SDF. <code>a</code>=donut radius, <code>b</code>=donut width. Swap coordinates to make donuts in different orientations. </p>
+<p>Consider writing out the donut formula yourself though. It&#39;s the second simplest shape after the sphere (imho). Because this allows you to replace <code>L(...)-c</code> (the 2D circle SDF) with other 2D SDFs such as the 2D square function. Try rewriting <code>L(L(x,y)-8,z)-2</code> to <code>bx2(L(x,y)-8,z,2)</code>, for a cool squared donut / &quot;wheel&quot;. Also experiment with replacing the other <code>L</code> function (replace both and you get a &quot;square frame&quot;), or using different 2D shapes than the 2D square.</p>
+<p><code>L(x,y)-r</code><br>3D Cylinder SDF. <code>r</code>=radius. Use other coordinates to orient differently. Also, it&#39;s the 2D circle SDF, how about that. </p>
+<p><code>L(k(x,y),z)-r</code><br>3D bent cylinder SDF. <code>r</code>=radius. Swap coordinates to orient differently. You can subtract or add to a coordinate to bend it at a different position. You can nest the <code>k</code> functions in all sorts of fun and interesting ways to create pipes. This is an example of the cool things you can do with the <code>k</code> function.</p>
+<p><code>sB=sabs=(x,p=.5)=&gt;(x*x+p)**.5</code><br>Smooth absolute. Like the absolute function but smooth around 0. <code>p</code> is the amount of smoothness.</p>
+<p><code>qB=(x,m)=&gt;(x=x&lt;0?-x:x)&gt;m?x:(2-x/m)*x*x/m</code><br>Smooth absolute, polynomial version. Probably slightly faster than <code>sB</code>. <code>m</code> is the amount of smoothness.</p>
+<p><code>scl=(x,p,a,b)=&gt;(sB(x-a,p)-sB(x-b,p)+b+a)/2</code><br>Smooth clamp. Did you know you can build the clamp function out of absolute functions? Well, if you do that with a smooth absolute, you get a smooth clamp!</p>
+<p><code>qcl=(x,p,a,b)=&gt;(qB(x-a,p)-qB(x-b,p)+b+a)/2</code><br>Smooth clamp, using polynomial version smooth absolute.</p>
+<p><code>nz=(x,y,z,s,i,o=1)=&gt;/* noise function, see source code */</code><br>3D value noise function that returns values in the range -.5 to .5. Parameter <code>s</code> is for scale, it simply multiplies <code>x</code>, <code>y</code> and <code>z</code> parameters. Integer parameter <code>i</code> means &quot;index&quot; and selects different random (non-integer) 3D offsets into the noise field. The noise field is periodic with dimensions 1024x1024x1024. At non-integer locations, the noise field is interpolated using the cubic smoothstep polynomial. </p>
+<p>The noise function is very fast and it is recommended to add two or more &quot;octaves&quot; of it, to get more organic looking noise. This is what the final parameter <code>o</code> is for, if it is larger than 1, several layers of noise are added, each layer with double the scale <code>s</code> and multiplied to half the amplitude. Note that this (slightly) increases the amplitude of your noise, for <code>o=2</code> your range is ± (1/2+1/4)=0.75, and for <code>o=3</code> the range is ± (1/2+1/4+1/8)=0.875. As you add more and more octaves, this range approaches the limit of ±1.</p>
+<p><code>ri=(i,j,k)=&gt;/* random values (see code) */</code><br>Random values on a 3D integer grid, ranging from -.5 to .5. Casts coordinates to integer. This function is used internally by the value noise function, but can also be useful for SDFs (such as for random variations of domain repetitions).</p>
+<p><code>r0=rotator(a0=par.a0); // rotate 2D coordinate by angle a0</code><br><code>r1=rotator(a1=par.a1); // rotate 2D coordinate by angle a1</code><br>2D rotation functions. Rotate vec2 by a constant angle, see section about <a href="#a0--r0-and-a1--r1">a0/a1/r0/r1 rotation params</a>, above.</p>
+<p><code>rot=(x,y,c,s)=&gt;[c*x+s*y,c*y-s*x]</code><br>Arbitrary 2D rotation function. If you want to precalc your own constant rotation, <code>c</code> and <code>s</code> are the cosine and sine of the angle, respectively.</p>
+<p>In a pinch, most of the vec3 functions should also work for vec2. The third coordinate defaults <code>z=0</code>. If it returns a vec3, it will have the 3rd coordinate set to <code>0</code>. Exceptions are the cross product and the 3D SDFs.</p>
+<h2 id="security-considerations">Security considerations</h2>
+<p>Yes. Good question. You <a href="https://en.wikipedia.org/wiki/JSFuck">can&#39;t really filter JS expressions</a>. I&#39;m not sure if this is bad, but I think with some creativity, it could be.</p>
+<p>So this is what I came up with. </p>
+<p>I allowlist a set of chars from ASCII 33-127, no funny unicode business, no quotes, no braces, no backslash, no $ or @.</p>
+<p><code>!%&amp;()*+,-./0123456789:&lt;=&gt;?ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_abcdefghijklmnopqrstuvwxyz|~</code></p>
+<p>Any identifiers longer than 2 chars must also be from an allowlist. The allowlist is all the functions and identifiers in this document and also the <code>Math</code> object and all its properties and methods. This means that your local variables are going to have to be 1 or 2 chars. Here is the full allowlist:</p>
+<p><code>Math LN10 LN2 LOG10E LOG2E SQRT1_2 SQRT2 abs acos acosh asin asinh atan atan2 atanh cbrt ceil clz32 cos cosh exp expm1 floor fround hypot imul log log10 log1p log2 max min pow round sign sin sinh sqrt tan tanh trunc mix mod fract rmax rmin bx2 bx3 don sabs scl qcl rot Infinity map reduce</code></p>
+<p>Any white space ASCII 32 will be removed from the code.</p>
+<p>Denylist <code>//</code>, <code>/*</code>, <code>*/</code>, <code>+[</code>, <code>](</code>, <code>to</code>, <code>of</code>, <code>in</code> and <code>--</code>. Yes, that last one is the decrement operator, because it is also part of HTML and SVG comments, which would break stuff because your SDF code is also <a href="https://twitter.com/piterpasma/status/1649071912742420482">included as a comment inside the output SVG</a>.</p>
+<p>Finally we trap the toString method of these primitives:</p>
+<pre><code class="language-js">  let typ=[Array,Function,Object,RegExp,Uint32Array];
+  let org=typ.map(v=&gt;v.prototype.toString);
+  let str=b=&gt;typ.map(b?(v,i)=&gt;v.prototype.toString=org[i]:v=&gt;v.prototype.toString=_=&gt;{throw Error(&#39;HAX&#39;)});
+  str(0); // trap toString
+  // ...
+  str(1); // restore toString
+</code></pre>
+<p>Without this last trick it would be possible to cast these types to strings, which would allow you to maybe construct nasty String values such as <code>x=&quot;constructor&quot;</code>, which would allow you to call <code>B[x]</code>, yielding the <code>Function</code> constructor, allowing for arbitrary code execution. And I want you to write arbitrary SDFs but not arbitrary code :-)</p>
+<p>If you still manage to wriggle your way out of this, let&#39;s collab. Make art not hax ;-)</p>
+</body></html>
