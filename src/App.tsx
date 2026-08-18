@@ -1,5 +1,6 @@
 import { createHashRouter, RouterProvider, type RouteObject } from 'react-router-dom'
 import Layout from './components/Layout'
+import LandingPage from './pages/LandingPage'
 import BrowsePage from './pages/BrowsePage'
 import TokenPage from './pages/TokenPage'
 import IterationPage from './pages/IterationPage'
@@ -11,7 +12,8 @@ export const routes: RouteObject[] = [
   {
     element: <Layout />,
     children: [
-      { path: '/', element: <BrowsePage /> },
+      { path: '/', element: <LandingPage /> },
+      { path: '/artwork', element: <BrowsePage /> },
       { path: '/token/:slug', element: <TokenPage /> },
       { path: '/gentk/:contract/:tokenId', element: <IterationPage /> },
       { path: '/artists', element: <ArtistsPage /> },

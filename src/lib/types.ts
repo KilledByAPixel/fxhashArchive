@@ -34,3 +34,32 @@ export interface SnapshotMeta {
   shardCount: number
   shardSize: number
 }
+
+/** Per-project market history, in mutez. Divide by 1e6 for tez. */
+export interface MarketStats {
+  pv: number
+  pn: number
+  sv: number
+  sn: number
+  floor: number | null
+  med: number | null
+  hi: number | null
+  lo: number | null
+  listed: number
+}
+
+export interface Summary {
+  generatedAt: string
+  counts: {
+    projects: number
+    artists: number
+    iterations: number
+    seeds: number
+    archived: number
+  }
+  /** Project ids, highest collector spending first. Position is the rank. */
+  ranked: number[]
+  /** Project ids whose generator code is archived in this repo. */
+  archived: number[]
+  curve: Array<{ p: number; share: number }>
+}

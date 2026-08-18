@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { findTokenBySlug, loadIterationContract, loadIterationIds } from '../lib/data'
+import { findTokenBySlug, loadIterationContract, loadIterationIds, loadProjectMarketStats } from '../lib/data'
 import { fetchIterations, fetchIterationsByIds, type Iteration } from '../lib/tzkt'
-import type { LeanToken } from '../lib/types'
+import type { LeanToken, MarketStats } from '../lib/types'
 import IpfsImage from '../components/IpfsImage'
 import LoadError from '../components/LoadError'
 import NotFoundPage from './NotFoundPage'
 
 const PAGE = 48
+
+const tez = (mutez: number) => `${(mutez / 1e6).toLocaleString(undefined, { maximumFractionDigits: 1 })} tez`
 
 /**
  * The project's iteration ids from the snapshot mapping:
@@ -40,6 +42,7 @@ export default function TokenPage() {
   const [iterError, setIterError] = useState(false)
   const [offset, setOffset] = useState(0)
   const [done, setDone] = useState(false)
+  const [market, setMarket] = useState<MarketStats | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -53,6 +56,7 @@ export default function TokenPage() {
     setIterError(false)
     setOffset(0)
     setDone(false)
+    setMarket(null)
     findTokenBySlug(slug!).then(
       (t) => { if (!cancelled) setState(t ? { status: 'ok', token: t } : { status: 'notfound' }) },
       // A rejected lookup says nothing about whether the project exists.
@@ -127,6 +131,16 @@ export default function TokenPage() {
     return () => { cancelled = true }
   }, [token, objktIds, iterContract, offset])
 
+  useEffect(() => {
+    if (!token) return
+    let cancelled = false
+    loadProjectMarketStats(token.slug, token.id).then(
+      (m) => { if (!cancelled) setMarket(m) },
+      () => { if (!cancelled) setMarket(null) },
+    )
+    return () => { cancelled = true }
+  }, [token])
+
   if (state.status === 'loading') return <p>Loading…</p>
   if (state.status === 'notfound') return <NotFoundPage />
   if (state.status === 'error') {
@@ -158,6 +172,12 @@ export default function TokenPage() {
             {iterations && iterations.length > 0 && ` · ${iterations.length} iterations loaded`}
           </p>
           {project.tags.length > 0 && <p className="muted">{project.tags.join(', ')}</p>}
+          {market && market.pv + market.sv > 0 && (
+            <p className="muted">
+              {tez(market.pv + market.sv)} traded
+              {market.hi != null && market.hi > 0 && ` · highest sale ${tez(market.hi)}`}
+            </p>
+          )}
         </div>
       </div>
 

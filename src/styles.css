@@ -35,3 +35,21 @@ img { max-width: 100%; }
 .artist-row { display: flex; gap: 1rem; align-items: center; padding: 0.5rem; border-radius: 8px; background: #1a1a1a; }
 .avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; }
 .avatar-lg { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; }
+
+.landing { display: flex; flex-direction: column; gap: 2.5rem; }
+.landing-intro { max-width: 42rem; }
+.landing-stats { display: flex; flex-wrap: wrap; gap: 1.5rem; list-style: none; padding: 0; }
+.landing-stats strong { display: block; font-size: 1.5rem; }
+.landing-coverage { max-width: 42rem; }
+.landing-note { max-width: 42rem; opacity: 0.8; }
+.bar { background: rgba(127, 127, 127, 0.25); border-radius: 3px; height: 10px; overflow: hidden; }
+/* Archived share is well under 2%, so guarantee the fill stays visible. */
+.bar-fill { background: currentColor; height: 100%; min-width: 2px; }
+.curve { color: inherit; max-width: 320px; width: 100%; }
+.token-card { position: relative; }
+.token-badge {
+  position: absolute; top: 6px; right: 6px;
+  background: rgba(0, 0, 0, 0.7); color: #fff;
+  border-radius: 3px; font-size: 0.7rem; padding: 2px 6px;
+}
+.archived-filter { display: inline-flex; align-items: center; gap: 0.35rem; }
