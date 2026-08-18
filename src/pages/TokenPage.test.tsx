@@ -39,6 +39,9 @@ beforeEach(() => {
   // Likewise the contract mapping: the ids alone cannot say which gentk contract a
   // project's iterations live on, so the page has to resolve both.
   vi.spyOn(data, 'loadIterationContract').mockResolvedValue(PROJECT_CONTRACT)
+  // Default: never traded. Stated explicitly so unrelated tests don't hit the real
+  // loader, whose relative-URL fetch fails in jsdom.
+  vi.spyOn(data, 'loadProjectMarketStats').mockResolvedValue(null)
 })
 
 afterEach(() => {
@@ -360,4 +363,67 @@ test('an empty mapping still claims "never minted" even without a contract entry
 
   expect(await screen.findByText(/no iterations have been minted/i)).toBeTruthy()
   expect(join).not.toHaveBeenCalled()
+})
+
+// --- historical trading figures -----------------------------------------
+// An archive, not a marketplace: sales appear only as historical record
+// (total traded, highest sale), never floor/med/lo/listed.
+
+test('shows historical sales in tez, and never a floor price', async () => {
+  vi.spyOn(data, 'loadProjectMarketStats').mockResolvedValue({
+    pv: 1_000_000, pn: 10, sv: 2_500_000, sn: 4,
+    floor: 48_000_000, med: null, hi: 900_000, lo: 1, listed: 12,
+  })
+  renderAt('/token/tok-5')
+  // 1 tez primary + 2.5 tez secondary
+  expect(await screen.findByText(/3\.5 tez/)).toBeTruthy()
+  expect(screen.getByText(/0\.9 tez/)).toBeTruthy()
+  // Floor and listings describe a market that no longer exists.
+  expect(screen.queryByText(/floor/i)).toBeNull()
+  expect(screen.queryByText(/listed/i)).toBeNull()
+})
+
+test('says nothing about sales when a project never traded', async () => {
+  vi.spyOn(data, 'loadProjectMarketStats').mockResolvedValue(null)
+  renderAt('/token/tok-5')
+  await screen.findByText('Tok 5')
+  expect(screen.queryByText(/tez/i)).toBeNull()
+})
+
+test('clears stale trading figures when navigating to a project with none of its own', async () => {
+  // Trading figures displayed beneath the wrong project's name would be a factual
+  // misstatement, not a cosmetic flicker — this archive's whole purpose is being
+  // accurate about what belongs to what.
+  const tokenA = token
+  const tokenB: LeanToken = { ...token, id: 6, slug: 'tok-6', name: 'Tok 6' }
+
+  vi.spyOn(data, 'findTokenBySlug').mockImplementation((slug: string) =>
+    Promise.resolve(slug === 'tok-5' ? tokenA : slug === 'tok-6' ? tokenB : null),
+  )
+  vi.spyOn(data, 'loadProjectMarketStats').mockImplementation((slug: string) =>
+    slug === 'tok-5'
+      ? Promise.resolve({ pv: 5_000_000, pn: 1, sv: 0, sn: 0, floor: null, med: null, hi: null, lo: null, listed: 0 })
+      // Deliberately never resolves for B: this proves the previous project's figures
+      // are cleared by the synchronous per-slug reset, not merely overwritten once B's
+      // own (still-pending) stats eventually load.
+      : new Promise(() => {}),
+  )
+
+  render(
+    <MemoryRouter initialEntries={['/token/tok-5']}>
+      <Link to="/token/tok-6">go to B</Link>
+      <Routes><Route path="/token/:slug" element={<TokenPage />} /></Routes>
+    </MemoryRouter>,
+  )
+
+  expect(await screen.findByRole('heading', { name: 'Tok 5' })).toBeTruthy()
+  expect(await screen.findByText(/5 tez traded/)).toBeTruthy()
+
+  fireEvent.click(screen.getByText('go to B'))
+
+  expect(await screen.findByRole('heading', { name: 'Tok 6' })).toBeTruthy()
+  // Project B's own market effect never resolves in this test. If A's figures had not
+  // been cleared synchronously alongside the rest of the per-slug reset, they would
+  // still be visible right now, under B's name.
+  expect(screen.queryByText(/tez/i)).toBeNull()
 })

@@ -55,6 +55,10 @@ beforeEach(() => {
   vi.spyOn(data, 'findTokenBySlug').mockResolvedValue(token)
   vi.spyOn(data, 'loadIterationIds').mockResolvedValue(['FX0-100', 'FX0-101'])
   vi.spyOn(data, 'loadIterationContract').mockResolvedValue(MIDDLE)
+  // This file pins the *count* of real fetch calls against the stubbed TzKT
+  // endpoint below, so the market-stats loader — which is unrelated to what this
+  // file tests — must not add a fetch of its own to that count.
+  vi.spyOn(data, 'loadProjectMarketStats').mockResolvedValue(null)
 })
 
 afterEach(() => {

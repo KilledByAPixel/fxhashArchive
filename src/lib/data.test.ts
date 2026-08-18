@@ -1,7 +1,7 @@
 import { test, expect, vi, beforeEach } from 'vitest'
 import {
   loadMeta, loadShard, findTokenBySlug, isVisible, loadIterationIds,
-  loadIterationContract, loadSummary, _resetCache,
+  loadIterationContract, loadSummary, loadProjectMarketStats, _resetCache,
 } from './data'
 import type { LeanToken } from './types'
 
@@ -198,4 +198,31 @@ test('loadSummary fetches summary.json', async () => {
 
   await expect(loadSummary()).resolves.toEqual(summary)
   expect(fetchMock.mock.calls[0][0]).toContain('data/summary.json')
+})
+
+// --- per-project trading history -----------------------------------------
+// Sharded to mirror tokens/index-NNN.json; loaded only when a project page
+// opens, since the full market data is 3 MB across 28 shards.
+
+test('loadProjectMarketStats reads the shard that holds the project', async () => {
+  const stats = { pv: 1_000_000, pn: 10, sv: 2_500_000, sn: 4, floor: null, med: null, hi: 900_000, lo: 1, listed: 0 }
+  const fetchMock = vi.fn().mockImplementation((url: string) => {
+    if (String(url).includes('slug-index.json')) {
+      return Promise.resolve({ ok: true, json: async () => ({ 'tok-5': 3 }) })
+    }
+    return Promise.resolve({ ok: true, json: async () => ({ '5': stats }) })
+  })
+  vi.stubGlobal('fetch', fetchMock)
+  _resetCache()
+
+  await expect(loadProjectMarketStats('tok-5', 5)).resolves.toEqual(stats)
+  expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('market/stats-003.json'))).toBe(true)
+})
+
+test('loadProjectMarketStats returns null for an unknown project', async () => {
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) })
+  vi.stubGlobal('fetch', fetchMock)
+  _resetCache()
+
+  await expect(loadProjectMarketStats('nope', 999)).resolves.toBeNull()
 })

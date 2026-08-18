@@ -1,4 +1,4 @@
-import type { LeanToken, Artist, SnapshotMeta, Summary } from './types'
+import type { LeanToken, Artist, SnapshotMeta, Summary, MarketStats } from './types'
 
 const BASE = `${import.meta.env.BASE_URL}data/`
 const HIDDEN_FLAGS = new Set(['MALICIOUS', 'HIDDEN', 'REPORTED', 'AUTO_DETECT_COPY'])
@@ -128,4 +128,24 @@ export async function loadIterationContract(projectId: number): Promise<string |
   const index = byProject[String(projectId)]
   if (index === undefined) return null
   return contracts[index] ?? null
+}
+
+/** Market stats sharded to mirror `tokens/index-NNN.json`. */
+const loadMarketShard = (i: number) =>
+  getJson<Record<string, MarketStats | null>>(`market/stats-${String(i).padStart(3, '0')}.json`)
+
+/**
+ * A project's trading history, or null if it never traded.
+ *
+ * Loaded only when a project page opens: the full market data is 3 MB across 28
+ * shards, and no other view needs a figure from it.
+ */
+export async function loadProjectMarketStats(
+  slug: string,
+  projectId: number,
+): Promise<MarketStats | null> {
+  const shardIdx = await shardIndexForSlug(slug)
+  if (shardIdx === undefined) return null
+  const shard = await loadMarketShard(shardIdx)
+  return shard[String(projectId)] ?? null
 }

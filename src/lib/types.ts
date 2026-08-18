@@ -35,6 +35,19 @@ export interface SnapshotMeta {
   shardSize: number
 }
 
+/** Per-project market history, in mutez. Divide by 1e6 for tez. */
+export interface MarketStats {
+  pv: number
+  pn: number
+  sv: number
+  sn: number
+  floor: number | null
+  med: number | null
+  hi: number | null
+  lo: number | null
+  listed: number
+}
+
 export interface Summary {
   generatedAt: string
   counts: {
