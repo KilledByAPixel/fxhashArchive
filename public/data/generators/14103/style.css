@@ -1,0 +1,50 @@
+body {
+  margin: 0px;
+  background-color: #FFFFFF;
+  overflow: hidden;
+  text-align: center;
+  align-content: center;
+  align-items: center;
+  vertical-align: middle;
+}
+
+#container {
+  position: absolute;
+  background-color: #FFFFFF;
+  top: 50%;
+  left: 50%;
+  -ms-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+  margin: auto;
+}
+
+#container canvas, #overlay {
+  
+  display: block;
+  position:absolute;
+  
+}
+#renderer {
+  display:block;
+}
+
+#overlay
+{
+  display:none;
+  color:#FFFFFF;
+  background-color: #1e1e1e;
+  font-family: "Arial";
+  margin: auto;
+  text-align: center;
+  align-content: center;
+}
+
+#progresscontainer {
+  
+  top: 50%;
+  left: 50%;
+  -ms-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+  position:relative;
+  margin:auto;
+}

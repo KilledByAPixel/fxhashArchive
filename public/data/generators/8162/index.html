@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Flockaroo WebGL</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="Author" content="Florian Berger">
+    <meta name="License" content="licensed under CC BY-SA 4.0">
+    
+    
+    <style>
+        html,
+        body {
+          margin: 0;
+          padding: 0;
+        }
+
+        body {
+          width: 100vw;
+          height: 100vh;
+          overflow: hidden;
+          background: radial-gradient(#efefef, #cccccc);
+        }
+
+        * {
+          -webkit-box-sizing: border-box;
+          box-sizing: border-box;
+          -moz-osx-font-smoothing: grayscale;
+          -webkit-font-smoothing: antialiased;
+          -webkit-tap-highlight-color: transparent;
+          -webkit-touch-callout: none;
+        }
+    </style>
+    
+<script id="fxhash-snippet">
+      let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+      var fxhash = new URLSearchParams(window.location.search).get('fxhash')
+      let b58dec = str=>[...str].reduce((p,c)=>p*alphabet.length+alphabet.indexOf(c)|0, 0)
+      let fxhashTrunc = fxhash.slice(2)
+      let regex = new RegExp(".{" + ((fxhashTrunc.length/4)|0) + "}", 'g')
+      let hashes = fxhashTrunc.match(regex).map(h => b58dec(h))
+      let sfc32 = (a, b, c, d) => {
+        return () => {
+          a |= 0; b |= 0; c |= 0; d |= 0
+          var t = (a + b | 0) + d | 0
+          d = d + 1 | 0
+          a = b ^ b >>> 9
+          b = c + (c << 3) | 0
+          c = c << 21 | c >>> 11
+          c = c + t | 0
+          return (t >>> 0) / 4294967296
+        }
+      }
+      var fxrand = sfc32(...hashes)
+      // used to get features during token mint
+      window.addEventListener("message", (event) => {
+        if (event.data === "fxhash_getFeatures") {
+          parent.postMessage({
+            id: "fxhash_getFeatures",
+            data: window.$fxhashFeatures
+          }, "*")
+        }
+      })
+      var isFxpreview = new URLSearchParams(window.location.search).get('preview') === "1"
+      function fxpreview() {
+        window.dispatchEvent(new Event("fxhash-preview"))
+        setTimeout(() => fxpreview(), 500)
+      }
+</script>
+
+</head>
+<body>
+<canvas id="glcanvas"></canvas>
+
+
+
+<script id="allShaders" type="not-javascript"></script>
+
+
+
+
+<script id="hicetnunc-hashes">
+//---------------------------------------------------------------------------------------------------
+const characters ='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+function generateRandStr(length) {
+    let result = ' ';
+    const charactersLength = characters.length;
+    for ( let i = 0; i < length; i++ ) {
+        result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    }
+    return result;
+}
+//---------------------------------------------------------------------------------------------------
+function hashCode(str) {
+  var hash = 0, i, chr; 
+  if (str.length === 0) return hash;
+  for (i=0; i<str.length; i++) {
+    chr   = str.charCodeAt(i);
+    hash  = ((hash << 5) - hash) + chr;
+    hash |= 0; // Convert to 32bit integer
+  }
+  return hash;
+};
+//---------------------------------------------------------------------------------------------------
+const creator = new URLSearchParams(window.location.search).get('creator');
+const viewer = new URLSearchParams(window.location.search).get('viewer');
+var objktID = new URLSearchParams(window.location.search).get('objkt')
+var creatorStr=creator; if (creatorStr==null) { creatorStr = generateRandStr(32); }
+var viewerStr=viewer;   if (viewerStr==null)  { viewerStr = generateRandStr(32); }
+var creatorHash=hashCode(creatorStr);
+var viewerHash=hashCode(viewerStr);
+//---------------------------------------------------------------------------------------------------
+</script>
+
+
+
+<script>
+var creatorFloat4=[((creatorHash>> 0)&0xFF)/0xFF,((creatorHash>> 8)&0xFF)/0xFF,((creatorHash>>16)&0xFF)/0xFF,((creatorHash>>24)&0xFF)/0xFF];
+var viewerFloat4 =[((viewerHash >> 0)&0xFF)/0xFF,((viewerHash >> 8)&0xFF)/0xFF,((viewerHash >>16)&0xFF)/0xFF,((viewerHash >>24)&0xFF)/0xFF];
+var viewerFloat8 =[((viewerHash >> 0)&0xF)/0xF,
+                   ((viewerHash >> 4)&0xF)/0xF,
+                   ((viewerHash >> 8)&0xF)/0xF,
+                   ((viewerHash >>12)&0xF)/0xF,
+                   ((viewerHash >>16)&0xF)/0xF,
+                   ((viewerHash >>20)&0xF)/0xF,
+                   ((viewerHash >>24)&0xF)/0xF,
+                   ((viewerHash >>28)&0xF)/0xF];
+var randFloat4   =[Math.random(),Math.random(),Math.random(),Math.random()];
+</script>
+
+<script id="fxhash3">
+    viewerHash=hashCode(fxhash); viewerFloat4=[fxrand(),fxrand(),fxrand(),fxrand()]; randFloat4=[fxrand(),fxrand(),fxrand(),fxrand()];
+    window.$fxhashFeatures = {
+       "ColorMode" : Math.floor(Math.pow(fxrand(),1.)*1.99) ,
+       "TintHue" : fxrand() ,
+       "Blobs" : (fxrand()<.3?1.7:0.) ,
+       "DOutl" : (fxrand()>.3?1.:0.) ,
+       "NoiseType" : Math.floor(fxrand()*2.99) ,
+       "TintSat" : fxrand()*.6+.4 ,
+       "YOutl" : (fxrand()>.3?1.:0.) ,
+       "PosZ" : 2.-Math.pow(fxrand(),2.) ,
+       "PosY" : (fxrand()-.5)*30. ,
+       "PosX" : (fxrand()-.5)*30. ,
+       "outlines" : (fxrand()<.15?0.:.5) ,
+       "ColorHash" : fxrand() ,
+       "XOutl" : (fxrand()>.3?1.:0.) ,
+       "Azim" : fxrand()*6.3 ,
+       "Elev" : 1.4-Math.pow(fxrand(),2.)*.6 ,
+       //fxhashFeatures
+    };
+</script>
+
+
+
+
+
+
+
+
+
+
+
+<script id="main">
+
+var MouseEnable=1;
+var RelMouseEnable=1;
+var SmoothMouse=0.97;
+var AnimEnable=1;
+var SpaceToPauseEnable=1;
+var use_webgl2=1;
+//const canvas = document.createElement('canvas');
+//canvas.id="glcanvas";
+//document.body.appendChild(canvas);
+var canvas;
+var gl;
+      canvas = document.querySelector("#glcanvas");
+      gl = canvas.getContext(use_webgl2?"webgl2":"webgl", { antialias: false });
+      if(use_webgl2) gl.getExtension( 'OES_texture_float_linear');
+      if(use_webgl2) gl.getExtension( 'EXT_color_buffer_float');
+      //if (!use_webgl2) gl.getExtension( 'OES_texture_float');
+      //if (!use_webgl2) gl.getExtension( 'EXT_shader_texture_lod');
+      //console.log("Float16Filter="+gl.getExtension( 'OES_texture_half_float_linear' ));
+      //console.log("Anisotropic="  +gl.getExtension( 'EXT_texture_filter_anisotropic' ));
+      
+
+var params;
+var allShadersStr="###TITLE:fxhash Mountain Moves\n###USER:flockaroo\n###SUBMITDATE:2022-01-28 14:54:34\n###TAGS:tags, tags, tags\n###DESCRIPTION:description\nImage: Geom_A local:Image.glsl opt:uniform.outlines=0.5;uniform.outlinesW=.7;uniform.GridSize=.05;uniform.VoxTile=20;uniform.VoxSmooth=1.4;uniform.VoxAng=0;uniform.FrameX=.05;uniform.FrameY=.05;uniform.TintHue=0.11;uniform.TintSat=.9;uniform.ColorMode=1;uniform.Elev=0;uniform.ColorHash=0.3;uniform.Blobs=0;uniform.XOutl=0;uniform.YOutl=0;uniform.DOutl=1;uniform.PosX=.1;uniform.PosY=1;uniform.NoiseType=0;\nBuff_A: rand256 local:Buff_A.glsl opt:width=512;height=1024;\nGeom_A: rand256 rand64 Buff_A Buff_B local:Geom_A.glsl opt:width=x2.3;height=x2.3;genMipmap=1;blending=sa__one_minus_sa;depthTest=0;\nInclude_A: local:Include_A.glsl\nInclude_B: local:Include_B.glsl\nBuff_B: Buff_B keyboard local:Buff_B.glsl opt:width=16;height=16;\n\nTimeline: YOutl\n###BEGIN:Image.glsl\n// created by florian berger (flockaroo) - 2022\n// License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.\n\n/*\n Mountain Moves\n ...kind of the logical real-time consequence of \"Mountain View\"\n featuring  different mountain formation (noise) types, different display modes\n (outlines, semi outlines, no outlines, soft paint strokes)\n 6 color modes are still switchable. initially always 2-color modes.\n on phones also uses device orientation.\n \n press 'c' ... switch color mode\n press 's' ... save png of actual resolution x3\n */\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    fragColor=texture(iChannel0,fragCoord/iResolution.xy);\n    fragColor.w=1.;\n    //if(fragColor.xyz==vec3(0)) fragColor.xyz=vec3(1);\n}\n\n###BEGIN:Buff_A.glsl\n// created by florian berger (flockaroo) - 2022\n// License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.\n\n#define RandTex iChannel0\n#include Include_A.glsl\n#include Include_B.glsl\n\n\nvoid mainImage( out vec4 fragColor, vec2 fragCoord )\n{\n    float isSky;\n    fragColor.xyz = getVertex_screen_XY(ivec2(fragCoord), isSky);\n    fragColor.w = isSky; \n}\n\n###BEGIN:Geom_A.glsl\n// created by florian berger (flockaroo) - 2022\n// License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.\n\n\n#NumTriangles 0x80000\n\n\n//fxhashFeature TintHue    fxrand()\n//fxhashFeature TintSat    fxrand()*.6+.4\n//fxhashFeature ColorMode  Math.floor(Math.pow(fxrand(),1.)*1.99)\n//fxhashFeature ColorHash  fxrand()\n//fxhashFeature outlines   (fxrand()<.15?0.:.5)\n//fxhashFeature XOutl      (fxrand()>.3?1.:0.)\n//fxhashFeature YOutl      (fxrand()>.3?1.:0.)\n//fxhashFeature DOutl      (fxrand()>.3?1.:0.)\n//fxhashFeature Blobs      (fxrand()<.3?1.7:0.)\n//fxhashFeature Azim       fxrand()*6.3\n//fxhashFeature Elev       1.4-Math.pow(fxrand(),2.)*.6\n//fxhashFeature PosX       (fxrand()-.5)*30.\n//fxhashFeature PosY       (fxrand()-.5)*30.\n//fxhashFeature PosZ       2.-Math.pow(fxrand(),2.)\n//fxhashFeature NoiseType  Math.floor(fxrand()*2.99)\n\n#define RandTex iChannel0\n#include Include_A.glsl\n#include Include_B.glsl\n\nuniform float XOutl;\nuniform float YOutl;\nuniform float DOutl;\n\nvec3  g_tintCol = vec3(1);\nvec3  g_bgCol = vec3(.5);\nfloat g_normalFade = 0.;\nfloat g_strokeInv = 0.;\nfloat g_3Cols = 0.;\n\nuniform float Blobs;\n\n// HSV <-> RGB from http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl\nvec3 hsv2rgb(vec3 c)\n{\n    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);\n    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);\n    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);\n}\n\n\nvoid SetColorMode(int mode)\n{\n    mode=mode%6;\n    g_tintCol = hsv2rgb(vec3(TintHue,TintSat,.8));\n    g_3Cols=0.;\n    if (mode==0) {\n        g_bgCol = mix(g_tintCol,vec3(0),.7);\n        g_normalFade=0.;\n        g_strokeInv=0.;\n        g_3Cols=1.;\n    }\n    if (mode==1) {\n        g_bgCol = mix(g_tintCol,vec3(1),.3);\n        //g_bgCol = vec3(1);\n        g_normalFade=0.;\n        g_strokeInv=1.;\n        g_3Cols=1.;\n    }\n    if (mode==2) {\n        g_bgCol = mix(g_tintCol,vec3(1),.3);\n        g_normalFade=0.;\n        g_strokeInv=1.;\n    }\n    if (mode==3) {\n        g_bgCol = mix(g_tintCol,vec3(0),.7);\n        g_normalFade=0.;\n        g_strokeInv=0.;\n    }\n    if (mode==4) {\n        g_bgCol = mix(g_tintCol,vec3(1),.5);\n        g_normalFade=1.;\n        g_strokeInv=1.;\n    }\n    if (mode==5) {\n        g_bgCol = mix(g_tintCol,vec3(0),.5);\n        g_normalFade=1.;\n        g_strokeInv=0.;\n    }\n}\n\nuniform float FrameX;\nuniform float FrameY;\n\n#if 0\nvec3 project(vec3 p)\n{\n    float s=max(Res.x,Res.y)*.5;\n    float sm=min(Res.x,Res.y)*.5;\n    float d0=1./tanFOVh;\n    //p[2]+=MOEB_R*1.3/tanFOVh*g_zoom;\n    //mcos(uv[0]*PI2)\n    #ifdef CREATE_360\n        var ang=matan(p[2],p[0]); if(ang<0.) ang+=PI2;\n        //((uv[1]*2.-1.)*height/width*PI)\n        return [ang/PI2*width,\n                //p[1]/-length2([p[0],p[2]])/PI*width*.5+height*.5,\n                p[1]/-length2([p[0],p[2]])/PI*width*.5,\n                length2([p[0],p[2]])];\n    #endif\n\n    return vec3(-p.x/p.z/tanFOVh,\n                -p.y/p.z/tanFOVh*Res.x/Res.y,\n                -p.z);\n}\n#endif\n\nvoid mainGeom( out vec4 vertCoord, out vec4 vertAttrib[3], int vertIndex )\n{\n    \n    float isSky;\n    vec3 p1=getVertex(vertIndex/3*3+0,isSky);\n    vec3 p2=getVertex(vertIndex/3*3+1);\n    vec3 p3=getVertex(vertIndex/3*3+2);\n    //vec3 pc=(p1+p2+p3)/3.;\n    vec3 pc=(p1+p3)/2.;\n    vec3 pcc=(p1+p3+p2)/3.;\n    \n    vec3 pos0=getVertex(vertIndex);\n    pos0=mix(pos0,(pos0-pc)*1.6+pc,Blobs);\n    //if(mod(iTime,10.)<5.) pos0.z=.5*(p2.z+p3.z);\n    vec3 normal=normalize(cross(p2-p1,p3-p1));\n    \n    //normal=vec3(-getGrad2(pos0.xy,.003),1.);\n    normal=normalize(normal);\n    normal*=(-isSky+.5)*2.;\n    \n    int idx=vertIndex-6;\n    vec2 uv6=UV6(idx);\n    vec2 uv=(uv6+vec2((idx/6)%NUM,(idx/6)/NUM))/float(NUM);\n    //pos0.z-=textureLod(iChannel1,uv,0.).z*.03;\n\n    vec3 pos=pos0, pos1=pc, pos2=p1, pos3=p1;\n    getTrafo(pos1);\n    //getTrafo(pos2);\n    getTrafo(pos3);\n    vec3 pct=pc;\n    getTrafo(pct);\n    getTrafo(pos);\n    float aspect = Res.y/Res.x;\n    vec4 vertCoord1,vertCoord3;\n    #ifndef CREATE_360\n    float nv=.03;\n    vertCoord = FRUSTUM(-nv,nv, -nv*aspect,nv*aspect, nv/tanFOVh,1./nv) * vec4(pos,1);\n    vertCoord1= FRUSTUM(-nv,nv, -nv*aspect,nv*aspect, nv/tanFOVh,1./nv) * vec4(pos1,1);\n    vertCoord3= FRUSTUM(-nv,nv, -nv*aspect,nv*aspect, nv/tanFOVh,1./nv) * vec4(pos3,1);\n    vertCoord/=vertCoord.w;\n    vec4 cpos=vertCoord;\n    vertCoord1/=vertCoord1.w;\n    vertCoord3/=vertCoord3.w;\n    //vertCoord.xy=project(pos).xy;\n    //vertCoord1.xy=project(pos1).xy;\n    //vertCoord.z=0.;\n    //vertCoord1.z=0.;\n    #else\n    float ang1=atan(pos1.z,pos1.x); if(ang1<0.) ang1+=PI2;\n    float ang =atan(pos.z, pos.x ); if(ang <0.) ang +=PI2;\n    if(ang-ang1> PI) ang-=PI2;\n    if(ang-ang1<-PI) ang+=PI2;\n        //((uv[1]*2.-1.)*height/width*PI)\n    float sy1=pos1.y/dot(pos1.xz,cos(ang1-vec2(0,PI*.5)))/PI*.5+.5;\n    //float sy2=pos2.y/dot(pos2.xz,cos(ang-vec2(0,PI*.5)))/PI*Res.x/Res.y*.5+.5;\n    //float sy3=pos3.y/dot(pos3.xz,cos(ang-vec2(0,PI*.5)))/PI*Res.x/Res.y*.5+.5;\n    float sy =pos.y/dot(pos.xz,cos(ang-vec2(0,PI*.5)))/PI*.5+.5;\n    //pos.y/-length(pos.xz)/PI*Res.x/Res.y*.5+.5\n    //(pos.y/dot(pos.xz,cos(ang-vec2(0,PI*.5)))/PI*.5)+1.\n    sy =atan(pos.y /length(pos.xz) )/PI+.5;\n    sy1=atan(pos1.y/length(pos1.xz))/PI+.5;\n    \n    vertCoord.xy =vec2(ang/PI2*.9+.05, sy*.9 +.05)*2.-1.;\n    vertCoord1.xy=vec2(ang1/PI2*.9+.05,sy1*.9+.05)*2.-1.;\n    vertCoord.xy =vec2(ang/PI2, sy)*2.-1.;\n    vertCoord1.xy=vec2(ang1/PI2,sy1)*2.-1.;\n    \n    //if (sy1<0.) vertCoord=vec4(-1000);\n    //if (sy2<0.) vertCoord=vec4(-1000);\n    //if (sy3<0.) vertCoord=vec4(-1000);\n    vertCoord.z=1.-exp(-length(pos.xz)/1.);\n    vertCoord.w=1.;\n    vec4 cpos=vertCoord;\n    //vertCoord = \n    #endif\n    \n    float FrameXPix=FrameX*max(Res.x,Res.y);\n    float FrameYPix=FrameY*max(Res.x,Res.y);\n    if(abs(vertCoord1.x)>1.-FrameXPix/Res.x*2.) vertCoord=vec4(0,-1000,0,1);\n    if(abs(vertCoord1.y)>1.-FrameYPix/Res.y*2.) vertCoord=vec4(0,-1000,0,1);\n    //if(abs(vertCoord3.x)>1.-FrameXPix/Res.x*2.) vertCoord=vec4(0,-1000,0,1);\n    //if(abs(vertCoord3.y)>1.-FrameYPix/Res.y*2.) vertCoord=vec4(0,-1000,0,1);\n    float bg=0.;\n    if (vertIndex<6)\n    {\n        uv6=UV6(vertIndex);\n        vertCoord=vec4(UV6(vertIndex)*2.-1.,.9999,1);\n        normal=vec3(0,0,1);\n        bg=1.;\n    }\n\n    vec3 eye=vec3(0); vec3 dir=vec3(0,0,-1);\n    getTrafo(eye,dir,vec2(0));\n    \n    //if(dot(eye-pos0,normal)<0.) vertCoord=vec4(0,0,0,1);\n    \n    if(-pos1.z>10. && isSky<.5 && bg<.5) vertCoord=vec4(vec3(-1110.),1);\n    \n    //if(isSky>.5) vertCoord=vec4(0,0,0,1);\n    \n    if(iCaptureGeom==1) \n    {\n        vertCoord=vec4(cpos.xyz,1);\n        if(-pos1.z>10. && isSky<.5 && bg<.5) vertCoord.z=1.;\n        if(abs(vertCoord1.x)>1.-FrameXPix/Res.x*2.) { vertCoord.z=1.; vertCoord.x*=(1.-FrameXPix/Res.x*2.)/abs(vertCoord1.x); }\n        if(abs(vertCoord1.y)>1.-FrameYPix/Res.y*2.) { vertCoord.z=1.; vertCoord.y*=(1.-FrameYPix/Res.y*2.)/abs(vertCoord1.y); }\n    }\n\n    vertAttrib[1] = vec4(uv6,uv6);\n    vertAttrib[0] = vec4(normal,bg);\n    vertAttrib[2] = vec4(eye-pos0,vertIndex/3);\n}\n\nvoid mainFragment( out vec4 fragColor, vec4 fragCoord, vec4 vertAttrib[3] )\n{\n    SetColorMode(int(ColorMode)+int(texelFetch(iChannel3,ivec2(0,0),0).y+.5));\n    vec3 light=normalize(vec3(1));\n    //light.xy*=ROTM(swellTime(iTime,3.,5.)*.4);\n    light=transformVecByQuat(light,axAng2Quat(vec3(.5,0,1),swellSteps(iTime+5.,27.,3.)*4.));\n    float bg=vertAttrib[0].w;\n    vec3 n =normalize(vertAttrib[0].xyz);\n    vec2 uv =vertAttrib[1].xy;\n    vec2 uv2 =vertAttrib[1].zw;\n    vec3 eye=vertAttrib[2].xyz;\n    float z=vertAttrib[2].w;\n    //vec4 col=textureLod(iChannel1,uv2,0.);\n    vec4 col=vec4(vec3(.0,.3,.6)*.5,1);\n    fragColor.xyz = -n*.05+(clamp(dot(n,light),0.,1.)*.7+.3)*vec3(1);\n    float ow2=1.;\n    \n    // outlines\n    //fragColor.xyz -= (exp2(-uv.x*uv.x/ow2)+exp2(-uv.y*uv.y/ow2)+exp2(-(uv.x+uv.y-1.)*(uv.x+uv.y-1.)/ow2))*outlines;\n    fragColor.xyz -=2.7*.25;\n    //fragColor.xyz=vec3(0);\n    fragColor*=col*.8+.2;\n    \n    vec3 dir=normalize(-eye);\n    vec3 R=reflect(dir,n);\n    float fres=1.-abs(dot(dir,n));\n    float fres0=fres;\n    fres*=fres*fres*fres;\n    fres=fres*.9+.1;\n    //fres=1.;\n    float fog=1.5*exp(-.4*z);\n    //fragColor.xyz=mix(fragColor.xyz,myenv(vec3(0),R,1.).xyz,fres);\n\n    vec3 eye0=vec3(0); vec3 dir0=vec3(0,0,-1);\n    getTrafo(eye0,dir0,vec2(0));\n    //uv=fract((eye-eye0).xy/GridSize)-.5;\n    ow2=outlinesW*outlinesW;\n    \n    fragColor.xyz=mix(vec3(.4,.5,.6)*0.,fragColor.xyz,clamp(fog*1.4+.2,0.,1.));\n    fragColor.xyz=vec3(.3+.7*max(0.,dot(n,normalize(vec3(1,1,1)))));\n\n    vec3 fogCol = vec3(.8,.9,1)*.9;\n    fogCol = vec3(.5,.5,.5);\n    vec3 bgCol = vec3(.7,.6,.45)*.6;\n    \n    bgCol = vec3(.1,.2,.27);\n    fogCol=bgCol*(1.2-.4*g_strokeInv);\n    \n    bgCol = g_bgCol;\n    fogCol=bgCol;\n    fogCol=bgCol*(1.2-.4*g_strokeInv);\n\n    fragColor.xyz=mix(bgCol*(1.-.7*g_strokeInv),vec3(1.1,1,.9)*(.9+.1*g_strokeInv),max(0.,dot(n,normalize(light))));\n    \n    vec3 col3=mix3(bgCol*(.7-.4*g_strokeInv),\n                   (hsv2rgb(vec3(TintHue+.5,TintSat,.8))*.6+.2)*(.9+.1*g_strokeInv),\n                   vec3(1.1,1,.9)*(.9+.1*g_strokeInv),\n                   max(0.,dot(n,normalize(light))));\n                   col3+=(getRand(int(z+.5)).xxx-.5)*.04;\n    \n    fragColor.xyz=mix(fragColor.xyz,col3,g_3Cols);\n    \n    //fragColor.xyz=mix3(bgCol*(1.-.5*g_strokeInv),g_tintCol,vec3(1.1,1,.9)*(.9+.1*g_strokeInv),max(0.,dot(n,normalize(light))));\n    vec3 ncol=transformVecByQuat(n,randQuat(ColorHash))*.5+.5;\n    //ncol=floor(ncol*2.99)/2.;\n    fragColor.xyz=mix(fragColor.xyz,ncol*(1.-.2*g_strokeInv),g_normalFade);\n    \n    float fogFade=1.-exp(-length(vertAttrib[2].xyz)/.6);\n    //fogFade=clamp(fogFade,0.,1.);\n    \n    float fw=.5,c;\n    fragColor.w=1.;\n    #ifdef SHADEROO_FRAGMENT_SHADER\n    if(dot(n,dir)>=0. && bg<.5) discard;\n    if (length(uv-.5)>.5 && bg<.5 && Blobs>.1) discard;\n    if (bg<.5 && Blobs>.1) { \n        fragColor.xyz*=1.-.2*length(uv-.5); \n        fragColor.w=clamp(2.-4.*2.*dot(uv-.5,uv-.5),0.,1.); \n    }\n    float outl=0.;\n    #define DoOutline(x) fw=fwidth(c); \\\n                      c+=outlinesW*fw; \\\n                      /*outl += smoothstep(-.5*fw,.5*fw,c);*/ \\\n                      outl = max(outl,smoothstep(-.5*fw,.5*fw,c)*(x));\n    c=abs(uv.x-.5)-.5;         DoOutline(XOutl);\n    c=abs(uv.y-.5)-.5;         DoOutline(YOutl); \n    c=-abs((1.-uv.y)+uv.x-1.); DoOutline(DOutl);\n    float outl2=(1.-g_strokeInv*2.)*outl;\n    fragColor.xyz*=(1.+outl2*(outlines*(1.-bg))*.5);\n    fragColor.xyz+=outl2*(outlines*(1.-bg))*vec3(1.1,1,.9)*.25;\n    //fw=fwidth(uv.y);\n    //fragColor.xyz -= fw*exp2(-uv.y*uv.y/ow2)*outlines;\n    //fw=fwidth(uv.x+uv.y);\n    //fragColor.xyz -= fw*exp2(-(uv.x+uv.y-1.)*(uv.x+uv.y-1.)/ow2)*outlines;\n    #endif\n    fragColor.xyz = mix(fragColor.xyz,fogCol,clamp(-.4+fogFade*1.,0.,1.));\n    fragColor.xyz=mix(fragColor.xyz,bgCol,bg);\n    //if (bg>.5) fragColor.xyz=vec3(1,0,0);\n    //fragColor.xyz=bgCol;\n    //fragColor.xyz = n*.5+.5;\n    //fragColor.xyz=fragColor.xyz*-1.+.5;\n    //fragColor.xyz*=sqrt(fragColor.xyz)*2.;\n}\n\n###BEGIN:Include_A.glsl\n// created by florian berger (flockaroo) - 2022\n// License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.\n\n\n#define PI  3.14159265359\n#define PI2 6.28318530718\n#define PIH 1.57079632679\n\n#ifndef RandTex\n#define RandTex iChannel0\n#endif\n\nvec4 getRandM(vec2 coord)\n{\n    vec4 c=vec4(0);\n    c+=texture(RandTex,coord+.003*iTime);\n    c+=texture(RandTex,coord/2.+.003*iTime)*2.;\n    c+=texture(RandTex,coord/4.+.003*iTime)*4.;\n    c+=texture(RandTex,coord/8.+.003*iTime)*8.;\n    return c/(1.+2.+4.+8.);\n}\n\nvec3 getLightDir() {return normalize(vec3(1,1,1));}\n\n###BEGIN:Include_B.glsl\n// created by florian berger (flockaroo) - 2022\n// License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.\n\n//#define CREATE_360\n\n#define HIGH_PRECISION_TEX_INTERPOL\n\nuniform vec4 iDevOri;\n\nuniform float TintHue;\nuniform float TintSat;\nuniform float ColorMode;\nuniform float ColorHash;\nuniform float Azim;\nuniform float Elev;\nuniform float PosX;\nuniform float PosY;\nuniform float PosZ;\nuniform float NoiseType;\n\nivec2 UV6i(int idx) {\n    idx=(idx+2)%6;\n    return ivec2((idx>=3)?1:0,((idx==0)?6:idx-1)>=3?1:0);\n}\n\nvec2 UV6(int idx) {\n    return vec2(UV6i(idx));\n}\n\nfloat swellSteps(float t, float pause, float swell)\n{\n    float tf=floor(t/(pause+swell));\n    float tsw=smoothstep(0.,swell,t-tf*(pause+swell))+tf;\n    return tsw;\n}\n\nfloat swellTime(float t, float pause, float swell)\n{\n    float tf=floor(t/(pause+swell));\n    float tsw=smoothstep(0.,swell,t-tf*(pause+swell))+tf;\n    return tsw*(pause+swell);\n}\n\n#define FRUSTUM(l,r,b,t,n,f) mat4( 2.*n/((r)-(l)),0,0,0, 0,2.*n/((t)-(b)),0,0, ((r)+(l))/((r)-(l)),((t)+(b))/((t)-(b)), ((n)+(f))/((n)-(f)),-1, 0,0,2.*(f)*(n)/((n)-(f)),0 )\n\nfloat tanFOVh = .7;\n\n#ifndef Res\n#define Res vec2(iResolution.xy)\n#endif\n\nuniform float outlines;\nuniform float outlinesW;\n\n#define ROTM(ang) mat2(cos(ang-vec2(0,PIH)),-sin(ang-vec2(0,PIH)))\n\nvec4 inverseQuat(vec4 q)\n{\n    //return vec4(-q.xyz,q.w)/length(q);\n    // if already normalized this is enough\n    return vec4(-q.xyz,q.w);\n}\n\nvec4 multQuat(vec4 a, vec4 b)\n{\n    return vec4(cross(a.xyz,b.xyz) + a.xyz*b.w + b.xyz*a.w, a.w*b.w - dot(a.xyz,b.xyz));\n}\n\nvec3 transformVecByQuat( vec3 v, vec4 q )\n{\n    return v + 2.0 * cross( q.xyz, cross( q.xyz, v ) + q.w*v );\n}\n\nvec4 axAng2Quat(vec3 ax, float ang)\n{\n    return vec4(normalize(ax),1)*sin(vec2(ang*.5)+vec2(0,PI2*.25)).xxxy;\n}\n\nvec4 randQuat(vec3 r) // construct a homogeneously distributed quaternion out outg 3 [0..1] white noise numbers\n{\n    return vec4(\n            vec3(cos(r.x*PI2-vec2(0,PI2*.25))*sqrt(1.-r.y*r.y),r.y) // axis with r.y as z and r.x*PI2 as angle in xy\n            ,1)\n           *sin(vec2(PI2*r.z*.5)+vec2(0,PI2*.25)).xxxy; // random angle of rotation out of r.z*PI2\n}\n\nvec4 randQuat(float r) // construct a homogeneously distributed quaternion out outg 1 [0..1] white noise number\n{\n    return randQuat(vec3(r,fract(r*256.),fract(r*256.*256.)));\n}\n\nvec2 uvSmooth(vec2 uv,vec2 res)\n{\n    // no interpolation\n    //return uv;\n    // sinus interpolation\n    //return uv+1.*sin(uv*res*PI2)/(res*PI2);\n    // cos interpolation\n    vec2 f = fract(uv*res-.5);\n    return (uv*res-f+.5-.5*cos(f*.5*PI2))/res;\n}\n\nvec4 getRand(vec2 uv)\n{\n    #ifdef HIGH_PRECISION_TEX_INTERPOL\n    vec2 fc=fract(uv-.5/256.)*256.;\n    vec2 f=fract(fc); \n    f=smoothstep(0.,1.,f);\n    //f=.5-.5*cos(f*PI2*.5);\n    vec4 c00=texelFetch(RandTex,(ivec2(fc)+ivec2(0,0))%256,0);\n    vec4 c10=texelFetch(RandTex,(ivec2(fc)+ivec2(1,0))%256,0);\n    vec4 c01=texelFetch(RandTex,(ivec2(fc)+ivec2(0,1))%256,0);\n    vec4 c11=texelFetch(RandTex,(ivec2(fc)+ivec2(1,1))%256,0);\n    return mix(mix(c00,c10,f.x),mix(c01,c11,f.x),f.y);\n    #endif\n\n    uv=uvSmooth(uv,vec2(256));\n    return textureLod(iChannel0,uv,0.);\n}\n\nvec4 getRand(int i)\n{\n    return texelFetch(iChannel0,ivec2(i,i/256)%256,0);\n}\n\nfloat smoothLim(float x, float maxLim)\n{\n    return (1.-exp(-x/maxLim))*maxLim;\n}\n\nfloat smoothLim2(float x, float minLim, float maxLim)\n{\n    float xm=.5*(maxLim+minLim);\n    float dx=maxLim-minLim;\n    return sign(x-xm)*(1.-exp(-abs(x-xm)/(dx*.5)))*dx*.5+xm;\n}\n\nvoid getTrafo(inout vec3 pos, inout vec3 dir, vec2 fc, bool inv)\n{\n    vec2 sc=(fc-Res*.5)/Res.x*2.;\n    dir=normalize(vec3(0,0,-1./tanFOVh)+vec3(sc,0));\n    \n    float ph = iMouse.x/Res.x*10.+Azim+swellSteps(iTime+28.,33.,7.)*20.*.05;\n    float th = iMouse.y/Res.y*10.+Elev;\n    //th = smoothLim2(th,0.,1.55);\n    th = mix(th,iDevOri.y/360.*PI2,iDevOri.w);\n    ph += mix(0.,iDevOri.x/360.*PI2,iDevOri.w);\n    float camDist=.83*exp(-iMouseData.z/5000.);\n    camDist=smoothLim(camDist,1.2);\n\n    if(inv)\n    {\n        pos=vec3(0,0,1)*camDist;\n        pos.yz=ROTM(th)*pos.yz;\n        dir.yz=ROTM(th)*dir.yz;\n        pos.xy=ROTM(ph)*pos.xy;\n        dir.xy=ROTM(ph)*dir.xy;\n    }\n    else\n    {\n        pos.xy=ROTM(-ph)*pos.xy;\n        pos.yz=ROTM(-th)*pos.yz;\n        pos.yz-=vec2(0,1)*camDist;\n    }\n}\n\nvoid getTrafo(inout vec3 pos, inout vec3 dir, vec2 fc)\n{\n    getTrafo(pos, dir, fc, true);\n}\n\nvoid getTrafo(inout vec3 pos)\n{\n    vec3 dir;\n    getTrafo(pos, dir, vec2(0), false);\n}\n\n#define NUM 479\n\n#define SQH .707106781187\n\nvec3 mix3(vec3 c1, vec3 c2, vec3 c3, float f)\n{\n    f*=2.;\n    return mix(mix(c1,c2,clamp(f,0.,1.)),c3,clamp(f-1.,0.,1.));\n}\n\n\nvoid applyOffs(inout vec3 p)\n{\n    vec2 transl=vec2(swellSteps(iTime+5.,67.,5.)*.4,swellSteps(iTime+5.,53.,5.)*.4);\n    p.xy-=transl;\n    p.xy-=vec2(PosX,PosY);\n    vec3 p0=p;\n    float R=1.;\n    int i=0;\n    float sc0=.2*pow(1.25,floor(log2(160./.2)/log2(1.25)+.5));\n    vec4 im=vec4(0);\n    for(float sc=sc0;sc>.2;sc/=1.25,i++) {\n        vec4 q = vec4(0,0,0,1);\n        im=fract(im+vec4(7,11,13,5)/SQH);\n        q = normalize(im);\n        vec4 ri=getRand(i);\n        q = randQuat(im.xyz);\n        float sTime=swellTime(iTime+16.,13.,6.);\n        vec2 uv=transformVecByQuat(p,q).xy*sc*.08+vec2(.1,1.4)*.65+vec2(.1,1.4)*sTime*sqrt(sc)*.0007*.5*1.;\n        vec3 dp0=(getRand(uv+0.*vec2(13*i,17*i)/256.).xyz-.5)/(sc)*.02;\n        vec3 pt=transformVecByQuat(p,q)*sc*60.;\n        vec3 dp1=((sin((pt.zxy*.5+sTime*sqrt(sc)*.125+1.*vec3(7*i,13*i,17*i))*2.)))/(sc)*.012*.5;\n        vec3 dp2=(-abs(sin((pt.zxy*.5+sTime*sqrt(sc)*.125+1.*vec3(7*i,13*i,17*i))*1.))+.6)/(sc)*.012;\n        p+=mix3(dp0,dp1,dp2,NoiseType/2.);\n    }\n    p.xy+=vec2(PosX,PosY);\n    p.xy+=transl;\n}\n\n\nvec3 getVertex_screen_XY(ivec2 idx2, inout float isSky)\n{\n    float sc=1.0/float(NUM-1);\n    vec2 uv=vec2(idx2);\n    uv.x+=(mod(uv.y,2.)-.5)*.25;\n    uv*=sc;\n    uv.y=1.-uv.y;\n    vec3 p,dir=p=vec3(0);\n    vec2 fc=(uv*1.3-.15)*Res;\n    getTrafo(p,dir,fc);\n    #ifdef CREATE_360\n    dir = vec3(cos(-(uv.x*PI2)),sin(-(uv.x*PI2)),\n               (uv.y*2.-1.)*PI\n               //uv.y*Res.y/Res.x*PI\n               );\n    #endif\n    vec3 p0=p;\n    p-=dir*p.z/dir.z;\n    \n    bool sky=false;\n    if (sign(dir.z)==sign(p0.z)) {\n        sky=true;\n        p-=dir*(p.z-.7)/dir.z;\n        p0=p;\n    }\n\n    p*=(sky?.2:1.);\n    p+=(sky?iTime*.01:0.);\n    applyOffs( p );\n    if(sky) p=((p-iTime*.01)*5.-p0)*.35+p0;\n    isSky=sky?1.:0.;\n    return p;\n}\n\nvec3 getVertex_screen_XY_lookup(ivec2 idx2, inout float isSky)\n{\n    vec4 c=texelFetch(iChannel2,idx2,0);\n    isSky=c.w;\n    return c.xyz;\n}\n\nvec3 getVertex_screen(int idx, inout float isSky)\n{\n    return getVertex_screen_XY_lookup((UV6i(idx)*ivec2(1,-1)+ivec2(0,1))+ivec2((idx/6)%NUM,(idx/6)/NUM), isSky);\n    return getVertex_screen_XY_lookup(UV6i(idx)+ivec2((idx/6)%NUM,(idx/6)/NUM), isSky);\n    return getVertex_screen_XY(UV6i(idx)+ivec2((idx/6)%NUM,NUM-1-(idx/6)/NUM), isSky);\n}\n\nvec3 getVertex(int idx, inout float isSky)\n{\n    return getVertex_screen(idx,isSky);\n}\n\nvec3 getVertex(int idx)\n{\n    float dummy;\n    return getVertex(idx,dummy);\n}\n\n###BEGIN:Buff_B.glsl\n// created by florian berger (flockaroo) - 2022\n// License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.\n\n#define Key_C (texelFetch(iChannel1,ivec2(67,0),0).x)\n\nvoid mainImage( out vec4 fragColor, vec2 fragCoord )\n{\n    vec2 uv = fragCoord.xy / iResolution.xy;\n    fragColor = vec4(uv,0.5+0.5*sin(iTime),1.0);\n\n    float mode =texelFetch(iChannel0,ivec2(0),0).y;\n    float key_c=texelFetch(iChannel0,ivec2(0),0).x;\n    if(ivec2(fragCoord)==ivec2(0,0)) \n    {\n        if (key_c!=Key_C) \n        {\n            if(Key_C>.5) mode++ ;\n            //if (mode>5.) mode=0.;\n            key_c=Key_C;\n        }\n        fragColor=vec4(key_c,mode,0,1);\n    }\n    \n    if (iFrame<10) fragColor=vec4(0,0,0,1);\n}\n";
+
+/**
+ * Provides requestAnimationFrame in a cross browser way.
+ * paulirish.com/2011/requestanimationframe-for-smart-animating/
+ */
+window.requestAnimationFrame = window.requestAnimationFrame || (function () {
+    return window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function (callback, element) {
+            window.setTimeout(callback, 1000 / 60);
+        };
+})();
+
+var buffers={};
+
+//---------------------------------------------------------------------------------------------------
+function getBuffSize(Buff) {
+    w_=Buff.width;
+    h_=Buff.height;
+    if(!Number.isFinite(parseInt(w_))) {
+        if (w_.startsWith("x")) w_=Math.floor(canvas.width*parseFloat(w_.substring(1))+.5);
+        else w_=canvas.width;
+    } else {
+        if(w_<0) w_=canvas.width;
+    }
+    if(!Number.isFinite(parseInt(h_))) {
+        if (h_.startsWith("x")) h_=Math.floor(canvas.height*parseFloat(h_.substring(1))+.5);
+        else h_=canvas.height;
+    } else {
+        if(h_<0) h_=canvas.height;
+    }
+    return {w:w_,h:h_};
+}
+
+//---------------------------------------------------------------------------------------------------
+function resize() {
+    var w_p = canvas.width;
+    var h_p = canvas.height;
+    var w_n = window.innerWidth;
+    var h_n = window.innerHeight;
+    if (!(typeof CanvWidthOverride  === 'undefined' || CanvWidthOverride  === null)) w_n = CanvWidthOverride;
+    if (!(typeof CanvHeightOverride === 'undefined' || CanvHeightOverride === null)) h_n = CanvHeightOverride;
+
+    // rescale mouse coords so relative screen position does not vary when switching resoltions
+    var scX=w_n/w_p;
+    var scY=h_n/h_p;
+    mouse.allX*=scX; mouse.allY*=scY;
+    mouse.relX*=scX; mouse.relY*=scY;
+    mouse.smX *=scX; mouse.smY *=scY;
+    mouse.x   *=scX; mouse.y   *=scY;
+
+    canvas.width=w_n;
+    canvas.height=h_n;
+
+    for (bname in buffers) {
+        var Buff=buffers[bname];
+        if((!Number.isFinite(Buff.width) || !Number.isFinite(Buff.height) || Buff.width<0 || Buff.height<0) && Buff.fb!=null)
+        {
+            createFB(Buff, getBuffSize(Buff).w, getBuffSize(Buff).h);
+        }
+    }
+    if(!AnimEnable) { if(startTime>0.) { startTime=Date.now()/1000.0-actTime; requestAnimationFrame(draw); } }
+}
+
+
+//---------------------------------------------------------------------------------------------------
+var commonGLSL="";
+var shaderooUniforms = commonGLSL+'\
+uniform sampler2D iChannel0;\n\
+uniform sampler2D iChannel1;\n\
+uniform sampler2D iChannel2;\n\
+uniform sampler2D iChannel3;\n\
+uniform sampler2D iChannel4;\n\
+uniform sampler2D iChannel5;\n\
+uniform sampler2D iChannel6;\n\
+uniform sampler2D iChannel7;\n\
+uniform sampler2D iChannel8;\n\
+uniform sampler2D iChannel9;\n\
+';
+
+shaderooUniforms+='\
+uniform vec4  iDate;\n\
+uniform vec4  iMouse;\n\
+uniform vec4  iMouseData;\n\
+uniform vec3  iResolution;\n\
+uniform int   iFrame;\n\
+uniform int   iCaptureGeom;\n\
+uniform int   iPassIndex;\n\
+uniform int   iNumTriangles;\n\
+uniform int   iNumPasses;\n\
+uniform float iTime;\n\
+uniform float iTimeDelta;\n\
+';
+
+// float must be less than 1e38 (e.g. 1e100 creates overflow on some machines)
+var shaderVersion = "\
+precision highp float;\n\
+precision highp int;\n\
+#define WEBGL1\n\
+#define texture texture2D\n\
+#define textureLod(a,b,c) texture((a),(b),-1e30)\n\
+uniform vec2 iChannel0Res;\n\
+uniform vec2 iChannel1Res;\n\
+uniform vec2 iChannel2Res;\n\
+uniform vec2 iChannel3Res;\n\
+uniform vec2 iChannel4Res;\n\
+uniform vec2 iChannel5Res;\n\
+uniform vec2 iChannel6Res;\n\
+uniform vec2 iChannel7Res;\n\
+uniform vec2 iChannel8Res;\n\
+uniform vec2 iChannel9Res;\n\
+";
+if (use_webgl2)
+    shaderVersion = "\
+#version 300 es\n\
+#define WEBGL2\n\
+//precision mediump sampler3D;\n\
+precision highp float;\n\
+precision highp int;\n\
+uniform vec2 iChannel0Res;\n\
+uniform vec2 iChannel1Res;\n\
+uniform vec2 iChannel2Res;\n\
+uniform vec2 iChannel3Res;\n\
+uniform vec2 iChannel4Res;\n\
+uniform vec2 iChannel5Res;\n\
+uniform vec2 iChannel6Res;\n\
+uniform vec2 iChannel7Res;\n\
+uniform vec2 iChannel8Res;\n\
+uniform vec2 iChannel9Res;\n\
+";
+
+//---------------------------------------------------------------------------------------------------
+var VS_BUFF_BASE=
+shaderVersion+'\n\
+//precision mediump sampler3D;\n\
+#ifdef WEBGL2\n\
+in vec4 Vertex;\n\
+#else \n\
+attribute vec4 Vertex;\n\
+#endif\n\
+void main()\n\
+{\n\
+    int idx=int(Vertex.x+.5); \n\
+    float fact=1.; float offs=0.; \n\
+    if(idx>2) { offs=1.; fact=-1.; } \n\
+#ifdef WEBGL2 \n\
+    idx=idx%3; \n\
+    gl_Position = vec4((vec2(idx%2,idx/2)*fact+offs)*2.-1.,0,1);\n\
+#else \n\
+    idx=idx-idx/3*3; \n\
+    gl_Position = vec4((vec2(idx-idx/2*2,idx/2)*fact+offs)*2.-1.,0,1);\n\
+#endif \n\
+}\n\
+';
+
+//---------------------------------------------------------------------------------------------------
+var FS_BUFF_BASE=
+shaderVersion+'\n'
++shaderooUniforms+
+'#define SHADEROO\n\
+__SHADER_SRC__\n\
+#ifdef WEBGL2\n\
+out vec4 myFragColor;\n\
+#else\n\
+#define myFragColor gl_FragColor \n\
+#endif\n\
+void main()\n\
+{\n\
+    mainImage(myFragColor,gl_FragCoord.xy);\n\
+}\n';
+
+//---------------------------------------------------------------------------------------------------
+var VS_GEOM_BASE=
+shaderVersion+'\n'
++shaderooUniforms+
+'#define SHADEROO\n\
+#define SHADEROO_VERTEX_SHADER\n\
+#ifdef WEBGL1\n\
+  // for lod not supported in vertex shader\n\
+  vec4 texture2D(sampler2D a, vec2 b, float c) { return texture2D(a,b); }\n\
+#endif\n\
+uniform int iShaderooVertexIndexOffs; \n\
+#ifdef WEBGL2\n\
+out vec4 shaderooExportPos;\n\
+#endif\n\
+__SHADER_SRC__\n\
+#ifdef WEBGL2\n\
+in vec4 Vertex;\n\
+out vec4 myVertAttrib[3];\n\
+//out vec4 position;\n\
+#else \n\
+attribute vec4 Vertex;\n\
+varying vec4 myVertAttrib[3];\n\
+#endif\n\
+void main()\n\
+{\n\
+    mainGeom(gl_Position,myVertAttrib,int(Vertex.x+.5)+iShaderooVertexIndexOffs);\n\
+}\n';
+
+
+//---------------------------------------------------------------------------------------------------
+var FS_GEOM_BASE=
+shaderVersion+'\n'
++shaderooUniforms+
+'#define SHADEROO\n\
+#define SHADEROO_FRAGMENT_SHADER\n\
+__SHADER_SRC__\n\
+#ifdef WEBGL2\n\
+in  vec4 myVertAttrib[3];\n\
+out vec4 myFragColor;\n\
+#else\n\
+varying vec4 myVertAttrib[3];\n\
+#define myFragColor gl_FragColor \n\
+#endif\n\
+void main()\n\
+{\n\
+    mainFragment(myFragColor,gl_FragCoord,myVertAttrib);\n\
+    //gl_FragDepth = gl_FragCoord.z;\n\
+}\n';
+
+
+  window.addEventListener("resize", resize);
+  
+  var keyArray = new Uint8Array(256*3);
+  keyArray.fill(0);
+  var kbTex=null; updateKeyboardTex();
+  const deviceori  = { alpha:0, beta:0, gamma:0, active:0 }
+  const mouse      = { x: 0, y: 0, wheel:0, buttons:0, allX:0, allY:0, relX:0, relY:0, smX:0, smY:0 };
+  const mouse_prev = { x: 0, y: 0, wheel:0, buttons:0, allX:0, allY:0, relX:0, relY:0, smX:0, smY:0 };
+
+    window.onkeyup = function(e) {
+        var key = e.keyCode ? e.keyCode : e.which;
+        if (key < 256) { keyArray[key]=0; }
+        if (SpaceToPauseEnable && key==32) { AnimEnable=AnimEnable?0:1; startTime=Date.now()/1000.0-actTime; if(AnimEnable) animate(); }
+        if (!AnimEnable) { startTime=Date.now()/1000.0-actTime; requestAnimationFrame(draw); }
+    }
+
+    window.onkeydown = function(e) {
+        var key = e.keyCode ? e.keyCode : e.which;
+        if (key < 256) {
+            keyArray[key]=255;
+            keyArray[key+256]=(keyArray[key+256]>128)?0:255;
+            keyArray[key+512]=(keyArray[key+512]>128)?0:255;
+        }
+        if (e.key=='s') {
+            save_as_png();
+        }
+    }
+
+    canvas.onmousedown = function(e){
+        var rect = canvas.getBoundingClientRect();
+        mouse.x=e.pageX-rect.left;
+        mouse.y=rect.bottom-e.pageY;
+        mouse.buttons = e.buttons&1+((e.buttons&4)<<1)+((e.buttons&2)>>1);
+        /*if(paused) requestAnimationFrame(draw);*/
+    }
+    canvas.onpointerdown = function(e){
+        var rect = canvas.getBoundingClientRect();
+        mouse.x=e.pageX-rect.left;
+        mouse.y=rect.bottom-e.pageY;
+        mouse.buttons = 1;
+        /*if(paused) requestAnimationFrame(draw);*/
+    }
+    canvas.onmouseup   = function(e){ mouse.buttons = e.buttons&1+((e.buttons&4)<<1)+((e.buttons&2)>>1); }
+    canvas.onpointerup = function(e){ mouse.buttons = 0; }
+
+    var myWheelFunc = function(e){
+        var wheel_prev=mouse.wheel;
+        if(e.wheelDelta)                    mouse.wheel += e.wheelDelta;
+        else if(e.detail)                   mouse.wheel -= e.detail*40;
+        else if(e.deltaY)                   mouse.wheel -= e.deltaY*40;
+        else if(e.originalEvent) {
+            if(e.originalEvent.wheelDelta)   mouse.wheel += e.originalEvent.wheelDelta;
+            else if(e.originalEvent.detail)  mouse.wheel -= e.originalEvent.detail*40;
+            else if(e.originalEvent.deltaY)  mouse.wheel -= e.originalEvent.deltaY*40;
+        }
+        if(wheel_prev<mouse.wheel) mouse.buttons|=8; else mouse.buttons^=8;
+        if(wheel_prev>mouse.wheel) mouse.buttons|=16; else mouse.buttons^=16;
+        if(MouseEnable && (!AnimEnable)) {
+                startTime=Date.now()/1000.0-actTime; 
+		requestAnimationFrame(draw);
+        }
+        /*if(paused) requestAnimationFrame(draw);*/
+    }
+    canvas.onwheel = myWheelFunc;
+
+    document.body.addEventListener("pointermove", function (e) {
+        var rect = canvas.getBoundingClientRect();
+        if(mouse.buttons&1!=0) { 
+            mouse.allX =e.pageX-rect.left;         mouse.allY =rect.bottom-e.pageY;
+            mouse.relX+=e.pageX-rect.left-mouse.x; mouse.relY+=rect.bottom-e.pageY-mouse.y;
+        }
+        mouse.x = e.pageX-rect.left;
+        mouse.y = rect.bottom-e.pageY;
+        if(mouse.buttons&1!=0) {
+            if(MouseEnable && (!AnimEnable)) { startTime=Date.now()/1000.0-actTime; requestAnimationFrame(draw); }; 
+        }
+  });
+  
+  window.addEventListener('deviceorientation', function (e) {
+      if (e) {
+      	  console.log("alpha="+e.alpha);
+	  console.log("beta ="+e.beta);
+	  console.log("gamma="+e.gamma);
+	  deviceori.alpha=e.alpha;
+	  deviceori.beta =e.beta;
+	  deviceori.gamma=e.gamma;
+	  if(e.gamma!=null && e.alpha!=null && e.beta!=null)
+	     deviceori.active=1.; // set to 1 when 1st event received
+	  console.log("active="+deviceori.active);
+      }
+  });
+
+//---------------------------------------------------------------------------------------------------
+  const triangles = new Float32Array(0x10000*3*3);
+  for(var i=0;i<triangles.length;i++) { triangles[i]=Math.floor(i/3); }
+  var triBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, triBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, triangles, gl.STATIC_DRAW);
+
+  var rand256=createTex(256,256,true);
+  genMip(rand256);
+
+  var frameCnt=0;
+
+  //---------------------------------------------------------------------------------------------------
+  var startTime=-1.;
+  var actTime;
+  var actTimeDelta;
+
+
+  //---------------------------------------------------------------------------------------------------
+  function renderGeomBuffer(fb, w, h, shader, trinum, textures, texSizes, numPasses=1, passIdx=0, blendMode="none", depthTest=1) {
+      var wc=canvas.width;
+      var hc=canvas.height;
+      dateObj = new Date();
+      gl.bindFramebuffer(gl.FRAMEBUFFER,fb);
+      gl.viewport(0, 0, w, h);
+      gl.clearColor(0.0,0.0,0.0,1.0);
+      gl.clearDepth(1.0);
+      //console.log("depthTest="+depthTest);
+      if (depthTest==1)
+	 gl.enable(gl.DEPTH_TEST);
+      else
+	 gl.disable(gl.DEPTH_TEST);
+      if (blendMode=="none") 
+	 gl.disable(gl.BLEND);
+      else {
+	 gl.enable(gl.BLEND);
+	 if(blendMode=='one__one')         gl.blendFunc(gl.ONE,gl.ONE);
+         if(blendMode=='sa__one_minus_sa') gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+         if(blendMode=='sc__one_minus_sc') gl.blendFunc(gl.SRC_COLOR,gl.ONE_MINUS_SRC_COLOR);
+      }
+      gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+
+      gl.useProgram(shader);
+      for(var i=0;i<textures.length;i++) {
+          gl.uniform1i(gl.getUniformLocation(shader, "iChannel"+i), i);
+          gl.activeTexture(gl.TEXTURE0+i);
+          gl.bindTexture(gl.TEXTURE_2D,textures[i]);
+          if(!use_webgl2)
+             gl.uniform2f(gl.getUniformLocation(shader, "iChannel"+i+"Res"), texSizes[i].w, texSizes[i].h );
+      }
+      gl.uniform3f(gl.getUniformLocation(shader, "iResolution"), wc, hc, 0);
+      gl.uniform1f(gl.getUniformLocation(shader, "iTime"), actTime);
+      gl.uniform1f(gl.getUniformLocation(shader, "iTimeDelta"), actTimeDelta);
+      gl.uniform1i(gl.getUniformLocation(shader, "iFrame"), frameCnt);
+      gl.uniform4f(gl.getUniformLocation(shader, "iDate"), dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), dateObj.getSeconds()+dateObj.getMinutes()*60+dateObj.getHours()*3600);
+      gl.uniform4f(gl.getUniformLocation(shader, "iDevOri"), deviceori.alpha, deviceori.beta, deviceori.gamma, deviceori.active);
+      if(MouseEnable) {
+        gl.uniform4f(gl.getUniformLocation(shader, "iMouse"), mouse.allX,mouse.allY,mouse.allX,mouse.allY);
+        if(RelMouseEnable) {
+      	  if(SmoothMouse>0.) {
+      	     mouse.smX=(1.-SmoothMouse)*mouse.relX+SmoothMouse*mouse.smX;
+             mouse.smY=(1.-SmoothMouse)*mouse.relY+SmoothMouse*mouse.smY;
+             if(!AnimEnable) { mouse.smX=mouse.relX; mouse.smY=mouse.relY; }
+             gl.uniform4f(gl.getUniformLocation(shader, "iMouse"), mouse.smX,mouse.smY,mouse.smX,mouse.smY);
+          }
+          else
+          {
+             gl.uniform4f(gl.getUniformLocation(shader, "iMouse"), mouse.relX,mouse.relY,mouse.relX,mouse.relY);
+          }
+        }
+        gl.uniform4f(gl.getUniformLocation(shader, "iMouseData"), mouse.x,mouse.y,mouse.wheel,mouse.buttons);
+      }
+      gl.uniform1i(gl.getUniformLocation(shader, "iNumPasses"), numPasses);
+      gl.uniform1i(gl.getUniformLocation(shader, "iPassIndex"), passIdx);
+      gl.uniform1i(gl.getUniformLocation(shader, "iNumTriangles"), trinum);
+      if (!(typeof viewerFloat4 === 'undefined' || viewerFloat4 === null))
+      	gl.uniform4f(gl.getUniformLocation(shader, "iViewer"), viewerFloat4[0], viewerFloat4[1], viewerFloat4[2], viewerFloat4[3]);
+      if (!(typeof creatorFloat4 === 'undefined' || creatorFloat4 === null))
+	gl.uniform4f(gl.getUniformLocation(shader, "iCreator"), creatorFloat4[0], creatorFloat4[1], creatorFloat4[2], creatorFloat4[3]);
+      if (!(typeof randFloat4 === 'undefined' || randFloat4 === null))
+        gl.uniform4f(gl.getUniformLocation(shader, "iRandom"), randFloat4[0], randFloat4[1], randFloat4[2], randFloat4[3]);
+
+      for (var param in params) {
+          gl.uniform1f(gl.getUniformLocation(shader, param), params[param]);
+      }
+      gl.uniform1f(gl.getUniformLocation(shader, "ColorMode"), window.$fxhashFeatures["ColorMode"]);
+      gl.uniform1f(gl.getUniformLocation(shader, "TintHue"), window.$fxhashFeatures["TintHue"]);
+      gl.uniform1f(gl.getUniformLocation(shader, "Blobs"), window.$fxhashFeatures["Blobs"]);
+      gl.uniform1f(gl.getUniformLocation(shader, "DOutl"), window.$fxhashFeatures["DOutl"]);
+      gl.uniform1f(gl.getUniformLocation(shader, "NoiseType"), window.$fxhashFeatures["NoiseType"]);
+      gl.uniform1f(gl.getUniformLocation(shader, "TintSat"), window.$fxhashFeatures["TintSat"]);
+      gl.uniform1f(gl.getUniformLocation(shader, "YOutl"), window.$fxhashFeatures["YOutl"]);
+      gl.uniform1f(gl.getUniformLocation(shader, "PosZ"), window.$fxhashFeatures["PosZ"]);
+      gl.uniform1f(gl.getUniformLocation(shader, "PosY"), window.$fxhashFeatures["PosY"]);
+      gl.uniform1f(gl.getUniformLocation(shader, "PosX"), window.$fxhashFeatures["PosX"]);
+      gl.uniform1f(gl.getUniformLocation(shader, "outlines"), window.$fxhashFeatures["outlines"]);
+      gl.uniform1f(gl.getUniformLocation(shader, "ColorHash"), window.$fxhashFeatures["ColorHash"]);
+      gl.uniform1f(gl.getUniformLocation(shader, "XOutl"), window.$fxhashFeatures["XOutl"]);
+      gl.uniform1f(gl.getUniformLocation(shader, "Azim"), window.$fxhashFeatures["Azim"]);
+      gl.uniform1f(gl.getUniformLocation(shader, "Elev"), window.$fxhashFeatures["Elev"]);
+      //uniforms
+      gl.bindBuffer(gl.ARRAY_BUFFER, triBuffer);
+      var vposLoc = gl.getAttribLocation(shader, "Vertex");
+      gl.enableVertexAttribArray(vposLoc);
+      gl.vertexAttribPointer(vposLoc, 3, gl.FLOAT, false, 0, 0);
+  
+      for(var i=0;i<trinum;i+=0x10000) {
+          gl.uniform1i(gl.getUniformLocation(shader, "iShaderooVertexIndexOffs"), i*3);
+          gl.drawArrays(gl.TRIANGLES, 0, Math.min(0x10000,(trinum-i))*3);
+      }
+      //gl.drawArrays(gl.TRIANGLES, 0, trinum*3);
+  }
+
+//---------------------------------------------------------------------------------------------------
+  function loadBufferShader(shaderSrc) {
+      return loadShader(VS_BUFF_BASE.replace("__SHADER_SRC__",shaderSrc),
+                        FS_BUFF_BASE.replace("__SHADER_SRC__",shaderSrc));
+  }
+
+//---------------------------------------------------------------------------------------------------
+  function loadGeomShader(shaderSrc) {
+      return loadShader(VS_GEOM_BASE.replace("__SHADER_SRC__",shaderSrc),
+                        FS_GEOM_BASE.replace("__SHADER_SRC__",shaderSrc));
+  }
+
+//---------------------------------------------------------------------------------------------------
+  function loadShader(vertexShaderSource, fragmentShaderSource) {
+      var vertexShader = gl.createShader(gl.VERTEX_SHADER);
+      gl.shaderSource(vertexShader, vertexShaderSource);
+      gl.compileShader(vertexShader);
+      {
+        var error = gl.getShaderInfoLog(vertexShader);
+        if (error.length > 0) {
+            console.log('compile error: '+error);
+            var lines=error.match(/ERROR: [0-9]+:([0-9]+)/);
+            var lnum=parseInt(lines[1]);
+            if (lines.length>1) {
+               var src_snip = vertexShaderSource.split('\n').slice(lnum-2,lnum+3).join("\n");
+               console.log('src: \n'+src_snip);
+            }
+            return null;
+        }
+      }
+
+      var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+      gl.shaderSource(fragmentShader, fragmentShaderSource);
+      gl.compileShader(fragmentShader);
+      {
+        var error = gl.getShaderInfoLog(fragmentShader);
+        if (error.length > 0) {
+            console.log('compile error: '+error);
+            var lines=error.match(/ERROR: [0-9]+:([0-9]+)/);
+            var lnum=parseInt(lines[1]);
+            if (lines.length>1) {
+               var src_snip = fragmentShaderSource.split('\n').slice(lnum-2,lnum+3).join("\n");
+               console.log('src: \n'+src_snip);
+            }
+            return null;
+        }
+      }
+
+      var program = gl.createProgram();
+      gl.attachShader(program, vertexShader);
+      gl.attachShader(program, fragmentShader);
+      gl.linkProgram(program);
+      if ( !gl.getProgramParameter( program, gl.LINK_STATUS) ) {
+          var error = gl.getProgramInfoLog(program);
+          if (error.length > 0) {
+              console.log('link error: '+error);
+              return null;
+          }
+      }
+      return program;
+  }
+ 
+//---------------------------------------------------------------------------------------------------
+var myrnd_w = 123456789;
+var myrnd_z = 987654321;
+
+// Takes any integer
+function myseed(i) {
+    myrnd_w = (123456789 + i) & 0xffffffff;
+    myrnd_z = (987654321 - i) & 0xffffffff;
+}
+
+// Returns number between 0 (inclusive) and 1.0 (exclusive),
+// just like Math.random().
+function myrandom()
+{
+    myrnd_z = (36969 * (myrnd_z & 65535) + (myrnd_z >> 16)) & 0xffffffff;
+    myrnd_w = (18000 * (myrnd_w & 65535) + (myrnd_w >> 16)) & 0xffffffff;
+    var result = ((myrnd_z << 16) + (myrnd_w & 65535)) >>> 0;
+    result /= 4294967296;
+    return result;
+}
+//---------------------------------------------------------------------------------------------------
+  function createTex(w,h,rnd=false) {
+      var isFloat=true; if (!use_webgl2) isFloat=false;
+      var halfFloat=false;
+      var tex = gl.createTexture();
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+      var ifmt = gl.RGBA;
+      if(isFloat) ifmt = halfFloat ? gl.RGBA16F : gl.RGBA32F ;
+      var data=null;
+      if (rnd) {
+          myseed(100);
+          if (isFloat)
+          {
+             data = new Float32Array(w*h*4);
+             for(var i=0;i<w*h*4;i++) data[i]=myrandom();
+          }
+          else
+          {
+             data = new Uint8Array(w*h*4);
+             for(var i=0;i<w*h*4;i++) data[i]=Math.floor(myrandom()*255.99);
+          }
+      }
+      gl.texImage2D(gl.TEXTURE_2D,0,ifmt,w,h,0,gl.RGBA,
+                    isFloat?gl.FLOAT:gl.UNSIGNED_BYTE,data);
+      return tex;
+  }
+
+//---------------------------------------------------------------------------------------------------
+  function createTexFromImg(img) {
+      var tex = gl.createTexture();
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      var ifmt = gl.RGBA;
+      gl.texImage2D(gl.TEXTURE_2D,0,ifmt,img.width,img.height,0,gl.RGBA,gl.UNSIGNED_BYTE,img);
+      return tex;
+  }
+
+//---------------------------------------------------------------------------------------------------
+  function Swap(Buff) {
+      var dummy=Buff.texB;
+      Buff.texB=Buff.texF;
+      Buff.texF=dummy;
+      gl.bindFramebuffer(gl.FRAMEBUFFER,Buff.fb);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER,
+                              gl.COLOR_ATTACHMENT0,
+                              gl.TEXTURE_2D,
+                              Buff.texB,
+                              0);
+  }
+
+//---------------------------------------------------------------------------------------------------
+  function setTexClampToEdge(tex,mode)
+  {
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  }
+
+//---------------------------------------------------------------------------------------------------
+  function createFB(Buff, w,h, hasDepth=true) {
+      Buff.fb = gl.createFramebuffer();
+      Buff.texF = createTex(w,h);   if (!use_webgl2) setTexClampToEdge(Buff.texF); // wow - this is needed by webgl1!!?!
+      Buff.texB = createTex(w,h);   if (!use_webgl2) setTexClampToEdge(Buff.texB); // wow - this is needed by webgl1!!?!
+      gl.bindFramebuffer(gl.FRAMEBUFFER,Buff.fb);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER,
+                              gl.COLOR_ATTACHMENT0,
+                              gl.TEXTURE_2D,
+                              Buff.texB,
+                              0);
+      if(hasDepth){
+          var depth_id=gl.createRenderbuffer();
+          gl.bindRenderbuffer(gl.RENDERBUFFER,depth_id);
+          if (use_webgl2)
+            gl.renderbufferStorage(gl.RENDERBUFFER,gl.DEPTH_COMPONENT24,w,h);
+          else
+            gl.renderbufferStorage(gl.RENDERBUFFER,gl.DEPTH_COMPONENT16,w,h);
+          gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.RENDERBUFFER,depth_id);
+      }
+      var e=gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+      if(gl.FRAMEBUFFER_COMPLETE !== e) {
+         console.log("incomplete fb: "+e.toString());
+      }
+      return Buff;
+  }
+
+//---------------------------------------------------------------------------------------------------
+  function getShaderSrcPortion(src, name, processIncludes=true)
+  {
+      var sstr="###BEGIN:"+name+".glsl";
+      var pos1=src.search(sstr);
+      var pos2=src.substring(pos1+2).search("###BEGIN:");
+      if (pos2==-1) pos2=src.substring(pos1+2).length;
+      var rstr=src.substring(pos1+sstr.length+1,pos1+2+pos2);
+
+      // replace includes
+      if(processIncludes) {
+          var sstr="\n#include ";
+          while( (pos1=rstr.search(sstr))!=-1 ) {
+              var str2=rstr.substring(pos1+10);
+              var pos2=str2.search("\n");
+              var incName=str2.substring(0,pos2);
+              if(incName.substr(incName.length-5)==".glsl") incName=incName.substr(0,incName.length-5);
+              rstr=rstr.slice(0,pos1)+getShaderSrcPortion(src,incName,false)+rstr.slice(pos1+10+pos2);
+          }
+      }
+
+      return rstr;
+  }
+
+//---------------------------------------------------------------------------------------------------
+  function genMip(buff)
+  {
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, buff);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.generateMipmap(gl.TEXTURE_2D);
+  }
+
+//---------------------------------------------------------------------------------------------------
+  var order=[];
+  var videoTex={};
+  var utilTex={};
+  var stdTex={rand256:rand256,keyboard:kbTex};
+  var stdTexSize={rand256:{w:256,h:256},keyboard:{w:256,h:3}};
+
+//---------------------------------------------------------------------------------------------------
+  function loadTex(tname)
+  {
+      var img = new Image();
+      img.onload = function() {
+          stdTex[tname] = createTexFromImg(img);
+          genMip(stdTex[tname]);
+      }
+      img.src=tname;
+  }
+
+
+//---------------------------------------------------------------------------------------------------
+function updateKeyboardTex()
+{
+    if( kbTex==null )
+    {
+        kbTex=gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D,kbTex);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texImage2D(gl.TEXTURE_2D,0,use_webgl2?gl.R8:gl.LUMINANCE,256,3,0, use_webgl2?gl.RED:gl.LUMINANCE,gl.UNSIGNED_BYTE,null);
+    }
+    gl.bindTexture(gl.TEXTURE_2D,kbTex);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0,0, 256,3, use_webgl2?gl.RED:gl.LUMINANCE, gl.UNSIGNED_BYTE, keyArray);
+}
+
+
+//---------------------------------------------------------------------------------------------------
+  function parseDirectives(src,directives) {
+      rstr=src;
+      rstr=rstr.replace(/^#(ShaderooNumPasses|NumTriangles|ShaderooNumTriangles|ShaderooCopyParameter) (.*)/gm,
+                        function(m1,m2,m3){
+                            directives[m2] = m3;
+                            if(m2!="ShaderooCopyParameter")
+                                directives[m2] = parseInt(m3);
+                            return"//#"+m2+" "+m3+"\n";
+                        }
+                       );
+      return rstr;
+  }
+
+//---------------------------------------------------------------------------------------------------
+  function matchFuncParams(fname, str){
+    var pos=[];
+    var i0=-1;
+    for(var i=0;i<str.length;i++) { 
+      if(str.substring(i,i+fname.length)==fname) { i0=i; break; } 
+    }
+    if (i0==-1) return [];
+    pos.push(i0); // 1st idx = function match
+    i0+=fname.length;
+    for(;i0<str.length;i0++) { var ch=str.charAt(i0); if(ch!=" " && ch!="\n" && ch !="\t") break; }
+    if ( str.charAt(i0) != "(" ) return [];
+    var lev=0;
+    pos.push(i0); i0++;
+    for(var i=i0+1;i<str.length;i++){
+        var ch=str.charAt(i);
+        if( ch=="," && lev==0 ) pos.push(i);
+        if( ch=="(" ) lev++;
+        if( ch==")" ) { lev--; if (lev<0) { pos.push(i); break; } } 
+        
+    }
+    return pos;
+  }
+  
+
+//---------------------------------------------------------------------------------------------------
+  function init() {
+
+      var w=canvas.width;
+      var h=canvas.height;
+      params={};
+      var allSrc;
+      if(allShadersStr!="")
+          allSrc=allShadersStr;
+      else
+          allSrc=document.getElementById("allShaders").text;
+          
+      if(!use_webgl2)
+      {
+          var pos=[];
+          //allSrc=allSrc.replaceAll(/texelFetch\(([^,]*),([^,]*),([^,)]*)\)/g,
+          //function(x,ch,pos,lev) { return "texture("+ch+",(vec2("+pos+")+.5)/"+ch+"Res,-1e30)" });
+          while ( (pos=matchFuncParams("texelFetch", allSrc)).length != 0 )  {
+              ch=allSrc.slice(pos[1]+1,pos[2]).trim();
+              allSrc=allSrc.slice(0,pos[0])+"texture"+allSrc.slice(pos[1],pos[2]+1)
+                    +"(vec2("+allSrc.slice(pos[2]+1,pos[3])+")+.5)/"+ch+"Res,-1e30)"
+                    +allSrc.slice(pos[4]+1);
+          }
+          //allSrc=allSrc.replaceAll(/textureSize\(([^,)]*),([^,)]*)\)/g,function(x,a,b,c) { return a+"Res" });
+          while ( (pos=matchFuncParams("textureSize", allSrc)).length != 0 )  {
+              ch=allSrc.slice(pos[1]+1,pos[2]).trim();
+              allSrc=allSrc.slice(0,pos[0])+"ivec2("+ch+"Res+.5)"+allSrc.slice(pos[3]+1);
+          }
+      }
+
+    
+      var lines=allSrc.split("\n");
+      for(var lidx in lines) {
+          var line=lines[lidx];
+          var elems=line.split(" ");
+          var lhead=elems[0].substring(0,elems[0].length-1);
+          if(!(lhead.startsWith("Buff") || lhead.startsWith("Geom") || lhead.startsWith("Image"))) continue;
+
+          Buff={};
+          Buff.width=-1;
+          Buff.height=-1;
+          Buff.texname=[];
+          Buff.genMipmap=0;
+          Buff.blending="none";
+          Buff.depthTest=1;
+          Buff.numPasses=1;
+          Buff.numTriangles=2;
+	  if(lhead.startsWith("Geom")) Buff.numTriangles=0x10000;
+          for (var i=1;i<elems.length;i++) {
+              if (elems[i].search(".glsl")>0) break;
+              var tname=elems[i];
+              Buff.texname[i-1]=tname;
+              if(tname.endsWith(".jpg")) loadTex(tname);
+              if(tname.endsWith(".png")) loadTex(tname);
+          }
+          var shsrc=getShaderSrcPortion(allSrc, lhead); // FIXME - get shader name from elems
+          var directives={};
+          shsrc=parseDirectives(shsrc,directives);
+          if ("NumTriangles"        in directives) Buff.numTriangles = directives.NumTriangles;
+          if ("NumPasses"           in directives) Buff.numPasses    = directives.NumPasses;
+          if ("ShaderooNumPasses"   in directives) Buff.numPasses    = directives.ShaderooNumPasses;
+          if(lhead.startsWith("Geom"))
+              Buff.shader=loadGeomShader(shsrc);
+          else
+              Buff.shader=loadBufferShader(shsrc);
+
+          // params+options
+          for (var i=1;i<elems.length;i++) {
+              if (elems[i].startsWith("opt:")) {
+                  opts=elems[i].substring(4).split(";");
+                  for(var o in opts) {
+                      // params
+                      if(opts[o].startsWith("uniform.")) { var pv=opts[o].substring(8).split("="); params[pv[0]]=pv[1]; }
+                      // options
+                      else { var pv=opts[o].split("="); Buff[pv[0]]=pv[1]; }
+                  }
+                  break;
+              }
+          }
+          
+          //### extern params
+          
+          if(!lhead.startsWith("Image"))
+              createFB(Buff, getBuffSize(Buff).w, getBuffSize(Buff).h);
+          else
+              Buff.fb = null;
+
+          buffers[lhead]=Buff;
+          if(lhead!="Image") order.push(lhead);
+      }
+      order.push("Image");
+  }
+
+//---------------------------------------------------------------------------------------------------
+  function draw() {
+
+      console.log("mouse all: "+mouse.allX+" "+mouse.allY);
+      updateKeyboardTex();
+
+      var w=canvas.width;
+      var h=canvas.height;
+
+      if(startTime<0.) startTime=Date.now()/1000.0;
+      var newTime = Date.now()/1000.0-startTime;
+      var paused=false;
+      if(paused) newTime = actTime;
+      actTimeDelta = (actTime==0.0)?0.0:newTime-actTime;
+      actTime=newTime;
+
+      for (idx in order) {
+          var Buff=buffers[order[idx]];
+          for(var passIdx=0;passIdx<Buff.numPasses;passIdx++)
+          {
+              textures=[];
+              texSizes=[];
+              for (tidx in Buff.texname) {
+                  var tex=Buff.texname[tidx];
+                  if(tex.startsWith("Ref:")) { var sp=tex.substring(4).split(":"); tex=buffers[sp[0]].texname[parseInt(sp[1].substring(3))]; }
+                  if      (tex in stdTex)   { textures[tidx]=stdTex[tex];       if(!use_webgl2) texSizes[tidx]=stdTexSize[tex]; }
+                  else if (tex in videoTex) { textures[tidx]=videoTex[tex];     if(!use_webgl2) texSizes[tidx]={w:256,h:256}; }
+                  else if (tex in utilTex)  { textures[tidx]=utilTex[tex];      if(!use_webgl2) texSizes[tidx]={w:256,h:256}; }
+                  else if (tex in buffers)  { textures[tidx]=buffers[tex].texF; if(!use_webgl2) texSizes[tidx]=getBuffSize(buffers[tex]); }
+                  else                      { textures[tidx]=rand256;           if(!use_webgl2) texSizes[tidx]={w:256,h:256}; }
+              }
+              var buffSize=getBuffSize(Buff);
+              //console.log(buffSize);
+              renderGeomBuffer(Buff.fb, buffSize.w, buffSize.h, Buff.shader, Buff.numTriangles, 
+                               textures, texSizes, 
+                               Buff.numPasses, passIdx,
+                               Buff.blending, Buff.depthTest);
+              if(Buff.fb!=null) Swap(Buff);
+              if(Buff.genMipmap!=0) genMip(Buff.texF);
+          }
+      }
+  }
+
+//---------------------------------------------------------------------------------------------------
+  function animate()
+  {
+     draw();
+     frameCnt++;
+     if (frameCnt==1) fxpreview();
+     //###PostFrame###
+     if(AnimEnable) requestAnimationFrame(animate);
+  }
+
+//---------------------------------------------------------------------------------------------------
+
+setTimeout(() => {
+init();
+resize();
+requestAnimationFrame(animate);
+}, 100);
+
+
+CanvWidthOverride=null;
+CanvHeightOverride=null;
+function save_as_png()
+{
+    CanvWidthOverride=4096;
+    CanvHeightOverride=4096;
+    CanvWidthOverride=canvas.width*3;
+    CanvHeightOverride=canvas.height*3;
+    resize();
+    draw();
+    var image = canvas.toDataURL();
+    var aDownloadLink = document.createElement('a');
+    aDownloadLink.download = 'mountain_moves.png';
+    aDownloadLink.href = image;
+    aDownloadLink.click();
+    CanvWidthOverride=null;
+    CanvHeightOverride=null;
+    resize();
+}
+
+
+</script>
+</body>
+</html>

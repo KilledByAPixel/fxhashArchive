@@ -1,0 +1,18 @@
+body {
+  margin: 0;
+  position: relative;
+  min-height: 100vh;
+  background-color: #252525;
+}
+canvas {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 100%;
+  max-height: 100%;  
+  min-width: 100%;
+  min-height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0.3rem 0.3rem 0.3rem rgba(0,0,0,0.43));
+}

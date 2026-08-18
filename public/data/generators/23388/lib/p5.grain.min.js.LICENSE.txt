@@ -1,0 +1,7 @@
+/**!
+ * p5.grain
+ * 
+ * @version 0.6.1
+ * @license MIT
+ * @copyright meezwhite, Gorilla Sun
+ */

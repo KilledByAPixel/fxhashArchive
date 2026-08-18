@@ -1,0 +1,4 @@
+The project is licensed under CC BY-NC 4.0
+It uses:
+- library twgl.js, © 2019 Gregg Tavares, MIT license
+- noise2D, © 2011 Ashima Arts, MIT license

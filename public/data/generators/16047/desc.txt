@@ -1,0 +1,28 @@
+Deep Forest
+
+I love being in nature and impressionistic painting! Deep Forest is my latest attempt to combine them with JavaScript. The editions will range from open, sparse forests to lush, dense, leafy wonderlands. Fall editions may render as Klimpt-style birch forests - my original inspiration for this work.
+
+Best viewed on a computer in Chrome. It may take a few seconds to start drawing and, depending on complexity, several minutes to finish rendering. In live view, press ’s’ to save a screenshot. Image size is 2318x3000px.
+
+Features:
+- One of the four seasons
+- Rare 10% night version with 50/50 for normal fireflies or "fire" fireflies. Night will only be spring or summer.
+- Amount of atmosphere/haze
+- Horizon line, 30% rarer "high horizon" near the top
+- Tint from one of 8 light and 7 shadow colors
+- Strength of the light and shadow color
+- Mixed tree trunks or 30% rarer all birch
+- 50/50 moss on tree trunks
+- One of 8 flower colors in spring or summer
+- One of 4 perspective transforms
+- Straight, curved out, or 30% rare curved inward trunks
+- 50/50 grass in fall or winter
+- 85% flowers in spring and summer
+- 95% underbrush
+- 50/50 clouds or solid background
+- 50/50 solid background will be vertical or swirls
+- Ground hill height
+
+Copyright (c) 2022 Matt Perkins, hello@mattperkins.me, @nudoru on Twitter. Licensed under CC BY-NC-SA 4.0, see LICENSE.txt for more information.
+
+"Deep Forest" 350 eds, DA starting at 50 -> 10 $xtz #generative #creativecoding #generativeart #fxhash #tezosart #nft #nftart #nftdrop #cleannft #cryptoart

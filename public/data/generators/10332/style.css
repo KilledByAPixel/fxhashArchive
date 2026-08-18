@@ -1,0 +1,35 @@
+/* * {
+     user-select: none;
+    -khtml-user-select: none;
+    -o-user-select: none;
+    -moz-user-select: -moz-none;
+    -webkit-user-select: none;
+} */
+
+::selection { background: transparent;color:inherit; }
+::-moz-selection { background: transparent;color:inherit; }
+
+html, body {
+  overflow: hidden;
+  height: 100%;
+}
+
+canvas {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+#xx {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  color: #000;
+  padding: 5px;
+  overflow: auto;
+  max-height: 100px;
+  font-size: 10px;
+  font-family: sans-serif;
+  /* font-size: 30px; */
+}

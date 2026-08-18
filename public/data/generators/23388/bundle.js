@@ -1,0 +1,1 @@
+console.log(fxhash),console.log(fxrand()),window.$fxhashFeatures={Background:bgName,Pallets:colorChoice[4],Border:nameTypeBorder,Formation:nameFormation},console.log(window.$fxhashFeatures);
