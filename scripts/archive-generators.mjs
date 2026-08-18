@@ -1,0 +1,370 @@
+// Archive generator code into the repo so selected projects keep working with
+// no IPFS, no Tezos and no internet at all.
+//
+// WHY THIS EXISTS
+// ---------------
+// A generator plus a seed regenerates an artwork. Seeds for all 1,802,387
+// iterations are already committed (see snapshot-seeds.mjs); the generators
+// are not, because the full catalog is 80-150 GB of code living on IPFS. So
+// the archive has to be selective, and this script is what makes the
+// selection concrete.
+//
+// Projects are archived in priority order until a byte budget is reached:
+//   1. explicit entries in data/preserve.json (accepted preservation requests)
+//   2. every project by the artists listed there
+//   3. the highest-volume projects, ranked from public/data/market
+// Volume is the ranking signal because engagement is extremely concentrated:
+// the top 1% of projects account for ~73% of all money that moved on fxhash.
+//
+// Generators are fetched as a tar from an IPFS gateway and unpacked into
+// public/data/generators/<projectId>/, so the files are directly servable and
+// runnable — the viewer loads index.html?fxhash=<seed> in an iframe, which is
+// exactly how fxhash itself drove a generator. No CAR parsing, no IPFS client,
+// no runtime dependency of any kind.
+//
+// Usage:
+//   node scripts/archive-generators.mjs [--budget MB] [--limit N] [--dry-run] [--commit]
+//
+//   --budget MB   stop once the archive reaches this size (default 600).
+//                  GitHub Pages caps a published site at 1 GB and the rest of
+//                  public/ already uses ~370 MB.
+//   --limit N     archive at most N projects this run
+//   --dry-run     print the priority list and stop; downloads nothing
+//   --commit      git commit every COMMIT_EVERY projects
+//
+// Resumable: a project already unpacked is skipped, and its size still counts
+// against the budget.
+//
+// NOT HANDLED: onchfs:// projects (372 of them). Their code is stored on-chain
+// and cannot be lost, so they are the least urgent to archive, and they need a
+// different fetch path than an IPFS gateway. They are reported and skipped.
+
+import { readFile, writeFile, rename, unlink, mkdir, readdir, rm, stat, cp } from 'node:fs/promises'
+import { join } from 'node:path'
+import { execFileSync } from 'node:child_process'
+
+const GATEWAYS = ['https://ipfs.io', 'https://dweb.link']
+const TOKENS_DIR = 'public/data/tokens'
+const MARKET_DIR = 'public/data/market'
+const PRESERVE_FILE = 'data/preserve.json'
+const OUT = 'public/data/generators'
+const COMMIT_EVERY = 25
+const DELAY_MS = 150
+
+function getArg(name, def) {
+  const i = process.argv.indexOf(`--${name}`)
+  return i >= 0 ? process.argv[i + 1] : def
+}
+const hasFlag = (name) => process.argv.includes(`--${name}`)
+
+const BUDGET_BYTES = Number(getArg('budget', 600)) * 1024 * 1024
+const LIMIT = Number(getArg('limit', Infinity))
+const DRY_RUN = hasFlag('dry-run')
+const DO_COMMIT = hasFlag('commit')
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+async function loadJson(path, fallback) {
+  try {
+    return JSON.parse(await readFile(path, 'utf8'))
+  } catch {
+    return fallback
+  }
+}
+
+async function atomicWrite(path, data) {
+  const tmp = `${path}.tmp-${process.pid}`
+  await writeFile(tmp, data)
+  try {
+    await rename(tmp, path)
+  } catch {
+    await writeFile(path, data)
+    await unlink(tmp).catch(() => {})
+  }
+}
+
+async function dirSize(dir) {
+  let total = 0
+  for (const e of await readdir(dir, { withFileTypes: true })) {
+    const p = join(dir, e.name)
+    total += e.isDirectory() ? await dirSize(p) : (await stat(p)).size
+  }
+  return total
+}
+
+// ---------------------------------------------------------------- selection
+
+async function loadCatalog() {
+  const projects = []
+  for (const f of (await readdir(TOKENS_DIR)).filter((f) => /^index-\d+\.json$/.test(f)).sort()) {
+    for (const p of await loadJson(join(TOKENS_DIR, f), [])) projects.push(p)
+  }
+  return projects
+}
+
+async function loadVolumes() {
+  const vol = new Map()
+  let shards = []
+  try {
+    shards = (await readdir(MARKET_DIR)).filter((f) => /^stats-\d+\.json$/.test(f))
+  } catch {
+    return vol
+  }
+  for (const f of shards) {
+    const stats = await loadJson(join(MARKET_DIR, f), {})
+    for (const [id, s] of Object.entries(stats)) {
+      if (s) vol.set(Number(id), (s.pv ?? 0) + (s.sv ?? 0))
+    }
+  }
+  return vol
+}
+
+function buildPriorityList(projects, volumes, rules, explicit) {
+  const byId = new Map(projects.map((p) => [p.id, p]))
+  const picked = new Map() // id -> reason, insertion order = priority
+
+  const add = (id, reason) => {
+    if (id == null || picked.has(id) || !byId.has(id)) return
+    picked.set(id, reason)
+  }
+
+  // 1. accepted requests, by id or slug
+  for (const entry of explicit) {
+    const id = entry.id ?? projects.find((p) => p.slug === entry.slug)?.id
+    add(id, `request${entry.reason ? ` (${entry.reason})` : ''}`)
+  }
+
+  // 2. named artists, whole body of work
+  const artists = (rules.artists ?? []).map((a) => a.toLowerCase())
+  if (artists.length) {
+    for (const p of projects) {
+      const who = `${p.author?.name ?? ''} ${p.author?.id ?? ''}`.toLowerCase()
+      if (artists.some((a) => who.includes(a))) add(p.id, `artist: ${p.author?.name ?? p.author?.id}`)
+    }
+  }
+
+  // 3. highest volume first
+  const ranked = projects
+    .map((p) => ({ p, v: volumes.get(p.id) ?? 0 }))
+    .filter((r) => r.v > 0)
+    .sort((a, b) => b.v - a.v)
+  const topN = rules.topProjectsByVolume ?? 0
+  for (const r of ranked.slice(0, topN)) add(r.p.id, `top volume (${Math.round(r.v / 1e6).toLocaleString()} tez)`)
+
+  return [...picked].map(([id, reason]) => ({ project: byId.get(id), reason, volume: volumes.get(id) ?? 0 }))
+}
+
+// ------------------------------------------------------------------- fetch
+
+async function fetchTar(cid, maxBytes) {
+  let lastErr
+  for (let attempt = 0; attempt < GATEWAYS.length * 2; attempt++) {
+    const gateway = GATEWAYS[attempt % GATEWAYS.length]
+    const ac = new AbortController()
+    const timer = setTimeout(() => ac.abort(), 180000)
+    try {
+      const res = await fetch(`${gateway}/ipfs/${cid}?format=tar`, {
+        headers: { accept: 'application/x-tar' },
+        signal: ac.signal,
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const chunks = []
+      let n = 0
+      for await (const c of res.body) {
+        n += c.length
+        if (n > maxBytes) {
+          ac.abort()
+          return { tooBig: true, bytes: n }
+        }
+        chunks.push(c)
+      }
+      return { buffer: Buffer.concat(chunks), bytes: n }
+    } catch (err) {
+      lastErr = err
+      if (attempt < GATEWAYS.length * 2 - 1) await sleep(1000 * (attempt + 1))
+    } finally {
+      clearTimeout(timer)
+    }
+  }
+  throw lastErr ?? new Error('all gateways failed')
+}
+
+// Unpacking archives fetched from a public gateway means treating their
+// contents as hostile: a crafted tar could carry absolute paths or ".."
+// segments and write outside the destination. List the members first and
+// refuse anything that is not a plain relative path.
+function assertSafeTar(tarPath) {
+  const listing = execFileSync('tar', ['--force-local', '-tf', tarPath], { encoding: 'utf8' })
+  const entries = listing.split('\n').map((l) => l.trim()).filter(Boolean)
+  if (entries.length === 0) throw new Error('tar is empty')
+  for (const e of entries) {
+    if (e.startsWith('/') || e.startsWith('\\') || /^[a-zA-Z]:/.test(e)) throw new Error(`absolute path in tar: ${e}`)
+    if (e.split(/[/\\]/).includes('..')) throw new Error(`path traversal in tar: ${e}`)
+  }
+  return entries
+}
+
+async function findEntryPoint(dir) {
+  for (const e of await readdir(dir, { withFileTypes: true })) {
+    if (e.isFile() && e.name.toLowerCase() === 'index.html') return e.name
+  }
+  // Single-file generators are stored as one HTML file named by CID.
+  const files = (await readdir(dir, { withFileTypes: true })).filter((e) => e.isFile())
+  const html = files.find((e) => /\.html?$/i.test(e.name))
+  return html ? html.name : files.length === 1 ? files[0].name : null
+}
+
+async function archiveProject(project, tmpRoot, maxBytes) {
+  const uri = String(project.generativeUri ?? '')
+  if (!uri.startsWith('ipfs://')) return { skipped: `unsupported scheme: ${uri.split(':')[0]}` }
+  const cid = uri.slice(7).split('/')[0]
+
+  const got = await fetchTar(cid, maxBytes)
+  if (got.tooBig) return { skipped: `over size cap (>${(maxBytes / 1024 / 1024).toFixed(0)} MB)` }
+
+  const staging = join(tmpRoot, `p${project.id}`)
+  await rm(staging, { recursive: true, force: true })
+  await mkdir(staging, { recursive: true })
+  const tarPath = join(staging, 'g.tar')
+  await writeFile(tarPath, got.buffer)
+
+  assertSafeTar(tarPath)
+  execFileSync('tar', ['--force-local', '-xf', tarPath, '-C', staging], { stdio: 'ignore' })
+  await unlink(tarPath)
+
+  // A directory generator unpacks to a single folder named by its CID; lift
+  // its contents up so paths are stable and do not embed the CID.
+  const top = await readdir(staging, { withFileTypes: true })
+  let source = staging
+  if (top.length === 1 && top[0].isDirectory()) source = join(staging, top[0].name)
+
+  const entry = await findEntryPoint(source)
+  if (!entry) return { skipped: 'no HTML entry point found' }
+
+  const dest = join(OUT, String(project.id))
+  await rm(dest, { recursive: true, force: true })
+  await mkdir(dest, { recursive: true })
+  await cp(source, dest, { recursive: true })
+  await rm(staging, { recursive: true, force: true })
+
+  return { cid, entry, bytes: await dirSize(dest) }
+}
+
+// -------------------------------------------------------------------- main
+
+function commitProgress(label) {
+  try {
+    execFileSync('git', ['add', OUT], { stdio: 'ignore' })
+    const staged = execFileSync('git', ['diff', '--cached', '--name-only']).toString().trim()
+    if (!staged) return
+    execFileSync('git', ['commit', '-m', `data: archive generator code (${label})\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`], { stdio: 'ignore' })
+    console.log(`[git] ${label}: committed`)
+  } catch (err) {
+    console.error(`[git] ${label}: commit FAILED: ${err.message}`)
+  }
+}
+
+const mb = (b) => `${(b / 1024 / 1024).toFixed(1)} MB`
+
+async function main() {
+  const preserve = await loadJson(PRESERVE_FILE, null)
+  if (!preserve) throw new Error(`${PRESERVE_FILE} missing`)
+  const rules = preserve.rules ?? {}
+  const maxProjectBytes = (rules.maxProjectSizeMB || 0) > 0 ? rules.maxProjectSizeMB * 1024 * 1024 : Infinity
+
+  const projects = await loadCatalog()
+  const volumes = await loadVolumes()
+  if (volumes.size === 0) {
+    console.warn('WARNING: no market data found — run snapshot-market.mjs first, or only requests and artists will be archived.')
+  }
+  const list = buildPriorityList(projects, volumes, rules, preserve.projects ?? [])
+
+  console.log(`archive-generators: ${projects.length} projects in catalog, ${volumes.size} with market data`)
+  console.log(`priority list: ${list.length} projects | budget ${mb(BUDGET_BYTES)} | per-project cap ${maxProjectBytes === Infinity ? 'none' : mb(maxProjectBytes)}\n`)
+
+  if (DRY_RUN) {
+    const onchfs = list.filter((x) => String(x.project.generativeUri).startsWith('onchfs://')).length
+    for (const [i, x] of list.slice(0, 40).entries()) {
+      console.log(`  ${String(i + 1).padStart(4)}. ${String(x.project.name).slice(0, 42).padEnd(42)} ${x.reason}`)
+    }
+    if (list.length > 40) console.log(`  … and ${list.length - 40} more`)
+    console.log(`\n${onchfs} of these are onchfs:// (on-chain, skipped by this script)`)
+    console.log('dry run — nothing downloaded')
+    return
+  }
+
+  await mkdir(OUT, { recursive: true })
+  const tmpRoot = join(OUT, '.staging')
+  await mkdir(tmpRoot, { recursive: true })
+
+  const manifestPath = join(OUT, 'manifest.json')
+  const manifest = await loadJson(manifestPath, {})
+
+  let used = 0
+  for (const key of Object.keys(manifest)) used += manifest[key].bytes ?? 0
+
+  const startTime = Date.now()
+  let archived = 0
+  let skipped = 0
+  let failed = 0
+  let sinceCommit = 0
+  let budgetHit = false
+
+  for (const { project, reason } of list) {
+    if (archived >= LIMIT) break
+    if (Object.prototype.hasOwnProperty.call(manifest, String(project.id))) continue
+    if (used >= BUDGET_BYTES) {
+      budgetHit = true
+      break
+    }
+
+    try {
+      const result = await archiveProject(project, tmpRoot, maxProjectBytes)
+      if (result.skipped) {
+        skipped++
+        console.log(`  skip  ${String(project.name).slice(0, 38).padEnd(38)} ${result.skipped}`)
+      } else {
+        manifest[String(project.id)] = {
+          slug: project.slug,
+          name: project.name,
+          cid: result.cid,
+          entry: result.entry,
+          bytes: result.bytes,
+          reason,
+        }
+        used += result.bytes
+        archived++
+        sinceCommit++
+        await atomicWrite(manifestPath, JSON.stringify(manifest, null, 2))
+        console.log(`  ok    ${String(project.name).slice(0, 38).padEnd(38)} ${String((result.bytes / 1024).toFixed(0) + ' KB').padStart(9)}  total ${mb(used)}`)
+      }
+    } catch (err) {
+      failed++
+      console.error(`  FAIL  ${String(project.name).slice(0, 38).padEnd(38)} ${err.message}`)
+    }
+
+    if (DO_COMMIT && sinceCommit >= COMMIT_EVERY) {
+      commitProgress(`${archived} projects, ${mb(used)}`)
+      sinceCommit = 0
+    }
+    await sleep(DELAY_MS)
+  }
+
+  await rm(tmpRoot, { recursive: true, force: true })
+  await atomicWrite(manifestPath, JSON.stringify(manifest, null, 2))
+
+  const elapsed = Math.round((Date.now() - startTime) / 1000)
+  console.log(`\n[FINAL] ${archived} archived, ${skipped} skipped, ${failed} failed | ${mb(used)} of ${mb(BUDGET_BYTES)} | ${elapsed}s`)
+  console.log(`manifest: ${Object.keys(manifest).length} projects playable offline`)
+  if (budgetHit) console.log('stopped: budget reached (raise with --budget MB)')
+  if (DO_COMMIT && sinceCommit > 0) commitProgress(`final ${archived} projects, ${mb(used)}`)
+}
+
+process.on('unhandledRejection', (err) => {
+  console.error('UNHANDLED REJECTION (continuing):', err)
+})
+
+main().catch((err) => {
+  console.error('FATAL:', err)
+  process.exitCode = 1
+})
