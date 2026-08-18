@@ -11,7 +11,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "snapshot": "node scripts/snapshot.mjs",
-    "snapshot:iterations": "node scripts/snapshot-iterations.mjs"
+    "snapshot:iterations": "node scripts/snapshot-iterations.mjs",
+    "snapshot:contracts": "node scripts/snapshot-contracts.mjs"
   },
   "dependencies": {
     "react": "^19.2.8",
