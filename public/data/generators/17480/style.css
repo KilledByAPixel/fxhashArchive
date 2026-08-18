@@ -1,0 +1,39 @@
+/* style.css */
+
+html, body {
+
+  position:fixed; 
+  top:0;
+  bottom:0;
+  left:0;
+  right:0;
+
+  height:1%
+
+  /* height: 100%; */
+
+  
+}
+
+body {
+  margin: 0;
+  display: flex;
+  min-height: 100vh;
+
+  /* This centers our sketch horizontally. */
+  justify-content: center;
+
+
+  /* This centers our sketch vertically. */
+  align-items: center;
+  /* transform: scale(0.9); */
+
+}
+
+
+.imgbox {
+  display: grid;
+  height: 10%;
+}
+
+

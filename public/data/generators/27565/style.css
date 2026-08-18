@@ -1,0 +1,168 @@
+* {
+        padding: 0;
+        margin: 0;
+}
+
+html {
+        scroll-behavior: smooth;
+        scrollbar-width: none;
+        --duration: 500ms;
+}
+
+body {
+        padding: 0;
+        margin: 0;
+        font-size: 1em;
+        background: white;
+        color: black;
+}
+
+body #container {
+        -webkit-tap-highlight-color: transparent;
+}
+
+@keyframes bye {
+        to {
+                transform: scaleY(0);
+        }
+}
+
+.bye {
+        animation: bye var(--duration) ease;
+}
+
+body::-webkit-scrollbar {
+        display: none;
+}
+
+a {
+        color: inherit;
+}
+
+#container.dark {
+        background: black;
+        color: white;
+}
+
+div.sensor {
+        height: 100vh;
+}
+
+div.dots {
+        height: 100vh;
+        grid-column: 1 / -1;
+        image-rendering: pixelated;
+}
+
+#container > div {
+        display: grid;
+}
+
+#container > div > div {
+        display: flex;
+        flex-direction: column;
+        transform-origin: 0 0;
+}
+
+#container > div > div > div {
+        transform-origin: 0 0;
+        background: currentColor;
+        width: var(--w);
+}
+
+#container.dir > div > div > div {
+        transform-origin: 0 100%;
+}
+
+
+div.line {
+        height: 1px;
+}
+
+div.stroke {
+        height: 3px;
+}
+
+div.em {
+        height: 1em;
+}
+
+div.gold {
+        height: 1.618em;
+}
+
+div.buren {
+        height: 8.7cm;
+}
+
+div.viewportgr {
+        height: calc(100vh / 1.618);
+}
+
+div.viewport {
+        height: 100vh;
+}
+
+div.milian {
+        height: 187cm;
+}
+
+div.leander {
+        height: 193cm;
+}
+
+#container div > div.overlay {
+        grid-column: 1 / -1;
+        position: sticky;
+        top: 0;
+        bottom: 0;
+        display: grid;
+        grid-template-columns: inherit;
+        grid-auto-rows: var(--rows);
+        pointer-events: none;
+}
+
+#container div > div.overlay > div {
+        background: currentColor;
+        width: calc(var(--mk) * 1%);
+        height: 1px;
+        transition: transform 0.7s ease, width 0.3s ease;
+}
+
+#container.rot div > div.overlay > div {
+        transform: rotate(90deg);
+}
+
+body:not(.active) {
+        cursor: none;
+}
+
+@keyframes fadein {
+        from {
+                opacity: 0;
+                transform: scale(0);
+        }
+}
+
+#fullscreen {
+        position: fixed;
+        top: 0;
+        right: 0;
+        cursor: pointer;
+        transition: opacity 0.3s ease;
+}
+
+#fullscreen:after {
+        display: inline-block;
+        content: "";
+        background: currentColor;
+        width: 2em;
+        height: 2em;
+        margin: 2em;
+}
+
+:fullscreen #fullscreen,
+body:not(.active) #fullscreen {
+        opacity: 0;
+}
+

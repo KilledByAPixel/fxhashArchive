@@ -1,0 +1,110 @@
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #111;
+  font-family: "Helvetica Neue", "Helvetica", sans-serif;
+  font-size: 12px;
+  color: #ebf8f3;
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  height: 100dvh;
+}
+
+html {  
+  flex-direction: column;
+}
+
+body {
+  width: 100vw;
+  height: 100vh;
+  flex-direction: row;
+  overflow: hidden;
+  touch-action: none;
+  position: relative;
+}
+
+main {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background: #111;
+}
+
+canvas {
+  max-width: 100%;
+  max-height: 100%;
+  z-index: 100;
+  margin: auto;
+  display: block;
+}
+
+div#rec {
+  z-index: 100000000;
+  position: absolute;
+  top:  0;
+  left:  0;
+  display: block;
+  height: 4em;
+  width: 8em;
+  font-size: 1em;
+  line-height: 15px;
+  text-align: center;
+  vertical-align: middle;
+  text-transform: uppercase;
+  letter-spacing: .3em;
+  font-size: 8px;
+  padding: 1em;
+  display: none;
+}
+
+div#rec.recording {
+  display: block;
+}
+
+div#rec p {
+  margin: 0;
+  margin-left: 1.5em;
+  padding: 0;
+}
+
+div#rec span {
+  position: absolute;
+  background: red;
+  display: block;
+  margin: .45em;
+  width:  1em;
+  height: 1em; 
+  border-radius: 100%;
+  animation: pulse-animation 2s infinite;
+  box-shadow: 0 0 20px #000;
+
+}
+
+@keyframes pulse-animation {
+  0% {
+    opacity: 0;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+
+}
+
+* {
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}

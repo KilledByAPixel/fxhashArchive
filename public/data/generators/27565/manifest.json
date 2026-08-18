@@ -1,0 +1,29 @@
+{
+  "name": "DOM1, by Leander Herzog and Milian Mori, HEK.edition #2",
+  "short_name": "DOM1",
+  "lang": "en-CH",
+  "start_url": "./",
+  "description": "2023. HTML, CSS, JS, variable dimensions.",
+  "icons": [
+    {
+      "src": "icons/iconsmall.jpg",
+      "type": "image/jpg",
+      "sizes": "256x256"
+    },
+    {
+      "src": "icons/icon.jpg",
+      "type": "image/jpg",
+      "sizes": "512x512"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "icons/preview.jpg",
+      "sizes": "1080x1080",
+      "type": "image/jpg"
+    }
+  ],
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "display": "fullscreen"
+}
