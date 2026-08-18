@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+	<meta charset="utf-8">
+	<head>
+		<title>Towers</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+		<meta name="mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-status-bar-style" content="black">
+		<link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
+		<link rel="icon" type="image/png" href="./icons/icon_48.png">
+		<link rel="shortcut icon" type="image/png" href="./icons/icon_48.png">
+		<link rel="apple-touch-icon" sizes="180x180" href="./icons/icon_180.png">
+		<link rel="manifest" href="./icons/site.webmanifest">
+		<meta name="apple-mobile-web-app-title" content="Towers">
+		<meta name="application-name" content="Towers">
+		<meta name="msapplication-config" content="./icons/browserconfig.xml">
+		<meta name="msapplication-TileColor" content="#000000">
+		<meta name="theme-color" content="#000000">
+		<script id="fxhash-snippet">
+      let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+      var fxhash = new URLSearchParams(window.location.search).get('fxhash')
+      let b58dec = str=>[...str].reduce((p,c)=>p*alphabet.length+alphabet.indexOf(c)|0, 0)
+      let fxhashTrunc = fxhash.slice(2)
+      let regex = new RegExp(".{" + ((fxhashTrunc.length/4)|0) + "}", 'g')
+      let hashes = fxhashTrunc.match(regex).map(h => b58dec(h))
+      let sfc32 = (a, b, c, d) => {
+        return () => {
+          a |= 0; b |= 0; c |= 0; d |= 0
+          var t = (a + b | 0) + d | 0
+          d = d + 1 | 0
+          a = b ^ b >>> 9
+          b = c + (c << 3) | 0
+          c = c << 21 | c >>> 11
+          c = c + t | 0
+          return (t >>> 0) / 4294967296
+        }
+      }
+      var fxrand = sfc32(...hashes)
+      // used to get features during token mint
+      window.addEventListener("message", (event) => {
+        if (event.data === "fxhash_getFeatures") {
+          parent.postMessage({
+            id: "fxhash_getFeatures",
+            data: window.$fxhashFeatures
+          }, "*")
+        }
+      })
+      var isFxpreview = new URLSearchParams(window.location.search).get('preview') === "1"
+      function fxpreview() {
+        window.dispatchEvent(new Event("fxhash-preview"))
+        setTimeout(() => fxpreview(), 500)
+      }
+</script>
+		<style>
+			html, body{
+				margin: 0;
+				height: 100%;
+			}
+			body{
+				background-color: black;
+			}
+			svg {
+				display: block;
+				overflow: hidden;
+			}
+			pre {
+				background-color: tomato;
+				color: black;
+				display: block;
+				position: absolute;
+				margin: 0;
+				padding: 1ch;
+				left: 1ch;
+				top: 1ch;
+			}
+			.hidden {
+				display: none;
+			}
+		</style>
+	</head>
+	<body>
+		<svg></svg>
+		<pre class="hidden"></pre>
+		<script type="module">
+			import {app, gen} from './js.js'
+
+			const features = gen()
+			window.$fxhashFeatures = features
+			app.boot(features)
+
+			window.addEventListener('keyup', e => {
+				if (e.key == 'd') {
+					app.toggleDebug()
+				} else if (e.key == 's') {
+					app.exportPNG(2048)
+				} else if (e.key == 'S') {
+					app.exportPNG(8192)
+				}
+			})
+		</script>
+	</body>
+</html>

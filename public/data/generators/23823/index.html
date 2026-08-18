@@ -1,0 +1,48 @@
+<!doctype html><html><head><title>7.356 DEGREES</title><meta name="keywords" content="generative art, generative token, tetrahedra, clean nft, tezos, growth"><meta name="author" content="mrkswcz"><meta charset="utf-8"><meta name="description" content="
+    All drawing and geometric methods written by mrkswcz using standard javascript
+    language except for:
+    - three.js (MIT License)
+    - three-mesh-bvh by Garrett Johnson (MIT License)
+    - seedrandom by David Bau (MIT License)
+    - OpenSimplex Noise by Josh Forisha (Public Domain)
+    - triangle-triangle-intersection by stonkpunk (CC0 1.0 Public Domain Dedication)
+
+    Compiled using fxhash-boilerplate-webpack by fxhash (MIT License)
+
+    For more information, please see the ./bundle.js.LICENSE.txt file included in
+    the package.
+    "><script id="fxhash-snippet">
+      let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+      var fxhash = new URLSearchParams(window.location.search).get('fxhash')
+      let b58dec = str=>[...str].reduce((p,c)=>p*alphabet.length+alphabet.indexOf(c)|0, 0)
+      let fxhashTrunc = fxhash.slice(2)
+      let regex = new RegExp(".{" + ((fxhashTrunc.length/4)|0) + "}", 'g')
+      let hashes = fxhashTrunc.match(regex).map(h => b58dec(h))
+      let sfc32 = (a, b, c, d) => {
+        return () => {
+          a |= 0; b |= 0; c |= 0; d |= 0
+          var t = (a + b | 0) + d | 0
+          d = d + 1 | 0
+          a = b ^ b >>> 9
+          b = c + (c << 3) | 0
+          c = c << 21 | c >>> 11
+          c = c + t | 0
+          return (t >>> 0) / 4294967296
+        }
+      }
+      var fxrand = sfc32(...hashes)
+      // used to get features during token mint
+      window.addEventListener("message", (event) => {
+        if (event.data === "fxhash_getFeatures") {
+          parent.postMessage({
+            id: "fxhash_getFeatures",
+            data: window.$fxhashFeatures
+          }, "*")
+        }
+      })
+      var isFxpreview = new URLSearchParams(window.location.search).get('preview') === "1"
+      function fxpreview() {
+        window.dispatchEvent(new Event("fxhash-preview"))
+        setTimeout(() => fxpreview(), 500)
+      }
+</script><link rel="stylesheet" href="./style.css"></head><body><span id="rendering">RENDERING</span><div id="wait"><div id="waitbackground"></div><div id="wimgs"><img src="./wait/sm_tetra_spinner-01.png" class="spinner" id="w01" style="display: block;"> <img src="./wait/sm_tetra_spinner-02.png" class="spinner" id="w02" style="display: block;"> <img src="./wait/sm_tetra_spinner-03.png" class="spinner" id="w03" style="display: block;"> <img src="./wait/sm_tetra_spinner-04.png" class="spinner" id="w04" style="display: block;"> <img src="./wait/sm_tetra_spinner-05.png" class="spinner" id="w05" style="display: block;"> <img src="./wait/sm_tetra_spinner-06.png" class="spinner" id="w06" style="display: block;"> <img src="./wait/sm_tetra_spinner-07.png" class="spinner" id="w07" style="display: block;"> <img src="./wait/sm_tetra_spinner-08.png" class="spinner" id="w08" style="display: block;"> <img src="./wait/sm_tetra_spinner-09.png" class="spinner" id="w09" style="display: block;"> <img src="./wait/sm_tetra_spinner-10.png" class="spinner" id="w10" style="display: block;"> <img src="./wait/sm_tetra_spinner-11.png" class="spinner" id="w11" style="display: block;"> <img src="./wait/sm_tetra_spinner-12.png" class="spinner" id="w12" style="display: block;"> <img src="./wait/sm_tetra_spinner-13.png" class="spinner" id="w13" style="display: block;"> <img src="./wait/sm_tetra_spinner-14.png" class="spinner" id="w14" style="display: block;"> <img src="./wait/sm_tetra_spinner-15.png" class="spinner" id="w15" style="display: block;"> <img src="./wait/sm_tetra_spinner-16.png" class="spinner" id="w16" style="display: block;"></div><span id="ttl">7.356 DEGREES</span><div id="overlay"></div></div><div id="menu" style="display: none;"><div id="background"></div><div id="buttons"><button id="closemenu" class="break" style="display: block;">[..]</button> <button id="LQ" style="display: block;" disabled="disabled">PREVIEW</button> <button id="MQ" style="display: block;">DISPLAY</button> <button id="HQ" class="break" style="display: block;">PRINT</button> <button id="PNG" style="display: block;">PNG</button> <button id="STL" style="display: block;">STL</button> <button id="PLY" class="break" style="display: block;">PLY</button> <a id="LIC" href="./bundle.js.LICENSE.txt" style="display: block;" target="_blank">LICENSE.TXT</a></div></div><script defer="defer" src="./bundle.js"></script></body></html>

@@ -1,0 +1,106 @@
+canvas {
+  padding: 0;
+  background-color: black;
+
+  margin: 0 auto;
+  display: block;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+body {
+  background-color: black;
+  color: white;
+  padding: 0;
+  margin: 0;
+}
+
+@media only screen and (max-device-width: 1024px) {
+  body {
+    overflow: hidden;
+  }
+}
+
+#gui {
+  /* position: absolute; */
+  position: fixed; /* fixed is useful for rendering large images */
+  z-index: 999;
+}
+#sgui {
+  position: absolute;
+  right: 0;
+  z-index: 999;
+}
+.lil-gui {
+  background-color: black;
+  color: #999;
+  padding: 4px;
+  --widget-color: #121212;
+  --hover-color: #222;
+  --focus-color: #333;
+  background-color: 1px solid rgb(12, 12, 12);
+}
+
+.lil-gui.root > .title {
+  display: none;
+}
+
+.lil-gui button, .lil-gui input[type='checkbox'] {
+  color: #898989;
+}
+
+.lil-gui .controller.number input {
+  color: rgb(66, 66, 66);
+}
+
+.lil-gui.root > .children > .lil-gui > .title {
+  border: none;
+}
+
+.lil-gui.root > .title {
+  background: black;
+}
+
+.lil-gui .controller.number .fill {
+  border-right: var(--slider-knob-width) solid #aaa;
+  box-sizing: content-box;
+  height: 100%;
+}
+
+#lc {
+  padding: 40vh 0 0;
+  height: 100vh;
+  aspect-ratio: 0.769;
+  max-width: 100%;
+  box-sizing: border-box;
+
+  margin: auto;
+  display: block;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+#l {
+  margin: 0 auto;
+  color: black;
+  width: 6px;
+  height: 6px;
+  background-color: rgb(100, 100, 100);
+  border-radius: 1px;
+  animation: 2s anim steps(6, start) 2;
+}
+
+@keyframes anim {
+  from {
+    transform: translate(0, 36px);
+  }
+  to {
+    transform: translate(0, 00px);
+  }
+}

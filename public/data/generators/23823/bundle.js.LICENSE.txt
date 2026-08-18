@@ -1,0 +1,230 @@
+7.356 DEGREES
+Copyright 2023 mrkswcz
+
+All rights reserved
+
+
+Start with something simple. Take four identical equilateral triangles and join 
+them to form a pyramid. This is your building block – a regular tetrahedron, the 
+simplest possible three-dimensional figure.
+
+When you connect five such pyramids by attaching their faces, you will be left 
+with a thin empty space between the first and last: a volumetric angle of 7.356 
+degrees. It’s too small to fit another piece and too big to be lost in numerical 
+imprecision. 
+
+It is a surprising imperfection. You would expect a tetrahedron to behave 
+similarly to its two-dimensional ancestor. When you arrange equilateral triangles,
+one next to the other like tiles, you can cover two-dimensional space without 
+leaving an empty spot. You may go on forever, covering infinite planes and be 
+sure that the six angles that meet at each point will add up to the perfect 360 
+degrees.
+
+In three dimensions, it is not like this: you cannot use your building block to 
+fully fill a void. It’s as if the mathematical rules –the ones we tend to idealise
+for elegance, harmony, and infallibility– broke when you raise complexity.
+
+But mathematical beauty does not reside in perfection. It is through these 
+exceptions that complexity emerges. So keep building, face by face, one block at
+a time, and embrace the surprising, chaotic aesthetics that appears. A different 
+type of harmony – not based on impeccable proportions, but on unpredictability.
+
+-----------------------------
+
+The colors of the structures are inspired by 16 paintings of Polish artists from
+the 19th and 20th century.
+
+"In a window" by Anna Bilinska-Bohdanowicz
+"Portrait of Jadwiga against a Yellow Background" by Jozef Mehoffer
+"Portrait of Zofia Okun" by Edward Okun
+"Girl with chrysanthemums" by Olga Boznanska
+"Nocturne – Swans in Ogrod Saski in Warsaw by Night" by Jozef Pankiewicz
+"Soil" by Ferdynand Ruszczyc
+"Obsession" by Wojciech Weiss
+"Self-portrait in armor" by Jacek Malczewski
+"Self-portrait" by Artur Grottger
+"Portrait of Jadwiga Dembowska" by Leopold Horowitz
+"Death of Barbara Radziwill" by Jozef Simmler
+"Before the Sunrise" by Jozef Chelmonski
+"With brushwood" by Julian Falat
+Study for the Painting "In a Bower" by Aleksander Gierymski
+"Woman Combing her Hair" by Wladyslaw Slewinski
+"Still life with a heron" by Wladyslaw Czachorski
+
+-----------------------------
+
+Click on the image for resolution options.
+
+In live mode:
+
+Click PNG to save the rendered image. [Saving higher resolutions may not work in 
+some browsers; in these cases, right-click-save the image]
+
+Click STL or PLY to download the digital model to view on your computer or 3d 
+print at home [experimental]. The PLY format stores colours of the model that can
+be visualised in most 3d modelling programs.
+
+The project uses CPU for calculations and rendering. Generating the image requires
+up to 500MB of free RAM. Testing was performed across browsers and devices, but 
+please ensure it works on your device before minting.
+
+-----------------------------
+
+All drawing and geometric methods are written by mrkswcz using javascript, except
+for the following:
+
+
+three.js
+https://threejs.org/
+https://github.com/mrdoob/three.js/
+
+The MIT License
+Copyright © 2010-2022 three.js authors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the 'Software'), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+-----------------------------
+
+three-mesh-bvh
+https://github.com/gkjohnson/three-mesh-bvh#readme
+
+MIT License
+Copyright (c) 2018 Garrett Johnson
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the 'Software'), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+-----------------------------------
+
+seedrandom
+https://github.com/davidbau/seedrandom
+
+Copyright 2019 David Bau.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the 'Software'), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+-----------------------------------
+
+OpenSimplex Noise
+https://github.com/joshforisha/open-simplex-noise-js
+Josh Forisha
+
+This is free and unencumbered software released into the public domain.
+
+Anyone is free to copy, modify, publish, use, compile, sell, or
+distribute this software, either in source code form or as a compiled
+binary, for any purpose, commercial or non-commercial, and by any
+means.
+
+In jurisdictions that recognize copyright laws, the author or authors
+of this software dedicate any and all copyright interest in the
+software to the public domain. We make this dedication for the benefit
+of the public at large and to the detriment of our heirs and
+successors. We intend this dedication to be an overt act of
+relinquishment in perpetuity of all present and future rights to this
+software under copyright law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+For more information, please refer to <http://unlicense.org>
+
+-----------------------------------
+
+triangle-triangle-intersection
+https://github.com/stonkpunk/my-npm-modules/tree/main/triangle-triangle-intersection
+by stonkpunk
+based on http://web.stanford.edu/class/cs277/resources/papers/Moller1997b.pdf
+
+CC0 1.0 Universal (CC0 1.0)
+Public Domain Dedication
+
+No Copyright
+The person who associated a work with this deed has dedicated the work 
+to the public domain by waiving all of his or her rights to the work 
+worldwide under copyright law, including all related and neighboring 
+rights, to the extent allowed by law.
+
+You can copy, modify, distribute and perform the work, even for commercial 
+purposes, all without asking permission. See Other Information below.
+
+Other Information
+- In no way are the patent or trademark rights of any person affected 
+by CC0, nor are the rights that other persons may have in the work or 
+in how the work is used, such as publicity or privacy rights.
+- Unless expressly stated otherwise, the person who associated a work 
+with this deed makes no warranties about the work, and disclaims 
+liability for all uses of the work, to the fullest extent permitted 
+by applicable law.
+- When using or citing the work, you should not imply endorsement by 
+the author or the affirmer.
+
+-----------------------------------
+
+Compiled using fxhash-boilerplate-webpack by fxhash under MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the 'Software'), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

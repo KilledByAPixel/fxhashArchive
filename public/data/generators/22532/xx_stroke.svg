@@ -1,0 +1,14 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" preserveAspectRatio="none" x="0px" y="0px" width="100px" height="100px" viewBox="0 0 100 100">
+<defs>
+<path id="Layer0_0_1_STROKES" stroke="#000000" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" fill="none" d="
+M 46.2 52.75
+L 56.8 42.1 45.85 31.2 52.75 24.25 63.7 35.3 74.25 24.6 81.15 31.5 70.5 42.15 86.45 58.15 79.6 65.05 63.55 49.05 52.95 59.75 46.15 52.75 46.2 52.75 Z
+M 41.65 35.4
+L 48.6 42.25 37.9 52.85 53.75 68.8 46.9 75.7 30.95 59.75 20.3 70.45 13.4 63.5 24.1 52.85 13.4 42.25 20.35 35.4 31 46.05 41.65 35.4 Z"/>
+</defs>
+
+<g transform="matrix( 1, 0, 0, 1, 0,0) ">
+<use xlink:href="#Layer0_0_1_STROKES"/>
+</g>
+</svg>
