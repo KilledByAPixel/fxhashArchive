@@ -1,0 +1,32 @@
+{
+  "generatedAt": "2026-08-18T03:55:43.501Z",
+  "source": "TzKT (cached IPFS token metadata)",
+  "chunkSize": 10000,
+  "contracts": [
+    {
+      "index": 0,
+      "address": "KT1KEa8z6vWXDJrVqtMrAeDVzsvxat3kHaCE",
+      "count": 589146,
+      "min": 0,
+      "max": 589145
+    },
+    {
+      "index": 1,
+      "address": "KT1U6EHmNxJTkvaWJ4ThczG4FSDaHC21ssvi",
+      "count": 1030141,
+      "min": 589146,
+      "max": 1619286
+    },
+    {
+      "index": 2,
+      "address": "KT1EfsNuqwLAWDd3o4pvfUx1CAh5GMdTrRvr",
+      "count": 226346,
+      "min": 0,
+      "max": 226345
+    }
+  ],
+  "chunksTotal": 186,
+  "chunksComplete": 186,
+  "seedsCaptured": 1802387,
+  "seedsMissing": 52392
+}
