@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>FXHASH project</title>
+    <style type="text/css">
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        height: 100vh;
+        width: 100vw;
+        overflow: hidden;
+        font-family: monospace;
+        font-size: 12px;
+        text-align: center;
+        gap: 5px;
+      }
+      button {
+        font-family: inherit;
+        font-size: inherit;
+      }
+    </style>
+  </head>
+  <body>
+    <span>frames were opened</span>
+    <button>x</button>
+    <script type="text/javascript">
+      const button = document.querySelector("button")
+      button.addEventListener("click", () => {
+        parent.postMessage("back-close", "*")
+      })
+      parent.postMessage("take-preview", "*")
+    </script>
+  </body>
+</html>
