@@ -58,6 +58,7 @@ function getArg(name, def) {
 const hasFlag = (name) => process.argv.includes(`--${name}`)
 
 const BUDGET_BYTES = Number(getArg('budget', 600)) * 1024 * 1024
+const FETCH_TIMEOUT_MS = Number(getArg('timeout', 900)) * 1000
 const LIMIT = Number(getArg('limit', Infinity))
 const DRY_RUN = hasFlag('dry-run')
 const DO_COMMIT = hasFlag('commit')
@@ -161,7 +162,11 @@ async function fetchTar(cid, maxBytes) {
   for (let attempt = 0; attempt < GATEWAYS.length * 2; attempt++) {
     const gateway = GATEWAYS[attempt % GATEWAYS.length]
     const ac = new AbortController()
-    const timer = setTimeout(() => ac.abort(), 180000)
+    // Generous, because the tail of the size distribution is what times out:
+    // a 20 MB generator pulled cold through a public gateway can take many
+    // minutes, and those large projects are exactly the ones no other copy is
+    // likely to exist for. Waiting is cheaper than losing them.
+    const timer = setTimeout(() => ac.abort(), FETCH_TIMEOUT_MS)
     try {
       const res = await fetch(`${gateway}/ipfs/${cid}?format=tar`, {
         headers: { accept: 'application/x-tar' },
@@ -204,6 +209,26 @@ function assertSafeTar(tarPath) {
   return entries
 }
 
+// Some generators were published with the artist's own version-control
+// metadata still inside. A nested .git directory is catastrophic here: git
+// records the folder as a gitlink (mode 160000) pointing at a commit that
+// exists in no remote, so the generator's real files are never committed and
+// a fresh clone of this repo is left with a broken submodule reference. Strip
+// VCS metadata before the files go anywhere near the index.
+async function stripVcsMetadata(dir) {
+  let removed = 0
+  for (const e of await readdir(dir, { withFileTypes: true })) {
+    if (!e.isDirectory()) continue
+    if (e.name === '.git' || e.name === '.svn' || e.name === '.hg') {
+      await rm(join(dir, e.name), { recursive: true, force: true })
+      removed++
+    } else {
+      removed += await stripVcsMetadata(join(dir, e.name))
+    }
+  }
+  return removed
+}
+
 async function findEntryPoint(dir) {
   for (const e of await readdir(dir, { withFileTypes: true })) {
     if (e.isFile() && e.name.toLowerCase() === 'index.html') return e.name
@@ -238,6 +263,8 @@ async function archiveProject(project, tmpRoot, maxBytes) {
   let source = staging
   if (top.length === 1 && top[0].isDirectory()) source = join(staging, top[0].name)
 
+  const strippedVcs = await stripVcsMetadata(source)
+
   const entry = await findEntryPoint(source)
   if (!entry) return { skipped: 'no HTML entry point found' }
 
@@ -247,7 +274,7 @@ async function archiveProject(project, tmpRoot, maxBytes) {
   await cp(source, dest, { recursive: true })
   await rm(staging, { recursive: true, force: true })
 
-  return { cid, entry, bytes: await dirSize(dest) }
+  return { cid, entry, bytes: await dirSize(dest), strippedVcs }
 }
 
 // -------------------------------------------------------------------- main
@@ -336,7 +363,8 @@ async function main() {
         archived++
         sinceCommit++
         await atomicWrite(manifestPath, JSON.stringify(manifest, null, 2))
-        console.log(`  ok    ${String(project.name).slice(0, 38).padEnd(38)} ${String((result.bytes / 1024).toFixed(0) + ' KB').padStart(9)}  total ${mb(used)}`)
+        const note = result.strippedVcs ? `  (stripped ${result.strippedVcs} VCS dir${result.strippedVcs > 1 ? 's' : ''})` : ''
+        console.log(`  ok    ${String(project.name).slice(0, 38).padEnd(38)} ${String((result.bytes / 1024).toFixed(0) + ' KB').padStart(9)}  total ${mb(used)}${note}`)
       }
     } catch (err) {
       failed++
