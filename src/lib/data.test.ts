@@ -1,7 +1,7 @@
 import { test, expect, vi, beforeEach } from 'vitest'
 import {
   loadMeta, loadShard, findTokenBySlug, isVisible, loadIterationIds,
-  loadIterationContract, _resetCache,
+  loadIterationContract, loadSummary, _resetCache,
 } from './data'
 import type { LeanToken } from './types'
 
@@ -184,4 +184,18 @@ test('loadIterationContract returns null for an out-of-range contract index', as
     json: async () => ({ contracts: ['KT1v1'], byProject: { '3': 7 } }),
   }) as Response))
   expect(await loadIterationContract(3)).toBeNull()
+})
+
+test('loadSummary fetches summary.json', async () => {
+  const summary = {
+    generatedAt: '2026-08-18T00:00:00.000Z',
+    counts: { projects: 3, artists: 2, iterations: 9, seeds: 8, archived: 1 },
+    ranked: [2, 1], archived: [1], curve: [{ p: 1, share: 50 }],
+  }
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => summary })
+  vi.stubGlobal('fetch', fetchMock)
+  _resetCache()
+
+  await expect(loadSummary()).resolves.toEqual(summary)
+  expect(fetchMock.mock.calls[0][0]).toContain('data/summary.json')
 })

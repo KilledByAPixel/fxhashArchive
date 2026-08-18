@@ -34,3 +34,19 @@ export interface SnapshotMeta {
   shardCount: number
   shardSize: number
 }
+
+export interface Summary {
+  generatedAt: string
+  counts: {
+    projects: number
+    artists: number
+    iterations: number
+    seeds: number
+    archived: number
+  }
+  /** Project ids, highest collector spending first. Position is the rank. */
+  ranked: number[]
+  /** Project ids whose generator code is archived in this repo. */
+  archived: number[]
+  curve: Array<{ p: number; share: number }>
+}
