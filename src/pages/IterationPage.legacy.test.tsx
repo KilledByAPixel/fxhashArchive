@@ -7,7 +7,9 @@ import { GENTK_CONTRACTS } from '../lib/tzkt'
 import type { Iteration } from '../lib/tzkt'
 
 const V1 = GENTK_CONTRACTS[0]
-const V2 = GENTK_CONTRACTS[1]
+/** The middle gentk contract: v2-style pieces, seeded from `?fxhash=` in the URL. */
+const MIDDLE = GENTK_CONTRACTS[1]
+const V2 = GENTK_CONTRACTS[2]
 
 /** Enough of a real v1 artifact to be recognised by needsLegacyPatch. */
 const V1_HTML = `<!DOCTYPE html><html><head><script id="fxhash-snippet">
@@ -83,6 +85,40 @@ test('a v2 iteration never fetches and keeps using src — srcdoc would strip it
   expect(frame.getAttribute('src')).toBe('https://ipfs.io/ipfs/QmGen/?fxhash=oo9')
   expect(frame.getAttribute('srcdoc')).toBeNull()
   expect(fetchMock).not.toHaveBeenCalled()
+})
+
+test('a middle-contract iteration keeps using src — its seed lives in the URL', async () => {
+  // The middle gentk contract is v2-style: its artifactUri carries `?fxhash=`, which
+  // a srcdoc document has no URL to read, so patching it would render random art.
+  const fetchMock = mockFetchText(V1_HTML)
+  vi.stubGlobal('fetch', fetchMock)
+  vi.spyOn(tzkt, 'fetchIteration').mockResolvedValue({
+    ...base(MIDDLE), artifactUri: 'ipfs://QmGen/?fxhash=oo9',
+  })
+
+  renderPage(MIDDLE)
+  await runLive()
+
+  const frame = document.querySelector('iframe')!
+  expect(frame.getAttribute('src')).toBe('https://ipfs.io/ipfs/QmGen/?fxhash=oo9')
+  expect(frame.getAttribute('srcdoc')).toBeNull()
+  expect(fetchMock).not.toHaveBeenCalled()
+})
+
+test('the legacy patch is gated on the v1 contract address itself, not a list position', async () => {
+  // Nothing but that one address may take the srcdoc path — reordering or extending
+  // GENTK_CONTRACTS must not silently start (or stop) patching a contract.
+  const fetchMock = mockFetchText(V1_HTML)
+  vi.stubGlobal('fetch', fetchMock)
+  vi.spyOn(tzkt, 'fetchIteration').mockResolvedValue(base('KT1SomeOtherContract'))
+
+  renderPage('KT1SomeOtherContract')
+  await runLive()
+
+  expect(document.querySelector('iframe')!.getAttribute('src')).toBe('https://ipfs.io/ipfs/QmGen')
+  expect(document.querySelector('iframe')!.getAttribute('srcdoc')).toBeNull()
+  expect(fetchMock).not.toHaveBeenCalled()
+  expect(V1).toBe('KT1KEa8z6vWXDJrVqtMrAeDVzsvxat3kHaCE')
 })
 
 test('a rejected artifact fetch falls back to the direct src rather than showing nothing', async () => {

@@ -23,15 +23,31 @@ const row = (tokenId: string) => ({
 beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
     const u = String(url)
-    // Only the v2 contract "owns" this project in the mock
+    // Only the middle gentk contract "owns" this project in the mock
     const rows = u.includes(GENTK_CONTRACTS[1]) && u.includes('generatorUri') ? [row('7')] : []
     if (u.includes('tokenId=7')) return { ok: true, json: async () => [row('7')] } as Response
     return { ok: true, json: async () => rows } as Response
   }))
 })
 
-test('fetchIterations queries both contracts and merges', async () => {
+test('GENTK_CONTRACTS lists all three gentk contracts, in index order', async () => {
+  // There are three, not two. The middle one holds more tokens than either of the
+  // others; while it was missing, every project on it rendered zero iterations.
+  expect(GENTK_CONTRACTS).toEqual([
+    'KT1KEa8z6vWXDJrVqtMrAeDVzsvxat3kHaCE',
+    'KT1U6EHmNxJTkvaWJ4ThczG4FSDaHC21ssvi',
+    'KT1EfsNuqwLAWDd3o4pvfUx1CAh5GMdTrRvr',
+  ])
+})
+
+test('fetchIterations queries every gentk contract and merges', async () => {
   const iters = await fetchIterations('ipfs://QmGen')
+  const urls = vi.mocked(fetch).mock.calls.map((c) => String(c[0]))
+  // The join fallback has to ask all three, or it silently misses a whole contract.
+  expect(urls).toHaveLength(3)
+  for (const contract of GENTK_CONTRACTS) {
+    expect(urls.some((u) => u.includes(`contract=${contract}`))).toBe(true)
+  }
   expect(iters).toHaveLength(1)
   expect(iters[0]).toMatchObject({
     contract: GENTK_CONTRACTS[1],
@@ -90,109 +106,113 @@ test('fetchIterations rethrows when every contract query fails', async () => {
 })
 
 // --- fetchIterationsByIds: the authoritative objkt-id path -------------------
-// Objkt ids look like FX{version}-{tokenId}; version 0 -> gentk v1, 1 -> gentk v2,
-// i.e. the version index addresses GENTK_CONTRACTS directly.
+// Objkt ids look like FX{version}-{tokenId}, where the version is the *issuer*
+// version — NOT the gentk contract. There are three gentk contracts and FX0 ids
+// exist on two of them, so the contract is passed in explicitly by the caller
+// (from the committed iterations/contracts.json) and the prefix is never consulted.
 
 const idsIn = (url: string) => /tokenId\.in=([^&]*)/.exec(url)?.[1].split(',') ?? []
-const versionOf = (url: string) => GENTK_CONTRACTS.findIndex((c) => url.includes(c))
 
 /** Answers a tokenId.in batch with one row per requested id, optionally reordered. */
-const batchMock = (opts: { reverse?: boolean; fail?: number[] } = {}) =>
+const batchMock = (opts: { reverse?: boolean; fail?: boolean; omit?: string[] } = {}) =>
   vi.fn(async (url: string) => {
     const u = String(url)
-    const version = versionOf(u)
-    if (opts.fail?.includes(version)) throw new Error(`network down v${version}`)
-    const ids = idsIn(u)
+    if (opts.fail) throw new Error('network down')
+    const ids = idsIn(u).filter((id) => !opts.omit?.includes(id))
     const rows = (opts.reverse ? [...ids].reverse() : ids).map((id) => row(id))
     return { ok: true, json: async () => rows } as Response
   })
 
 const urlsCalled = () => vi.mocked(fetch).mock.calls.map((c) => String(c[0]))
-const asObjktIds = (iters: { contract: string; tokenId: string }[]) =>
-  iters.map((i) => `FX${GENTK_CONTRACTS.indexOf(i.contract)}-${i.tokenId}`)
+const tokenIdsOf = (iters: { tokenId: string }[]) => iters.map((i) => i.tokenId)
 
-test('fetchIterationsByIds batches one tokenId.in query against the right contract', async () => {
+test('fetchIterationsByIds batches one tokenId.in query against the contract it is given', async () => {
   vi.stubGlobal('fetch', batchMock())
-  const iters = await fetchIterationsByIds(['FX0-955', 'FX0-960', 'FX0-961'])
+  const iters = await fetchIterationsByIds(['FX0-955', 'FX0-960', 'FX0-961'], GENTK_CONTRACTS[1])
   const urls = urlsCalled()
   expect(urls).toHaveLength(1)
-  expect(urls[0]).toContain(`contract=${GENTK_CONTRACTS[0]}`)
+  expect(urls[0]).toContain(`contract=${GENTK_CONTRACTS[1]}`)
   expect(urls[0]).toContain('tokenId.in=955,960,961')
   expect(urls[0]).toContain('select=tokenId,firstMinter,metadata')
   expect(urls[0]).not.toContain('generatorUri')
-  expect(asObjktIds(iters)).toEqual(['FX0-955', 'FX0-960', 'FX0-961'])
+  expect(tokenIdsOf(iters)).toEqual(['955', '960', '961'])
   expect(iters[0]).toMatchObject({ name: 'Piece #955', iterationHash: 'oo955', minter: 'Minter' })
 })
 
-test('fetchIterationsByIds issues one request per version present and merges them', async () => {
+test('fetchIterationsByIds never infers the contract from the FX prefix', async () => {
+  // The bug this replaces: `FX0-…` ids on the middle contract were queried against
+  // gentk v1, which returns nothing (or, worse, another project's token).
   vi.stubGlobal('fetch', batchMock())
-  const iters = await fetchIterationsByIds(['FX0-1', 'FX1-2', 'FX0-3'])
+  const iters = await fetchIterationsByIds(['FX0-1', 'FX2-2'], GENTK_CONTRACTS[1])
   const urls = urlsCalled()
-  expect(urls).toHaveLength(2)
-  const v1 = urls.find((u) => u.includes(GENTK_CONTRACTS[0]))!
-  const v2 = urls.find((u) => u.includes(GENTK_CONTRACTS[1]))!
-  expect(idsIn(v1)).toEqual(['1', '3'])
-  expect(idsIn(v2)).toEqual(['2'])
-  expect(asObjktIds(iters).sort()).toEqual(['FX0-1', 'FX0-3', 'FX1-2'])
+  expect(urls).toHaveLength(1)
+  expect(urls[0]).not.toContain(GENTK_CONTRACTS[0])
+  expect(urls[0]).not.toContain(GENTK_CONTRACTS[2])
+  // Mixed prefixes are one project on one contract: one batch, and every row
+  // reported on the contract the caller named.
+  expect(idsIn(urls[0])).toEqual(['1', '2'])
+  expect(iters.every((i) => i.contract === GENTK_CONTRACTS[1])).toBe(true)
+})
+
+test('fetchIterationsByIds queries whatever contract it is given, including v1', async () => {
+  vi.stubGlobal('fetch', batchMock())
+  await fetchIterationsByIds(['FX1-4'], GENTK_CONTRACTS[0])
+  expect(urlsCalled()[0]).toContain(`contract=${GENTK_CONTRACTS[0]}`)
 })
 
 test('fetchIterationsByIds preserves mint order even when TzKT shuffles rows', async () => {
   vi.stubGlobal('fetch', batchMock({ reverse: true }))
-  const asked = ['FX0-3', 'FX1-9', 'FX0-1', 'FX1-4', 'FX0-2']
-  expect(asObjktIds(await fetchIterationsByIds(asked))).toEqual(asked)
+  const asked = ['FX0-3', 'FX0-9', 'FX0-1', 'FX0-4', 'FX0-2']
+  const iters = await fetchIterationsByIds(asked, GENTK_CONTRACTS[1])
+  expect(tokenIdsOf(iters)).toEqual(['3', '9', '1', '4', '2'])
+})
+
+test('fetchIterationsByIds drops ids TzKT does not return rather than inventing or shifting rows', async () => {
+  // A missing row must leave a gap: the ids after it keep their own rows instead of
+  // sliding up, which would show every later iteration under the wrong number.
+  vi.stubGlobal('fetch', batchMock({ omit: ['2'] }))
+  const iters = await fetchIterationsByIds(['FX0-1', 'FX0-2', 'FX0-3'], GENTK_CONTRACTS[1])
+  expect(tokenIdsOf(iters)).toEqual(['1', '3'])
+  expect(iters.map((i) => i.name)).toEqual(['Piece #1', 'Piece #3'])
 })
 
 test('fetchIterationsByIds slices the id list and only names the current page', async () => {
   vi.stubGlobal('fetch', batchMock())
   const all = Array.from({ length: 10 }, (_, i) => `FX0-${i}`)
-  const iters = await fetchIterationsByIds(all, 4, 3)
-  expect(asObjktIds(iters)).toEqual(['FX0-4', 'FX0-5', 'FX0-6'])
+  const iters = await fetchIterationsByIds(all, GENTK_CONTRACTS[1], 4, 3)
+  expect(tokenIdsOf(iters)).toEqual(['4', '5', '6'])
   const urls = urlsCalled()
   expect(urls).toHaveLength(1)
   expect(idsIn(urls[0])).toEqual(['4', '5', '6'])
   // Ids outside the page must never appear in the query.
-  expect(urls[0]).not.toContain('tokenId.in=0')
   expect(idsIn(urls[0])).not.toContain('9')
 })
 
 test('fetchIterationsByIds returns [] for an offset past the end without querying', async () => {
   vi.stubGlobal('fetch', batchMock())
-  expect(await fetchIterationsByIds(['FX0-1'], 48, 48)).toEqual([])
+  expect(await fetchIterationsByIds(['FX0-1'], GENTK_CONTRACTS[1], 48, 48)).toEqual([])
   expect(urlsCalled()).toHaveLength(0)
 })
 
-test('fetchIterationsByIds keeps the rows of a version that succeeded when another fails', async () => {
-  vi.stubGlobal('fetch', batchMock({ fail: [0] }))
-  const iters = await fetchIterationsByIds(['FX0-1', 'FX1-2'])
-  expect(asObjktIds(iters)).toEqual(['FX1-2'])
+test('fetchIterationsByIds rejects when its query fails, so the page can say "unavailable"', async () => {
+  vi.stubGlobal('fetch', batchMock({ fail: true }))
+  await expect(fetchIterationsByIds(['FX0-1', 'FX0-2'], GENTK_CONTRACTS[1])).rejects.toThrow(/network down/)
 })
 
-test('fetchIterationsByIds rejects only when every version query fails', async () => {
-  vi.stubGlobal('fetch', batchMock({ fail: [0, 1] }))
-  await expect(fetchIterationsByIds(['FX0-1', 'FX1-2'])).rejects.toThrow(/network down/)
-})
-
-test('fetchIterationsByIds drops ids TzKT does not return rather than inventing rows', async () => {
-  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
-    const ids = idsIn(String(url)).filter((id) => id !== '2')
-    return { ok: true, json: async () => ids.map((id) => row(id)) } as Response
-  }))
-  expect(asObjktIds(await fetchIterationsByIds(['FX0-1', 'FX0-2', 'FX0-3']))).toEqual(['FX0-1', 'FX0-3'])
-})
-
-test('fetchIterationsByIds ignores malformed or unknown-version ids', async () => {
+test('fetchIterationsByIds ignores malformed ids', async () => {
   vi.stubGlobal('fetch', batchMock())
-  expect(asObjktIds(await fetchIterationsByIds(['FX0-1', 'nonsense', 'FX9-4']))).toEqual(['FX0-1'])
-  expect(await fetchIterationsByIds(['nonsense'])).toEqual([])
+  const iters = await fetchIterationsByIds(['FX0-1', 'nonsense'], GENTK_CONTRACTS[1])
+  expect(tokenIdsOf(iters)).toEqual(['1'])
+  expect(await fetchIterationsByIds(['nonsense'], GENTK_CONTRACTS[1])).toEqual([])
   expect(urlsCalled()).toHaveLength(1)
 })
 
 test('fetchIterationsByIds guards against unbounded page sizes blowing up the URL', async () => {
   vi.stubGlobal('fetch', batchMock())
   const all = Array.from({ length: 5000 }, (_, i) => `FX0-${i}`)
-  await expect(fetchIterationsByIds(all, 0, MAX_IDS_PER_QUERY + 1)).rejects.toThrow(RangeError)
+  await expect(fetchIterationsByIds(all, GENTK_CONTRACTS[1], 0, MAX_IDS_PER_QUERY + 1)).rejects.toThrow(RangeError)
   expect(urlsCalled()).toHaveLength(0)
   // The documented maximum is still allowed.
-  await fetchIterationsByIds(all, 0, MAX_IDS_PER_QUERY)
+  await fetchIterationsByIds(all, GENTK_CONTRACTS[1], 0, MAX_IDS_PER_QUERY)
   expect(urlsCalled()).toHaveLength(1)
 })

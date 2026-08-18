@@ -1,5 +1,8 @@
 import { test, expect, vi, beforeEach } from 'vitest'
-import { loadMeta, loadShard, findTokenBySlug, isVisible, loadIterationIds, _resetCache } from './data'
+import {
+  loadMeta, loadShard, findTokenBySlug, isVisible, loadIterationIds,
+  loadIterationContract, _resetCache,
+} from './data'
 import type { LeanToken } from './types'
 
 const tok = (id: number, over: Partial<LeanToken> = {}): LeanToken => ({
@@ -16,6 +19,12 @@ const routes: Record<string, unknown> = {
   // Iteration-id shards mirror tokens/index-NNN.json one-for-one.
   'iterations/map-000.json': { '1': ['FX0-5', 'FX1-6'], '2': [] },
   'iterations/map-001.json': { '3': ['FX0-9'] },
+  // Which gentk contract each project's iterations live on. The index addresses
+  // `contracts`; the `FX{n}` prefix of an id says nothing about it.
+  'iterations/contracts.json': {
+    contracts: ['KT1v1', 'KT1v2', 'KT1v3'],
+    byProject: { '1': 0, '2': 1, '3': 2 },
+  },
 }
 
 beforeEach(() => {
@@ -130,4 +139,49 @@ test('isVisible hides moderated flags', () => {
   expect(isVisible(tok(1))).toBe(true)
   expect(isVisible(tok(1, { flag: 'MALICIOUS' }))).toBe(false)
   expect(isVisible(tok(1, { flag: 'REPORTED' }))).toBe(false)
+})
+
+// --- which gentk contract a project's iterations live on ---------------------
+// There are three gentk contracts and the `FX{n}` prefix of an iteration id is the
+// *issuer* version, not the contract — FX0 ids exist on two different contracts.
+// Guessing renders another project's artwork, so the mapping is the only source.
+
+test('loadIterationContract returns the mapped contract address for a project', async () => {
+  expect(await loadIterationContract(3)).toBe('KT1v3')
+  expect(await loadIterationContract(1)).toBe('KT1v1')
+  expect(await loadIterationContract(2)).toBe('KT1v2')
+  const urls = vi.mocked(fetch).mock.calls.map((c) => String(c[0]))
+  expect(urls.some((u) => u.endsWith('data/iterations/contracts.json'))).toBe(true)
+  // Never a hardcoded leading slash — the app deploys to a Pages subpath, so every
+  // data path has to hang off BASE_URL.
+  expect(urls.every((u) => u.startsWith(`${import.meta.env.BASE_URL}data/`))).toBe(true)
+})
+
+test('loadIterationContract returns null for a project with no entry, never a guess', async () => {
+  expect(await loadIterationContract(999)).toBeNull()
+})
+
+test('loadIterationContract memoizes the contracts file across projects', async () => {
+  await loadIterationContract(1)
+  const before = vi.mocked(fetch).mock.calls.length
+  await loadIterationContract(2)
+  await loadIterationContract(3)
+  expect(vi.mocked(fetch).mock.calls.length).toBe(before)
+})
+
+test('loadIterationContract rejects when the contracts file cannot be loaded', async () => {
+  _resetCache()
+  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 404 }) as Response))
+  await expect(loadIterationContract(3)).rejects.toThrow(/404/)
+})
+
+test('loadIterationContract returns null for an out-of-range contract index', async () => {
+  // Corrupt data must degrade to "we do not know" rather than to `undefined`
+  // leaking into a TzKT URL as the contract.
+  _resetCache()
+  vi.stubGlobal('fetch', vi.fn(async () => ({
+    ok: true,
+    json: async () => ({ contracts: ['KT1v1'], byProject: { '3': 7 } }),
+  }) as Response))
+  expect(await loadIterationContract(3)).toBeNull()
 })

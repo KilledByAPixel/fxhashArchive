@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { fetchIteration, GENTK_CONTRACTS, type Iteration } from '../lib/tzkt'
+import { fetchIteration, GENTK_V1_CONTRACT, type Iteration } from '../lib/tzkt'
 import { ipfsToHttp } from '../lib/ipfs'
 import { artifactBaseHref, injectLegacyPatch, needsLegacyPatch } from '../lib/legacyPatch'
 import IpfsImage from '../components/IpfsImage'
@@ -28,8 +28,15 @@ type Frame =
   | { view: 'patched'; html: string }
   | { view: 'direct' }
 
-/** gentk v1. Its hash is hardcoded into the artifact, so srcdoc costs it nothing. */
-const GENTK_V1 = GENTK_CONTRACTS[0]
+/**
+ * gentk v1, and *only* gentk v1. Its hash is hardcoded into the artifact, so srcdoc
+ * costs it nothing — whereas the other two gentk contracts are v2-style and read their
+ * seed from `?fxhash=` in the artifact URL, which a srcdoc document does not have:
+ * patching one of those would silently render random art. The gate compares the
+ * contract address itself so that reordering or extending GENTK_CONTRACTS cannot
+ * quietly change which contract gets patched.
+ */
+const GENTK_V1 = GENTK_V1_CONTRACT
 
 export default function IterationPage() {
   const { contract, tokenId } = useParams()

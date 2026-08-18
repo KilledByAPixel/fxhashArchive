@@ -19,6 +19,9 @@ const iter = (over: Partial<Iteration> = {}): Iteration => ({
   artifactUri: null, displayUri: null, thumbnailUri: 'ipfs://t', attributes: [], minter: 'M', ...over,
 })
 
+/** The middle gentk contract — the one that used to be unreachable entirely. */
+const PROJECT_CONTRACT = tzkt.GENTK_CONTRACTS[1]
+
 const renderAt = (path: string) =>
   render(
     <MemoryRouter initialEntries={[path]}>
@@ -33,6 +36,9 @@ beforeEach(() => {
   // to fail in this environment — so these tests were exercising the fallback path by
   // accident, and would have silently changed meaning the day someone stubbed fetch.
   vi.spyOn(data, 'loadIterationIds').mockResolvedValue(null)
+  // Likewise the contract mapping: the ids alone cannot say which gentk contract a
+  // project's iterations live on, so the page has to resolve both.
+  vi.spyOn(data, 'loadIterationContract').mockResolvedValue(PROJECT_CONTRACT)
 })
 
 afterEach(() => {
@@ -131,7 +137,7 @@ test('renders iterations sourced from the mapping, not the generatorUri join', a
   expect(await screen.findByText('BINGO #1')).toBeTruthy()
   expect(screen.getByText('BINGO #2')).toBeTruthy()
   expect(loadIds).toHaveBeenCalledWith('tok-5', 5)
-  expect(byIds).toHaveBeenCalledWith(['FX0-955', 'FX0-960'], 0, 48)
+  expect(byIds).toHaveBeenCalledWith(['FX0-955', 'FX0-960'], PROJECT_CONTRACT, 0, 48)
   // The lossy join must not be consulted when the mapping answered.
   expect(join).not.toHaveBeenCalled()
   expect((await screen.findByText(/edition of/i)).textContent).toBe('edition of 10 · 2 iterations loaded')
@@ -196,8 +202,8 @@ test('a slug change resets a populated mapping, not just an empty one', async ()
     slug === 'tok-5' ? token : tokenB)
   vi.spyOn(data, 'loadIterationIds').mockClear().mockImplementation(async (slug: string) =>
     slug === 'tok-5' ? ['FX0-1'] : ['FX0-2'])
-  vi.spyOn(tzkt, 'fetchIterationsByIds').mockClear().mockImplementation(async (ids: string[]) =>
-    ids.map((id) => iter({ contract: 'KT1v1', tokenId: id.split('-')[1], name: `iter-${id}` })))
+  vi.spyOn(tzkt, 'fetchIterationsByIds').mockClear().mockImplementation(async (ids: string[], contract: string) =>
+    ids.map((id) => iter({ contract, tokenId: id.split('-')[1], name: `iter-${id}` })))
 
   render(
     <MemoryRouter initialEntries={['/token/tok-5']}>
@@ -219,10 +225,10 @@ test('a zero-row first page still offers "Load more" for the remaining ids', asy
   const ids = Array.from({ length: 100 }, (_, i) => `FX0-${i}`)
   vi.spyOn(data, 'loadIterationIds').mockClear().mockResolvedValue(ids)
   vi.spyOn(tzkt, 'fetchIterationsByIds').mockClear().mockImplementation(
-    async (_ids: string[], offset = 0, limit = 48) =>
+    async (_ids: string[], contract: string, offset = 0, limit = 48) =>
       offset === 0
         ? []
-        : ids.slice(offset, offset + limit).map((id) => iter({ contract: 'KT1v1', tokenId: id.split('-')[1], name: id })),
+        : ids.slice(offset, offset + limit).map((id) => iter({ contract, tokenId: id.split('-')[1], name: id })),
   )
 
   renderAt('/token/tok-5')
@@ -281,8 +287,8 @@ test('"Load more" pages through the mapping by offset and stops at the end', asy
   const ids = Array.from({ length: 50 }, (_, i) => `FX0-${i}`)
   vi.spyOn(data, 'loadIterationIds').mockClear().mockResolvedValue(ids)
   const byIds = vi.spyOn(tzkt, 'fetchIterationsByIds').mockClear().mockImplementation(
-    async (_ids: string[], offset = 0, limit = 48) =>
-      ids.slice(offset, offset + limit).map((id) => iter({ contract: 'KT1v1', tokenId: id.split('-')[1], name: id })),
+    async (_ids: string[], contract: string, offset = 0, limit = 48) =>
+      ids.slice(offset, offset + limit).map((id) => iter({ contract, tokenId: id.split('-')[1], name: id })),
   )
 
   renderAt('/token/tok-5')
@@ -293,6 +299,65 @@ test('"Load more" pages through the mapping by offset and stops at the end', asy
   fireEvent.click(screen.getByRole('button', { name: /load more/i }))
 
   expect(await screen.findByText('FX0-49')).toBeTruthy()
-  expect(byIds.mock.calls.map((c) => c[1])).toEqual([0, 48])
+  expect(byIds.mock.calls.map((c) => c[2])).toEqual([0, 48])
   expect(screen.queryByRole('button', { name: /load more/i })).toBeNull()
+})
+
+// --- which contract the iterations live on -----------------------------------
+// The `FX{n}` prefix of an id is the issuer version, not the gentk contract, so the
+// contract comes from its own mapping and is passed to TzKT explicitly.
+
+test('ids with no contract entry fall back to the join rather than guessing a contract', async () => {
+  // A wrong contract renders another project's artwork under this project's name,
+  // which is far worse than the lossy join or an honest error.
+  vi.spyOn(data, 'loadIterationIds').mockClear().mockResolvedValue(['FX0-955'])
+  vi.spyOn(data, 'loadIterationContract').mockClear().mockResolvedValue(null)
+  const byIds = vi.spyOn(tzkt, 'fetchIterationsByIds').mockClear().mockResolvedValue([])
+  const join = vi.spyOn(tzkt, 'fetchIterations').mockClear().mockResolvedValue([iter({ name: 'Joined #1' })])
+
+  renderAt('/token/tok-5')
+
+  expect(await screen.findByText('Joined #1')).toBeTruthy()
+  expect(byIds).not.toHaveBeenCalled()
+  expect(join).toHaveBeenCalledWith('ipfs://QmGen', 0, 48)
+})
+
+test('a failed contract lookup falls back to the join instead of guessing', async () => {
+  vi.spyOn(data, 'loadIterationIds').mockClear().mockResolvedValue(['FX0-955'])
+  vi.spyOn(data, 'loadIterationContract').mockClear().mockRejectedValue(new Error('contracts.json: HTTP 404'))
+  const byIds = vi.spyOn(tzkt, 'fetchIterationsByIds').mockClear().mockResolvedValue([])
+  const join = vi.spyOn(tzkt, 'fetchIterations').mockClear().mockResolvedValue([iter({ name: 'Joined #1' })])
+
+  renderAt('/token/tok-5')
+
+  expect(await screen.findByText('Joined #1')).toBeTruthy()
+  expect(byIds).not.toHaveBeenCalled()
+  expect(join).toHaveBeenCalled()
+})
+
+test('no contract entry and no generativeUri says so, and still never guesses', async () => {
+  vi.spyOn(data, 'findTokenBySlug').mockResolvedValue({ ...token, generativeUri: null })
+  vi.spyOn(data, 'loadIterationIds').mockClear().mockResolvedValue(['FX0-955'])
+  vi.spyOn(data, 'loadIterationContract').mockClear().mockResolvedValue(null)
+  const byIds = vi.spyOn(tzkt, 'fetchIterationsByIds').mockClear().mockResolvedValue([])
+  const join = vi.spyOn(tzkt, 'fetchIterations').mockClear().mockResolvedValue([])
+
+  renderAt('/token/tok-5')
+
+  expect(await screen.findByText(/no iterations available/i)).toBeTruthy()
+  expect(byIds).not.toHaveBeenCalled()
+  expect(join).not.toHaveBeenCalled()
+})
+
+test('an empty mapping still claims "never minted" even without a contract entry', async () => {
+  // A project with zero iterations has no contract entry by construction; that must
+  // not downgrade the one case where "never minted" is actually known.
+  vi.spyOn(data, 'loadIterationIds').mockClear().mockResolvedValue([])
+  vi.spyOn(data, 'loadIterationContract').mockClear().mockResolvedValue(null)
+  const join = vi.spyOn(tzkt, 'fetchIterations').mockClear().mockResolvedValue([])
+
+  renderAt('/token/tok-5')
+
+  expect(await screen.findByText(/no iterations have been minted/i)).toBeTruthy()
+  expect(join).not.toHaveBeenCalled()
 })

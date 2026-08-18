@@ -1,8 +1,24 @@
 const TZKT = 'https://api.tzkt.io/v1'
 
-/** gentk v1, gentk v2 — a project's iterations live on exactly one of these. */
+/**
+ * The original gentk contract ("v1"/beta). Named separately because it is the one
+ * contract whose artifacts need the legacy Math.pow patch, and that decision must be
+ * keyed to this address rather than to a position in the array below.
+ */
+export const GENTK_V1_CONTRACT = 'KT1KEa8z6vWXDJrVqtMrAeDVzsvxat3kHaCE'
+
+/**
+ * Every gentk contract, in the index order used by `iterations/contracts.json`.
+ *
+ * There are three, not two. A project's iterations live on exactly one of them, but
+ * *which* one cannot be derived from an iteration id: the `FX{n}` prefix in the
+ * snapshot mapping is the issuer version, and FX0 ids exist on both the first and the
+ * middle contract. The middle one holds more tokens than either of the others, so
+ * while it was missing here every project on it resolved to zero iterations.
+ */
 export const GENTK_CONTRACTS = [
-  'KT1KEa8z6vWXDJrVqtMrAeDVzsvxat3kHaCE',
+  GENTK_V1_CONTRACT,
+  'KT1U6EHmNxJTkvaWJ4ThczG4FSDaHC21ssvi',
   'KT1EfsNuqwLAWDd3o4pvfUx1CAh5GMdTrRvr',
 ]
 
@@ -68,32 +84,36 @@ export async function fetchIterations(generativeUri: string, offset = 0, limit =
  */
 export const MAX_IDS_PER_QUERY = 100
 
-/** Snapshot objkt id: `FX{version}-{tokenId}`, version indexing GENTK_CONTRACTS. */
-const OBJKT_ID = /^FX(\d+)-(\d+)$/
+/**
+ * Snapshot objkt id: `FX{issuerVersion}-{tokenId}`.
+ *
+ * The version is captured but deliberately unused: it is the *issuer* version, not
+ * the gentk contract, and inferring one from the other is exactly the bug that made
+ * most of the catalog render "Could not load iterations". Only the token id is ours
+ * to read; the contract is the caller's to supply.
+ */
+const OBJKT_ID = /^FX\d+-(\d+)$/
 
-function parseObjktId(id: string): { versionIndex: number; tokenId: string } | null {
-  const m = OBJKT_ID.exec(id)
-  if (!m) return null
-  const versionIndex = Number(m[1])
-  return GENTK_CONTRACTS[versionIndex] ? { versionIndex, tokenId: m[2] } : null
-}
-
-const rowKey = (contract: string, tokenId: string | number) => `${contract}-${String(tokenId)}`
+const parseTokenId = (id: string): string | null => OBJKT_ID.exec(id)?.[1] ?? null
 
 /**
- * Fetch one page of iterations by their snapshot ids.
+ * Fetch one page of iterations by their snapshot ids, from a known contract.
  *
  * This is the primary path: ~33% of gentk tokens (the entire launch era) carry no
  * `metadata.generatorUri`, so `fetchIterations`'s join silently misses them.
  *
- * Only the requested page is queried, batched into one request per gentk version,
- * and the result is re-ordered to match `objktIds` — mint order matters to collectors
- * and TzKT gives no ordering guarantee for `tokenId.in`. Ids TzKT does not return are
- * dropped rather than faked. As with `fetchIterations`, a version whose request fails
- * is skipped; the call rejects only when every request fails.
+ * `contract` comes from `iterations/contracts.json` via `loadIterationContract` and is
+ * never guessed — a wrong contract would render another project's artwork under this
+ * project's name. Since all of a project's iterations live on one contract, the page
+ * is a single batched `tokenId.in` request, whose failure rejects (the caller's cue to
+ * say "unavailable", never "never minted"). Only the requested page is queried and the
+ * result is re-ordered to match `objktIds` — mint order matters to collectors and TzKT
+ * gives no ordering guarantee for `tokenId.in`. Ids TzKT does not return are dropped
+ * rather than faked, leaving a gap instead of shifting later iterations up.
  */
 export async function fetchIterationsByIds(
   objktIds: string[],
+  contract: string,
   offset = 0,
   limit = 48,
 ): Promise<Iteration[]> {
@@ -101,41 +121,22 @@ export async function fetchIterationsByIds(
     throw new RangeError(`fetchIterationsByIds: limit ${limit} exceeds MAX_IDS_PER_QUERY (${MAX_IDS_PER_QUERY})`)
   }
   const page = objktIds.slice(offset, offset + limit)
+  const tokenIds = page.map(parseTokenId).filter((t): t is string => t !== null)
+  if (tokenIds.length === 0) return []
 
-  const byVersion = new Map<number, string[]>()
-  for (const id of page) {
-    const parsed = parseObjktId(id)
-    if (!parsed) continue
-    const bucket = byVersion.get(parsed.versionIndex)
-    if (bucket) bucket.push(parsed.tokenId)
-    else byVersion.set(parsed.versionIndex, [parsed.tokenId])
-  }
-  if (byVersion.size === 0) return []
-
-  const settled = await Promise.allSettled(
-    [...byVersion].map(async ([versionIndex, tokenIds]) => {
-      const contract = GENTK_CONTRACTS[versionIndex]
-      const url =
-        `${TZKT}/tokens?contract=${contract}&tokenId.in=${tokenIds.join(',')}` +
-        `&limit=${tokenIds.length}&select=tokenId,firstMinter,metadata`
-      return (await getRows(url)).map((r) => toIteration(contract, r))
-    }),
-  )
-  const fulfilled = settled.filter((s): s is PromiseFulfilledResult<Iteration[]> => s.status === 'fulfilled')
-  if (fulfilled.length === 0) {
-    throw (settled.find((s) => s.status === 'rejected') as PromiseRejectedResult).reason
-  }
+  const url =
+    `${TZKT}/tokens?contract=${encodeURIComponent(contract)}&tokenId.in=${tokenIds.join(',')}` +
+    `&limit=${tokenIds.length}&select=tokenId,firstMinter,metadata`
+  const rows = await getRows(url)
 
   const found = new Map<string, Iteration>()
-  for (const s of fulfilled) {
-    for (const it of s.value) found.set(rowKey(it.contract, it.tokenId), it)
-  }
+  for (const row of rows) found.set(String(row.tokenId), toIteration(contract, row))
 
   const ordered: Iteration[] = []
   for (const id of page) {
-    const parsed = parseObjktId(id)
-    if (!parsed) continue
-    const hit = found.get(rowKey(GENTK_CONTRACTS[parsed.versionIndex], parsed.tokenId))
+    const tokenId = parseTokenId(id)
+    if (!tokenId) continue
+    const hit = found.get(tokenId)
     if (hit) ordered.push(hit)
   }
   return ordered

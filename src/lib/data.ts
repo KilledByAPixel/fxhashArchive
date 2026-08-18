@@ -90,3 +90,35 @@ export async function loadIterationIds(slug: string, projectId: number): Promise
   const map = await loadIterationMap(shardIdx)
   return map[String(projectId)] ?? null
 }
+
+/** `iterations/contracts.json`: the contract list, plus one index per project. */
+interface IterationContracts {
+  contracts: string[]
+  byProject: Record<string, number>
+}
+
+/**
+ * Which gentk contract each project's iterations live on, captured alongside the id
+ * mapping. One small file for the whole catalog, so it is fetched once and memoized.
+ */
+export const loadIterationContracts = () => getJson<IterationContracts>('iterations/contracts.json')
+
+/**
+ * The gentk contract holding a project's iterations, or null when unknown.
+ *
+ * This cannot be inferred from anything else we hold. The `FX{n}` prefix of an
+ * iteration id is the *issuer* version, not the contract; token id ranges overlap
+ * across contracts; and all three contracts contain tokens without a `generatorUri`.
+ * So the only honest answers are "this address" or null — callers must fall back
+ * rather than guess, because a wrong contract renders another project's artwork.
+ *
+ * A project with no entry is one with no iterations at all; an out-of-range index
+ * means the file is corrupt, which is likewise "we do not know", not `undefined`
+ * smuggled into a TzKT URL.
+ */
+export async function loadIterationContract(projectId: number): Promise<string | null> {
+  const { contracts, byProject } = await loadIterationContracts()
+  const index = byProject[String(projectId)]
+  if (index === undefined) return null
+  return contracts[index] ?? null
+}

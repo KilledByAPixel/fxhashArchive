@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { findTokenBySlug, loadIterationIds } from '../lib/data'
+import { findTokenBySlug, loadIterationContract, loadIterationIds } from '../lib/data'
 import { fetchIterations, fetchIterationsByIds, type Iteration } from '../lib/tzkt'
 import type { LeanToken } from '../lib/types'
 import IpfsImage from '../components/IpfsImage'
@@ -33,6 +33,9 @@ export default function TokenPage() {
   const [state, setState] = useState<ProjectState>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
   const [objktIds, setObjktIds] = useState<ObjktIds>(undefined)
+  // The gentk contract those ids live on; null when the mapping has no entry, which
+  // is the caller's cue to fall back rather than to guess one from the id prefix.
+  const [iterContract, setIterContract] = useState<string | null>(null)
   const [iterations, setIterations] = useState<Iteration[] | null>(null)
   const [iterError, setIterError] = useState(false)
   const [offset, setOffset] = useState(0)
@@ -45,6 +48,7 @@ export default function TokenPage() {
     // hero, iterations, offset, or error state visible while the new one loads.
     setState({ status: 'loading' })
     setObjktIds(undefined)
+    setIterContract(null)
     setIterations(null)
     setIterError(false)
     setOffset(0)
@@ -62,15 +66,23 @@ export default function TokenPage() {
 
   // Resolve the authoritative id list. A failure here is "we don't know", never
   // "nothing was minted" — the fallback join below gets a chance instead.
+  //
+  // The ids and the contract they live on are resolved together, and committed
+  // together: querying with one and not the other is exactly how iterations end up
+  // being asked of a contract that never held them.
   useEffect(() => {
     if (!token) return
     let cancelled = false
-    Promise.resolve()
-      .then(() => loadIterationIds(token.slug, token.id))
-      .then(
-        (ids) => { if (!cancelled) setObjktIds(ids) },
-        () => { if (!cancelled) setObjktIds(null) },
-      )
+    Promise.all([
+      Promise.resolve().then(() => loadIterationIds(token.slug, token.id)).catch(() => null),
+      // "We could not read the contract mapping" and "this project has no entry" both
+      // mean the same thing here: we may not guess, so fall back.
+      Promise.resolve().then(() => loadIterationContract(token.id)).catch(() => null),
+    ]).then(([ids, contract]) => {
+      if (cancelled) return
+      setIterContract(contract)
+      setObjktIds(ids)
+    })
     return () => { cancelled = true }
   }, [token])
 
@@ -85,20 +97,24 @@ export default function TokenPage() {
         setDone(true)
         return
       }
-      fetchIterationsByIds(objktIds, offset, PAGE).then(
-        (page) => {
-          if (cancelled) return
-          setIterations((prev) => [...(prev ?? []), ...page])
-          // Page against the id list, not the row count: TzKT may not return a row
-          // for every id, and a short page must not truncate the rest of the list.
-          if (offset + PAGE >= objktIds.length) setDone(true)
-        },
-        () => { if (!cancelled) setIterError(true) },
-      )
-      return () => { cancelled = true }
+      // Ids but no contract: fall through to the join. Never pick a contract for
+      // them — a wrong one renders another project's artwork under this name.
+      if (iterContract) {
+        fetchIterationsByIds(objktIds, iterContract, offset, PAGE).then(
+          (page) => {
+            if (cancelled) return
+            setIterations((prev) => [...(prev ?? []), ...page])
+            // Page against the id list, not the row count: TzKT may not return a row
+            // for every id, and a short page must not truncate the rest of the list.
+            if (offset + PAGE >= objktIds.length) setDone(true)
+          },
+          () => { if (!cancelled) setIterError(true) },
+        )
+        return () => { cancelled = true }
+      }
     }
 
-    // Mapping unavailable — fall back to the lossy generatorUri join.
+    // No usable id path — fall back to the lossy generatorUri join.
     if (!token.generativeUri) return
     fetchIterations(token.generativeUri, offset, PAGE).then(
       (page) => {
@@ -109,7 +125,7 @@ export default function TokenPage() {
       () => { if (!cancelled) setIterError(true) },
     )
     return () => { cancelled = true }
-  }, [token, objktIds, offset])
+  }, [token, objktIds, iterContract, offset])
 
   if (state.status === 'loading') return <p>Loading…</p>
   if (state.status === 'notfound') return <NotFoundPage />
@@ -119,8 +135,11 @@ export default function TokenPage() {
 
   const project = state.token
   const neverMinted = Array.isArray(objktIds) && objktIds.length === 0
-  // Mapping unavailable and no generatorUri to join on: nothing left to try.
-  const noSource = objktIds === null && !project.generativeUri
+  // The id path is only usable with both halves: the ids and their contract.
+  const byIdsUsable = Array.isArray(objktIds) && objktIds.length > 0 && iterContract !== null
+  // Nothing left to try: no usable id path, and no generatorUri to join on.
+  const noSource =
+    objktIds !== undefined && !neverMinted && !byIdsUsable && !project.generativeUri
 
   return (
     <div>
