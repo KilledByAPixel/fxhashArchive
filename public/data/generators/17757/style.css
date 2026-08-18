@@ -1,0 +1,33 @@
+body {
+  margin:0;
+	padding:0;
+	display:block;
+	width:100vw;
+	height:100vh;
+	overflow:hidden;
+  background-color: black;
+  object-fit: contain;
+}
+canvas {
+	max-width: 100%;
+	max-height: 100%;
+	bottom: 0;
+	left: 0;
+	margin: auto;
+	overflow: auto;
+	position: fixed;
+	right: 0;
+	top: 0;
+	object-fit: contain;
+}
+.loadingclass {
+	background-color:  black;
+	height: 100%;
+	width: 100%;
+	display: flex;
+justify-content: center;
+align-items: center;
+color:rgb(255,255,255);
+/* font-size: 500px; */
+
+}

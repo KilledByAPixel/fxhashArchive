@@ -1,0 +1,29 @@
+body {
+  margin: 0;
+  text-align: center;
+  background: transparent;
+  overflow: hidden; /* Hide scrollbars */
+
+}
+canvas {
+  margin: 0vh auto;
+  width: 75vh !important;
+  height: 100vh !important;
+}
+
+div.weekDay {
+  z-index: 1000;
+  overflow: hidden;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center; /*centers items on the line (the x-axis by default)*/
+  align-items: flex-end; /*centers items on the cross-axis (y by default)*/
+  bottom: 100px;
+  font: 2.5em "Arial", sans-serif;
+  font-style: oblique;
+  font-weight: 600;
+  opacity: 0;
+  display: none;
+}

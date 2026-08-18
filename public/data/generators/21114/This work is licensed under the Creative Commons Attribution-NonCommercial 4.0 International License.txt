@@ -1,0 +1,76 @@
+This work is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-nc/4.0/ or send a letter to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
+
+Overgrowth was an experiment in mixed brushes, and random walks, to create complex scribble landscapes. Overgrowth X8 takes the concept a number of steps forward.
+
+The first change is that there are 8 brush heads rather than 1. The starting location of these brush heads have been curated into 6 sets.
+
+a) Four Corners - 2 brush heads emanating from each corner,
+b) All Together Now - All brush heads starting at the same low central location,
+c) Great Monument (sometimes),
+d) Upon this Slope, these structures are built,
+e) Heaven and Earth - 4 brush heads at the top and 4 at the bottom, sometimes they meet,
+f) Random Landscaper - All brush heads randomly placed in the lower part of the canvas.
+
+Each brushes white ellipses are now a randomised shade of very light grey. This gives slightly more depth.
+
+As the brushes usually do not randomly fill the whole canvas, there is a background that has been built to be consistent with the drawing rather than just using a solid color or mono light bands.
+
+White and black stroke sizes have been adapted to give a slightly wider range of effects.
+
+Press s to save a 2400x2400 jpg.
+
+Created with p5.js
+
+Please note that the progressive rendering may not work on mobile and may be slow on some browsers.
+
+This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.
+
+20221005-29928365.
+20221005-29928407.
+kY9%$jf8g8#*
+
+
+
+
+priskapasquer.tez
+ArashMP
+MiladNFT
+MEHRAN
+HappyAccidents
+TheRequisite
+fomoboy
+BenCar
+Condoriano
+xest91x
+SOAPBOX1965
+Mike Geiger
+Biggtopp
+skollar
+Aether Dada
+SHEP
+omnivault
+Bapak
+Gandhiavelli
+fx bang
+dude420
+Lula
+1abstract
+
+
+nudoru
+culla
+Orr Kislev
+markknol
+Oleg Abakshonok
+Qotonana
+
+>>>>. tz1PjAX...7TWyAmD
+
+Blizzart
+Van Dyke II
+tz1PMcH...5eSSLX8
+tz1LtMZ...4g78MV4
+tz1fGTH...2fgyshF
+tz1W6i3...6CE5aRW
+tz1gLX1...f1rTv6a
+tz1hKq7...bHCjyBi

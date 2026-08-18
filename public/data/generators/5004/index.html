@@ -1,0 +1,34 @@
+<!doctype html><html class="monokai-20211226"><head><title>Fire Cards, © 2021 Monokai</title><meta http-equiv="content-type" content="text/html;charset=utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="author" content="Monokai"><link rel="icon" href="favicon.ico" sizes="any"><link rel="icon" type="image/svg+xml" href="icon.svg"><link rel="apple-touch-icon" href="apple-touch-icon.png"><script id="fxhash-snippet">
+      let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+      var fxhash = new URLSearchParams(window.location.search).get('fxhash')
+      let b58dec = str=>[...str].reduce((p,c)=>p*alphabet.length+alphabet.indexOf(c)|0, 0)
+      let fxhashTrunc = fxhash.slice(2)
+      let regex = new RegExp(".{" + ((fxhashTrunc.length/4)|0) + "}", 'g')
+      let hashes = fxhashTrunc.match(regex).map(h => b58dec(h))
+      let sfc32 = (a, b, c, d) => {
+        return () => {
+          a |= 0; b |= 0; c |= 0; d |= 0
+          var t = (a + b | 0) + d | 0
+          d = d + 1 | 0
+          a = b ^ b >>> 9
+          b = c + (c << 3) | 0
+          c = c << 21 | c >>> 11
+          c = c + t | 0
+          return (t >>> 0) / 4294967296
+        }
+      }
+      var fxrand = sfc32(...hashes)
+      // used to get features during token mint
+      window.addEventListener("message", (event) => {
+        if (event.data === "fxhash_getFeatures") {
+          parent.postMessage({
+            id: "fxhash_getFeatures",
+            data: window.$fxhashFeatures
+          }, "*")
+        }
+      })
+      function fxpreview() {
+        window.dispatchEvent(new Event("fxhash-preview"))
+        setTimeout(() => fxpreview(), 500)
+      }
+</script><link href="760c642c67ab7aa6.css" rel="stylesheet"><meta name="apple-mobile-web-app-title" content="monokai-firecards" ><meta name="apple-mobile-web-app-capable" content="yes" ><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" ><link rel="manifest" href="manifest.json" ></head><body class="monokai-20211226 monokai-20211226-is-loading"><div class="monokai-20211226-wrap"><div class="monokai-20211226-artwork"><canvas class="monokai-20211226-canvas"></canvas><div class="monokai-20211226-overlay"></div><noscript style="display: flex; width: 100vw; height: 100vh; align-items: center; justify-content: center"><p style="text-align: center; font-family: sans-serif; color: #000; font-size: 2rem; max-width: 16ch;">Original Monokai generative artwork<br/><br/>(enable JavaScript)</p></noscript></div></div><script src="760c642c67ab7aa6.js"></script></body></html>

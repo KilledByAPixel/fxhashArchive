@@ -1,0 +1,21 @@
+* {
+    margin: 0;
+    padding: 0;
+} 
+
+body {
+  background-color: white;
+
+  /* leave it to hide the scrollbars */
+  overflow: hidden;
+   display: flex;
+  justify-content: center;
+   margin: 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  -ms-transform: translateY(-50%);
+  transform: translate(-50%, -50%);
+
+}
+

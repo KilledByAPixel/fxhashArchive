@@ -1,0 +1,25 @@
+body {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #111;
+}
+
+canvas {
+  box-shadow: 0px 0px 30px 30px #000;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+html {
+  font-size: small;
+}
+
+.align-left {
+  text-align: left;
+}

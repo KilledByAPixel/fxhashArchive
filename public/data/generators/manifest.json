@@ -143,6 +143,14 @@
     "bytes": 38612,
     "reason": "top volume (19,608 tez)"
   },
+  "1167": {
+    "slug": "vortex-2",
+    "name": "Vortex",
+    "cid": "QmTAK9F2aohPnx6yfPU1q6Ek2rypLSHCFh972khTRMogFb",
+    "entry": "index.html",
+    "bytes": 412707,
+    "reason": "top volume (13,403 tez)"
+  },
   "1291": {
     "slug": "hypergiraffe",
     "name": "Hypergiraffe",
@@ -166,6 +174,14 @@
     "entry": "index.html",
     "bytes": 5901,
     "reason": "artist: KilledByAPixel"
+  },
+  "1470": {
+    "slug": "fireworks-1",
+    "name": "Fireworks",
+    "cid": "QmfLziRacqz3CQKmcDmqoxsxdzCKr1pyCXMwGtHkz5HSrh",
+    "entry": "index.html",
+    "bytes": 630801,
+    "reason": "top volume (12,721 tez)"
   },
   "1600": {
     "slug": "gossamer",
@@ -487,6 +503,14 @@
     "bytes": 822066,
     "reason": "top volume (22,471 tez)"
   },
+  "4449": {
+    "slug": "0.20-carat",
+    "name": "0.20 carat",
+    "cid": "QmPAR5rEmJ8i8GQNgKKto4ZdiEHYXt4nFdQYy42cJ53hBw",
+    "entry": "index.html",
+    "bytes": 893885,
+    "reason": "top volume (13,017 tez)"
+  },
   "4504": {
     "slug": "echos",
     "name": "Echos",
@@ -542,6 +566,14 @@
     "entry": "index.html",
     "bytes": 2043,
     "reason": "artist: KilledByAPixel"
+  },
+  "5004": {
+    "slug": "fire-card",
+    "name": "Fire Card",
+    "cid": "QmbKWSteqjJHqoqBh45XBTCWCo3opYUwgvXj4tbKBcbPeE",
+    "entry": "index.html",
+    "bytes": 172380,
+    "reason": "top volume (13,562 tez)"
   },
   "5011": {
     "slug": "returns",
@@ -727,6 +759,14 @@
     "bytes": 4348311,
     "reason": "top volume (19,184 tez)"
   },
+  "7664": {
+    "slug": "shift",
+    "name": "Shift",
+    "cid": "QmfYgUnH1kpRmYcSQ4qEf6TWE6spAR2e9EbTHFXaqZLd9U",
+    "entry": "index.html",
+    "bytes": 825995,
+    "reason": "top volume (13,375 tez)"
+  },
   "7691": {
     "slug": "divide-by-circle",
     "name": "Divide by Circle",
@@ -831,6 +871,14 @@
     "bytes": 1022977,
     "reason": "top volume (14,747 tez)"
   },
+  "9899": {
+    "slug": "ukiyo-e-seascape",
+    "name": "ukiyo-e seascape",
+    "cid": "QmdXnWsUG7JBPg7m7YtEVPADrHNQwFX6AWZDEwdw85NCYU",
+    "entry": "index.html",
+    "bytes": 990510,
+    "reason": "top volume (13,322 tez)"
+  },
   "10051": {
     "slug": "california-hills-in-late-sun",
     "name": "California Hills in Late Sun",
@@ -863,6 +911,14 @@
     "bytes": 4133515,
     "reason": "top volume (18,656 tez)"
   },
+  "10282": {
+    "slug": "spaceplant-1",
+    "name": "spaceplant",
+    "cid": "QmUuKiWb5BBK5dERnfZBRebDrtxxkvwFrNYZGs7uwbwSon",
+    "entry": "index.html",
+    "bytes": 50940,
+    "reason": "top volume (13,511 tez)"
+  },
   "10332": {
     "slug": "the-generative-octopuses",
     "name": "the generative octopuses",
@@ -871,6 +927,14 @@
     "bytes": 873857,
     "reason": "top volume (15,613 tez)"
   },
+  "10352": {
+    "slug": "avoidance",
+    "name": "Avoidance",
+    "cid": "QmYbSDs45k8K7u7uWETKDVDnEUWPdEeHZKMWT1ZgPuPVki",
+    "entry": "index.html",
+    "bytes": 847852,
+    "reason": "top volume (13,259 tez)"
+  },
   "10363": {
     "slug": "fragments-of-a-wave",
     "name": "Fragments of a Wave",
@@ -878,6 +942,14 @@
     "entry": "index.html",
     "bytes": 835017,
     "reason": "top volume (165,441 tez)"
+  },
+  "10383": {
+    "slug": "cuts",
+    "name": "Cuts",
+    "cid": "QmRDdA87agcJyCvEmDjN9oPTWmzxLG3bxo87tNT3zUobWF",
+    "entry": "index.html",
+    "bytes": 843174,
+    "reason": "top volume (13,865 tez)"
   },
   "10589": {
     "slug": "chaospill",
@@ -951,6 +1023,14 @@
     "bytes": 142454,
     "reason": "top volume (37,578 tez)"
   },
+  "11331": {
+    "slug": "extreme-ways",
+    "name": "Extreme Ways",
+    "cid": "QmRbDFa8GGD1kSsk2HXjpNwB2okiKA4ZixMNsTVMMui2zo",
+    "entry": "index.html",
+    "bytes": 2753908,
+    "reason": "top volume (13,059 tez)"
+  },
   "11366": {
     "slug": "(de)construction",
     "name": "(de)construction",
@@ -999,6 +1079,14 @@
     "bytes": 4312056,
     "reason": "top volume (22,819 tez)"
   },
+  "11589": {
+    "slug": "gonzion",
+    "name": "Gonzion",
+    "cid": "QmdPjQBjrLBfTo8c9Sh9vwwSb8cRBPf4xgE6edxfrfxoTE",
+    "entry": "index.html",
+    "bytes": 15173,
+    "reason": "top volume (13,351 tez)"
+  },
   "11805": {
     "slug": "collage-1",
     "name": "Collage",
@@ -1014,6 +1102,14 @@
     "entry": "index.html",
     "bytes": 40304,
     "reason": "top volume (15,266 tez)"
+  },
+  "12059": {
+    "slug": "abstraction-2",
+    "name": "abstraction",
+    "cid": "QmY8HVRzqAjLDgEHGzvURmxbbWK3cfVu2M7CEWr1V5u76v",
+    "entry": "index.html",
+    "bytes": 372485,
+    "reason": "top volume (12,689 tez)"
   },
   "12066": {
     "slug": "perpetual-oscillations",
@@ -1423,6 +1519,14 @@
     "bytes": 939636,
     "reason": "top volume (33,884 tez)"
   },
+  "14748": {
+    "slug": "sketch-b",
+    "name": "Sketch B",
+    "cid": "QmRuNmptRuEDiqJF3trsT9gRwWTQWdY8bHnUTLGjMP1X23",
+    "entry": "index.html",
+    "bytes": 623556,
+    "reason": "top volume (13,007 tez)"
+  },
   "14790": {
     "slug": "canyon",
     "name": "Canyon",
@@ -1559,6 +1663,14 @@
     "bytes": 889023,
     "reason": "top volume (508,894 tez)"
   },
+  "15956": {
+    "slug": "memory-module",
+    "name": "Memory Module",
+    "cid": "QmbHwT8jQtAXPAQFMw3b9MBt8Ftv4KmcjSnn21YpSS4KCe",
+    "entry": "index.html",
+    "bytes": 840594,
+    "reason": "top volume (13,798 tez)"
+  },
   "16047": {
     "slug": "deep-forest",
     "name": "Deep Forest",
@@ -1654,6 +1766,14 @@
     "entry": "index.html",
     "bytes": 858640,
     "reason": "top volume (16,069 tez)"
+  },
+  "16408": {
+    "slug": "one-of-these-days",
+    "name": "One of These Days",
+    "cid": "QmXq9EqDds95Udy1Mrv2fT2xfUoWJue7dDNLNunYYHAbJo",
+    "entry": "index.html",
+    "bytes": 628101,
+    "reason": "top volume (12,809 tez)"
   },
   "16467": {
     "slug": "rococo",
@@ -1798,6 +1918,14 @@
     "entry": "index.html",
     "bytes": 1698712,
     "reason": "top volume (34,086 tez)"
+  },
+  "17757": {
+    "slug": "crossworlds",
+    "name": "CrossWorlds",
+    "cid": "QmUTWJFK9DdDf9AbHzfWmMago5f6MG7wCFUUgx11NwjZEC",
+    "entry": "index.html",
+    "bytes": 965614,
+    "reason": "top volume (13,285 tez)"
   },
   "17776": {
     "slug": "artifact-1",
@@ -2071,6 +2199,22 @@
     "bytes": 4444338,
     "reason": "top volume (23,325 tez)"
   },
+  "20450": {
+    "slug": "tratti",
+    "name": "tratti",
+    "cid": "QmSbn5Zj7aWVp6EGgVrDEYUjFsmUSMdhneqPwAaepBgRbC",
+    "entry": "index.html",
+    "bytes": 833873,
+    "reason": "top volume (13,407 tez)"
+  },
+  "20459": {
+    "slug": "release",
+    "name": "Release",
+    "cid": "Qmf18C8AtdSG5d9Vm6eX1VQcndCfbXAZBP3hfk9nE63Nmi",
+    "entry": "index.html",
+    "bytes": 198668,
+    "reason": "top volume (13,490 tez)"
+  },
   "20499": {
     "slug": "the-city-1",
     "name": "The City",
@@ -2118,6 +2262,14 @@
     "entry": "index.html",
     "bytes": 637673,
     "reason": "top volume (30,981 tez)"
+  },
+  "21114": {
+    "slug": "continuum",
+    "name": "Continuum",
+    "cid": "QmXXMLjvjCMU4MGJed85rPCGKFK4HvZeD4DQH2n6NrJiW6",
+    "entry": "index.html",
+    "bytes": 853358,
+    "reason": "top volume (13,455 tez)"
   },
   "21126": {
     "slug": "roil",
@@ -2190,6 +2342,14 @@
     "entry": "index.html",
     "bytes": 912024,
     "reason": "top volume (14,933 tez)"
+  },
+  "21554": {
+    "slug": "fx(haish)-the-generator-1",
+    "name": "fx(haish) / the Generator",
+    "cid": "QmWr5a8kBWr3Nz6U7ncUAgVhk43cbmVNB4tSgNMRnMMnYv",
+    "entry": "index.html",
+    "bytes": 5092586,
+    "reason": "top volume (13,985 tez)"
   },
   "21570": {
     "slug": "henge",
@@ -2303,6 +2463,14 @@
     "bytes": 7617,
     "reason": "top volume (123,071 tez)"
   },
+  "22249": {
+    "slug": "eddy",
+    "name": "EDDY",
+    "cid": "QmTEkrz8mymPBkgGWYjSkoVq24uiCUXtHZgqgmrEPqokvz",
+    "entry": "index.html",
+    "bytes": 858440,
+    "reason": "top volume (13,840 tez)"
+  },
   "22473": {
     "slug": "bweeps",
     "name": "BWEEPS ",
@@ -2414,6 +2582,14 @@
     "entry": "index.html",
     "bytes": 907346,
     "reason": "top volume (17,789 tez)"
+  },
+  "23362": {
+    "slug": "thebaide",
+    "name": "thébaïde",
+    "cid": "QmUmbwUP7bscGYWEaN9a9qWGddczZbzr1ZynyvCa91w3Yg",
+    "entry": "index.html",
+    "bytes": 3950745,
+    "reason": "top volume (13,756 tez)"
   },
   "23388": {
     "slug": "digital-expression",
@@ -2543,6 +2719,14 @@
     "bytes": 4304136,
     "reason": "top volume (23,203 tez)"
   },
+  "24239": {
+    "slug": "i-am-unfolding",
+    "name": "I AM UNFOLDING",
+    "cid": "QmXeVwPhKVGAPNcvTWfhcRdqTFX1Y4ZtrL3FwcbJP5MJ3w",
+    "entry": "index.html",
+    "bytes": 912999,
+    "reason": "top volume (12,669 tez)"
+  },
   "24320": {
     "slug": "system-b",
     "name": "System β",
@@ -2574,6 +2758,14 @@
     "entry": "index.html",
     "bytes": 424173,
     "reason": "top volume (23,878 tez)"
+  },
+  "24923": {
+    "slug": "badgirs-city",
+    "name": "Badgirs City",
+    "cid": "QmQPrX6Gv3suFC3FVqmz6AKp1ddnUuGyGMG2oyutAvQ4pk",
+    "entry": "index.html",
+    "bytes": 900211,
+    "reason": "top volume (13,687 tez)"
   },
   "24934": {
     "slug": "rausch",
@@ -2710,6 +2902,14 @@
     "entry": "index.html",
     "bytes": 1578705,
     "reason": "top volume (16,271 tez)"
+  },
+  "27192": {
+    "slug": "destructures",
+    "name": "Destructures",
+    "cid": "QmVe76YX5Rk3YKzFWbEdoJYBNjrJJNgv5BnZmKntTjR8tg",
+    "entry": "index.html",
+    "bytes": 49027,
+    "reason": "top volume (13,433 tez)"
   },
   "27367": {
     "slug": "exodus-2",
