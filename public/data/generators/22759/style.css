@@ -1,0 +1,57 @@
+body {
+  background-color: #fff;
+}
+
+canvas {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate( -50%, -50% );
+}
+
+.dg.ac {
+  z-index: 10000 !important;
+  /* display: none !important; */
+}
+
+#use-instructions {
+  position: absolute;
+  top: 120px;
+  right: 45px;
+  opacity: .7;
+  text-align: left;
+  font-size: 14px;
+}
+
+#wait-instructions {
+  position: absolute;
+  top: 25%;
+  left: 50%;
+  transform: translate( -50%, 0 );
+  opacity: .7;
+  text-align: center;
+}
+
+#wip-link {
+  position: absolute;
+  left: 50%;
+  transform: translateX( -50% );
+  bottom: 5%;
+  background-color: #ff6b22;
+  border-radius: 5px;
+  padding: 10px;
+  z-index: 10001;
+}
+
+#wip-link a {
+  color: #fff;
+  text-decoration: none;
+}
+
+#displacement {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: scale( .25 );
+  transform-origin: 0 0;
+}

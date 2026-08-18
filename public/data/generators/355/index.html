@@ -1,0 +1,90 @@
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="author" content="Mark Knol">
+<script id="fxhash-snippet">
+      let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+      var fxhash = new URLSearchParams(window.location.search).get('fxhash')
+      let b58dec = (str) => str.split('').reduce((p,c,i) => p + alphabet.indexOf(c) * (Math.pow(alphabet.length, str.length-i-1)), 0)
+      let fxhashTrunc = fxhash.slice(2)
+      let regex = new RegExp(".{" + ((fxhashTrunc.length/4)|0) + "}", 'g')
+      let hashes = fxhashTrunc.match(regex).map(h => b58dec(h))
+      let sfc32 = (a, b, c, d) => {
+        return () => {
+          a |= 0; b |= 0; c |= 0; d |= 0
+          var t = (a + b | 0) + d | 0
+          d = d + 1 | 0
+          a = b ^ b >>> 9
+          b = c + (c << 3) | 0
+          c = c << 21 | c >>> 11
+          c = c + t | 0
+          return (t >>> 0) / 4294967296
+        }
+      }
+      var fxrand = sfc32(...hashes)
+      // used to get features during token mint
+      window.addEventListener("message", (event) => {
+        if (event.data === "fxhash_getFeatures") {
+          parent.postMessage({
+            id: "fxhash_getFeatures",
+            data: window.$fxhashFeatures
+          }, "*")
+        }
+      })
+</script>
+<style>
+body,html {
+	margin:0;
+	padding:0;
+	width:100vw;
+	height:100vh;
+	overflow:hidden;
+	
+	background:#111;
+	color: #fff;
+	font: 21px monospace;
+}
+canvas {
+	display:none;
+}
+#result canvas {
+	display:block;
+	max-width: 100%;
+	max-height: 100%;
+	bottom: 0;
+	left: 0;
+	margin: auto;
+	overflow: auto;
+	position: fixed;
+	right: 0;
+	top: 0;
+	-o-object-fit: contain;
+	object-fit: contain;
+}
+</style>
+</head>
+<body>
+<img id="font" style="display:none" src="data:image/gif;base64,R0lGODlhgABQAIABAP///wAAACH5BAEAAAEALAAAAACAAFAAAAL/jI+JEGwAo1O02ouzfrL7nTAT2HxldHJid0DVyJGt4jbzObFLjaNv+LCtdrabAybc8UArV02UnHmO1ODCAoUmh62s9UgZPZEYLTeLnGqvXnLQe7uYuz96iXhlv8FcPP/eFuX0t7YxJ4OTJwYkcbc1dPYGuCUYCcdU5JaxlNm1GAIW4+T4x0j5AzeIJ1mE1ee4auWpZqLE0hRYaGr2ulT6Usspq6LZamfbiEvJ6xNI8hsWTAYT2tP2SpxMsyxZPawBTSMtDvSlB7mcu+2cWv4dxno8lecuKpWrPsrcXLs+mk4EWjUdMUBh2QMQl74o8Z6VuxaQXidP2zaFWoTGGKYc//1A6bg1RiG1NB4N8dNWbyOilSxbslTjMqbMmTRd+VKkUZePWWKEidtZppgKi0DhVXyX8t0lVa6O2QwabYxTfw+lmFKyqyAsqHKKGjwqJOPBnEhr6hOqFdhWclGrpK2YBm3HZsbOWuTqk6dQgsD+pUXh1ehau1M5ffwwj8cgkHb4YmrYt6Fijj2/DnYbkSmgjJOtFnMWU3MjrcIMY5YXF5YqbNGw6sLqOiRba6lnrc02+zBqoHmR5VjHUC3Rz46Fdx19aqKMomj2oo3V1Sr0u92MANdj9vnUppB7G28Xp8zPstzL9+4cnQlG5WSpaWyl3dpx7z2oB6VfM4X+/Pxnwv9si1x/Av73U3HzBQiggArS5gaB4FRmlIELyuSgb5NdWIWEVAQ24Vu3eaThPBSRgs5mdNWHyEiDFWjLgRwS+I9Uq+2UV3xOibgfMXrZdJhUjV2UYU+duWXjXyb0mM04Q6UgY0HKtMigH1+cIZJISVapHy0hnebXI4u9hR9pslBJYiwiIskkQaP5UkhzTZAm4SobWlbYSLyVVpucsjVJ4mmXcdiJitPhSdJs24G4Jj9QmpaVPPT46ONmEs0HZV8hIuaVYcFhiN5iAQK6YIV6hdkogEV2aFJHo55qiIeo+ocjoqC6VOirsKp6Jau27sprr0tOV56vRO2qmavGwZofobP/1lgZo8D65B205EWHnkmGgomNsw/aZx1tSYrC0TPTQAjsh3Qe2pplneq25Unu4ukqs9xii2C0jp6lm7nPkouutreRWu6gzYYbJrznyhtwwmz9B+3AdLzr3LGMAsymb3pi+t2R4YaqIsWCprckX/yKJpap38qH7WXpnnswJDSO3EcyVtJE6LX9zYgjcsUqHJquxr4kG38ArzS0zbTG2lLQws5LIdJAI7h01FJPTXXVVl+Ndda5alkSnWpC3e6Fo+JGtlnhwbfVbyOqFrOQ8X5MMtvJMslNtVseC2ek6D7M2cY0EwKQPRUbLaOf+pYJ7t5Ee4Y2fCX/ayeRG0Lstc5xSBKtZc6P+2uQ03EbuV3RClabNnEsS9p2Znn+nc83aqPGd51wyg16ykI3Jsh4O55Z77s8Qfe16Naq857WWAMWlsvGL8988wsWAAA7" alt="" >
+<canvas id="canvas" width="11" height="11"></canvas>
+<canvas id="canvas2" width="17" height="17"></canvas>
+<div id=result></div>
+
+<script>
+/*
+
+ASCII-SMOLSKULL 💀
+Generative art by Mark Knol 
+
+https://twitter.com/mknol
+https://hicetnunc.xyz/markknol (RIP)
+
+https://hicetnunc.art/markknol
+https://tryshowtime.com/markknol
+https://objkt.com/profile/tz1XrutuvkFRG15HmV2gdon86F38NMMGMAXr
+
+*/
+let c,tc,ctx,tctx,font,src,index=0,fw=16,fh=4,lw=8,lh=16,cw=24,ch=12,colorpalettes=[],fonts=[],context1=canvas.getContext("2d"),context2=canvas2.getContext("2d");const WHITE="#FCFCFC",LIGHT_GRAY="#EEE",BLACK="#111",GREEN="#58cf34",GRAY="#555",RED="#cd202c",BLUE="#347fcf",YELLOW="#e4d81a";function rand(){return fxrand()}let all_colors=[RED,BLUE,LIGHT_GRAY,GREEN,YELLOW,BLACK,WHITE,BLACK,WHITE];rand()>.97&&all_colors.push(GRAY);let colors=[RED,BLUE,BLACK,GRAY,LIGHT_GRAY,GREEN,YELLOW],backgroundColors=[BLACK,BLACK,BLACK,YELLOW,BLUE,RED,GREEN,WHITE,WHITE,WHITE],props={eyeHeight:4,eyeColor:4,eyeDirection:4,mouthType:2,mouthSize:3,background:backgroundColors.length};const unique=(t,e,o)=>o.indexOf(t)===e,s=11;function makeFace(t){let e=BLACK,o=WHITE;(e=backgroundColors[t.background])==WHITE&&(o=BLACK),context1.fillStyle=o,context1.fillRect(0,0,s,s);let l=1+3*rand()|0;2==t.mouthSize&&(l=1);let c=[o==WHITE?GRAY:WHITE,o==WHITE?GRAY:WHITE];if(1==t.eyeColor){let t=o==WHITE?GRAY:WHITE,e=o!=WHITE?GRAY:WHITE;c[0]=t,c[1]=e}else if(2==t.eyeColor){let t=o==WHITE?GRAY:WHITE;c[0]=t,c[1]=t}context1.fillStyle=c[0],context1.fillRect(2,l,3,t.eyeHeight+2),context1.fillStyle=c[1],context1.fillRect(6,l,3,t.eyeHeight+2),context1.fillStyle=BLACK,(t.eyeHeight<=2||rand()>.2)&&(0==t.eyeDirection?(context1.fillRect(2,l,1,t.eyeHeight+2),context1.fillRect(6,l,1,t.eyeHeight+2)):1==t.eyeDirection?(context1.fillRect(4,l,1,t.eyeHeight+2),context1.fillRect(8,l,1,t.eyeHeight+2)):2==t.eyeDirection?(context1.fillRect(2,t.eyeHeight+l+1,3,1),context1.fillRect(6,t.eyeHeight+l+1,3,1)):3==t.eyeDirection&&(context1.fillRect(2,l,3,1),context1.fillRect(6,l,3,1))),mouthY=l+1+t.eyeHeight+2+2*rand()|0,2==t.mouthSize&&(mouthY=l+1+t.eyeHeight+2),context1.fillStyle=pick(o==WHITE?[BLACK,GRAY,RED]:[WHITE,LIGHT_GRAY,YELLOW]),0==t.mouthType?rand()>.5?context1.fillRect(3,mouthY,5,2*(t.mouthSize+1)):context1.fillRect(4,mouthY,3,2*(t.mouthSize+1)):(context1.fillRect(3,mouthY,1,2*(t.mouthSize+1)),context1.fillRect(5,mouthY,1,2*(t.mouthSize+1)),context1.fillRect(7,mouthY,1,2*(t.mouthSize+1))),context1.fillStyle=e,context1.clearRect(0,0,1,1),context1.clearRect(s-1,0,1,1);let r=1+4*rand()|0,n=1+2*rand()|0;context1.clearRect(0,s-r,n,r),context1.clearRect(s-n,s-r,n,r);let a=[o==WHITE?BLACK:WHITE,pick(colors)];fxrand()>.85&&(a=[a[1],a[0]]),fxrand()>.85&&(a=[pick(o==WHITE?[BLACK,GRAY]:[WHITE,LIGHT_GRAY]),pick(o==WHITE?[BLACK,GRAY]:[WHITE,LIGHT_GRAY])]);const i=context1.createLinearGradient(0,0,0,context2.canvas.height);i.addColorStop(0,a[0]),i.addColorStop(1,a[1]),context2.fillStyle=i,context2.fillRect(0,0,context2.canvas.width,context2.canvas.height),context2.drawImage(context1.canvas,3,3);const h=upscale(context2,4);return h.fillStyle=o,h.beginPath(),h.arc(16,16,4,0,2*Math.PI),h.arc(52,16,4,0,2*Math.PI),h.fill(),h}let characterProps=[];for(let t=0;t<props.eyeHeight;t++)for(let e=0;e<props.eyeColor;e++)for(let o=0;o<props.eyeDirection;o++)for(let l=0;l<props.mouthType;l++)for(let c=0;c<props.mouthSize;c++)for(let r=0;r<props.background;r++)3==t&&2==c||characterProps.push({eyeHeight:t,eyeColor:e,eyeDirection:o,mouthType:l,mouthSize:c,background:r});const settings=pick(characterProps);window.onload=(()=>{renderAscii(makeFace(settings))});const realProps={};for(let t in settings){const e=settings[t];"eyeHeight"==t?realProps.eyes=0==e?"smol":1==e?"regular":2==e?"large":"huge":"eyeDirection"==t?0==e?realProps.look="⬅️":1==e?realProps.look="➡️":2==e?realProps.look="⬇️":3==e&&(realProps.look="⬆️"):"mouthType"==t?0==e?realProps.mouth="⬛":1==e&&(realProps.mouth="|||"):"mouthSize"==t?0==e?realProps.mouth_size="smol":1==e?realProps.mouth_size="regular":2==e&&(realProps.mouth_size="huge"):"background"==t||"eyeColor"==t||(realProps[t]=settings[t])}function pick(t){return t[rand()*t.length|0]}function upscale(t,e=5){const o=document.createElement("canvas");o.width=t.canvas.width*e,o.height=t.canvas.height*e;const l=o.getContext("2d");return l.imageSmoothingEnabled=!1,l.drawImage(t.canvas,0,0,t.canvas.width*e,t.canvas.height*e),l}function initColorPalette(){fonts=[],colorpalettes=[pick(all_colors),pick(all_colors)],rand()>.5&&colorpalettes.push(pick(all_colors)),rand()>.4&&colorpalettes.push(pick(all_colors)),rand()>.3&&colorpalettes.push(pick(all_colors)),rand()>.2&&colorpalettes.push(pick(all_colors)),rand()>.1&&colorpalettes.push(pick(all_colors)),rand()>.1&&colorpalettes.push(pick(all_colors)),(colorpalettes=colorpalettes.filter(unique)).length<=1&&colorpalettes.push(pick(all_colors)),realProps["🔴"]=colorpalettes.includes(RED),realProps["🟡"]=colorpalettes.includes(YELLOW),realProps["🔵"]=colorpalettes.includes(BLUE),realProps["🟢"]=colorpalettes.includes(GREEN),realProps["⚫"]=colorpalettes.includes(BLACK),realProps["⚪"]=colorpalettes.includes(WHITE)||colorpalettes.includes(LIGHT_GRAY)||colorpalettes.includes(GRAY);for(let t=0;t<colorpalettes.length;t++)for(let e=0;e<colorpalettes.length;e++)t!=e&&(tctx.clearRect(0,0,tc.width,tc.height),tctx.drawImage(font,0,0),tctx.globalCompositeOperation="source-atop",tctx.fillStyle=colorpalettes[t],tctx.rect(0,0,tc.width,tc.height),tctx.fill(),tctx.globalCompositeOperation="destination-over",tctx.fillStyle=colorpalettes[e],tctx.rect(0,0,tc.width,tc.height),tctx.fill(),tctx.globalCompositeOperation="source-over",fonts.push(tctx.getImageData(0,0,tc.width,tc.height+lh)))}function renderAscii(t){(c=document.getElementById("canvas")).width=lw*cw,c.height=lh*ch,c.imageSmoothingEnabled=!1,font=document.getElementById("font"),(tc=document.createElement("canvas")).width=fw*lw,tc.height=font.height,document.body.prepend(tc),ctx=c.getContext("2d"),tctx=tc.getContext("2d"),ctx.drawImage(t.canvas,0,0,c.width,c.height),src=ctx.getImageData(0,0,c.width,c.height),initColorPalette(),renderFrame()}function renderFrame(){if(index<cw*ch){const t=index%cw,e=Math.floor(index/cw);let o=bestFit(src.data,t,e);o&&o.length>=2&&ctx.putImageData(o[0],t*lw-o[1]*lw,e*lh-o[2]*lh,o[1]*lw,o[2]*lh,lw,lh),index++,renderFrame()}else{addSignature();let t=upscale(ctx,7);window.out=t,result.prepend(t.canvas)}}function drawChar(t,e,o=[0,0],l=[0,0],c=[lw,lh]){t.putImageData(e,(o[0]-l[0])*c[0],(o[1]-l[1])*c[1],l[0]*c[0],l[1]*c[1],c[0],c[1])}function addSignature(){const t=pick(fonts);pick(fonts);drawChar(ctx,t,[cw-3,ch-1],[13,4]),drawChar(ctx,t,[cw-2,ch-1],[14,4]),drawChar(ctx,t,[cw-1,ch-1],[15,4])}function bestFit(t,e,o){let l,c=1e34;return fonts.forEach(r=>{const n=r.data;for(let a=0;a<fw;a++)for(let i=0;i<fh;i++){let s=0;t:for(let l=0;l<lw;l+=2)e:for(let r=0;r<lh;r++){const h=4*(a*lw+l)+16*(i*lh+r)*lw*4,p=4*(e*lw+l)+(o*lh+r)*lw*cw*4;if(s+=.21*((n[h+0]-t[p+0])/255)**2+.71*((n[h+1]-t[p+1])/255)**2+.07*((n[h+2]-t[p+2])/255)**2,s+=((n[h+4]-t[p+4])/255)**2+((n[h+5]-t[p+5])/255)**2+((n[h+6]-t[p+6])/255)**2,(s+=.5*((n[h+0]-t[p+0]+n[h+4]-t[p+4])/255)**2+.5*((n[h+1]-t[p+1]+n[h+5]-t[p+5])/255)**2+.5*((n[h+2]-t[p+2]+n[h+6]-t[p+6])/255)**2)>c)break e}(s+=.005*rand()-.005)<c&&rand()>.1&&(l=[r,a,i],c=s)}}),l}window.$fxhashFeatures=realProps,console.log(realProps);
+</script>
+</body>
+</html>
