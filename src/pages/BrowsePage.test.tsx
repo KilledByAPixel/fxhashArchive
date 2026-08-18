@@ -33,7 +33,7 @@ afterEach(() => {
 })
 
 const renderPage = () => render(<MemoryRouter><BrowsePage /></MemoryRouter>)
-const names = () => screen.getAllByText(/^Tok \d$/).map((el) => el.textContent)
+const names = () => screen.queryAllByText(/^Tok \d$/).map((el) => el.textContent)
 
 test('largest-edition sorting is gone', async () => {
   renderPage()
@@ -86,4 +86,26 @@ test('random order is stable while typing in the search box', async () => {
   // A filter that matches everything: order must not be reshuffled by the keystroke.
   fireEvent.change(search, { target: { value: 'Tok' } })
   expect(names()).toEqual(before)
+})
+
+test('archived projects are badged', async () => {
+  renderPage()
+  await screen.findByPlaceholderText(/search projects/i)
+  // summary.archived = [2], so exactly one badge for four projects.
+  expect(screen.getAllByTitle(/playable offline/i)).toHaveLength(1)
+})
+
+test('the archived filter narrows the grid to archived projects', async () => {
+  renderPage()
+  await screen.findByPlaceholderText(/search projects/i)
+  fireEvent.click(screen.getByLabelText(/fully archived only/i))
+  expect(names()).toEqual(['Tok 2'])
+})
+
+test('the archived filter combines with search', async () => {
+  renderPage()
+  const search = await screen.findByPlaceholderText(/search projects/i)
+  fireEvent.click(screen.getByLabelText(/fully archived only/i))
+  fireEvent.change(search, { target: { value: 'Tok 3' } })
+  expect(names()).toEqual([])
 })
