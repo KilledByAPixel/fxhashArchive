@@ -5,7 +5,11 @@ import { seededShuffle } from '../lib/shuffle'
 import type { LeanToken, Summary } from '../lib/types'
 import TokenCard from '../components/TokenCard'
 
-const STRIP = 8
+// The collected strip is deliberately the longer of the two: it is deterministic,
+// so the same projects appear every visit, and showing more of them is the only
+// way it varies at all between one look and the next.
+const RANDOM_STRIP = 10
+const COLLECTED_STRIP = 20
 const n = (value: number) => value.toLocaleString()
 
 /**
@@ -52,15 +56,22 @@ export default function LandingPage() {
   const archivedIds = useMemo(() => new Set(summary?.archived ?? []), [summary])
 
   const shown = useMemo(() => (tokens ?? []).filter(isVisible), [tokens])
-  const random = useMemo(() => seededShuffle(shown, seed).slice(0, STRIP), [shown, seed])
+  const random = useMemo(() => seededShuffle(shown, seed).slice(0, RANDOM_STRIP), [shown, seed])
   const collected = useMemo(() => {
     if (!summary) return []
     const byId = new Map(shown.map((t) => [t.id, t]))
-    return summary.ranked.map((id) => byId.get(id)).filter((t): t is LeanToken => Boolean(t)).slice(0, STRIP)
+    return summary.ranked.map((id) => byId.get(id)).filter((t): t is LeanToken => Boolean(t)).slice(0, COLLECTED_STRIP)
   }, [summary, shown])
 
   const archivedPct = summary
     ? (100 * summary.counts.archived) / summary.counts.projects
+    : 0
+
+  // Seed coverage is 100% of the seeds that exist, not of all mints. The gap is
+  // unsigned mints, which never had a seed to lose — saying "97.7%" would claim
+  // we lost tens of thousands of seeds that were never assigned in the first place.
+  const iterationsWithoutSeeds = summary
+    ? Math.max(0, summary.counts.iterations - summary.counts.seeds)
     : 0
 
   return (
@@ -107,20 +118,26 @@ export default function LandingPage() {
             no network at all, while the rest still depend on IPFS staying up.
           </p>
           <div className="share-bars">
-            <ShareBar
-              label="of projects fully archived"
-              percent={archivedPct}
-              testId="share-projects"
-            />
+            {/* Ordered full to empty, so the three bars read as one sentence: the
+                seeds are completely safe, most of what people cared about is
+                covered, and that took only a sliver of the catalog. */}
+            <ShareBar label="of seeds preserved" percent={100} testId="share-seeds" />
             <ShareBar
               label="of collector interest covered"
               percent={summary.counts.archivedShareOfVolume}
               testId="share-interest"
             />
+            <ShareBar
+              label="of projects fully archived"
+              percent={archivedPct}
+              testId="share-projects"
+            />
           </div>
           <p className="landing-note">
-            Those two numbers are the whole idea: the archived projects are a sliver of
-            the catalog, but they are the ones people actually engaged with.
+            Every seed that was ever assigned is here — the {n(iterationsWithoutSeeds)}{' '}
+            remaining mints were never signed by fxhash, so no artwork was generated for
+            them and no seed ever existed. The archived projects are a sliver of the
+            catalog by count, but they are the ones people actually engaged with.
           </p>
         </section>
       )}

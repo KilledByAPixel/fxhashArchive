@@ -61,6 +61,15 @@ test('contrasts share of projects against share of collector interest', async ()
   expect(interest.textContent).toContain('70.5%')
 })
 
+test('seed coverage reads 100%, against the seeds that exist', async () => {
+  renderPage()
+  const seeds = await screen.findByTestId('share-seeds')
+  expect(seeds.textContent).toContain('100.0%')
+  // 1,845,509 iterations - 1,802,387 seeds = 43,122 mints that were never signed.
+  // Naming them is what stops 100% looking like a rounded-up 97.7%.
+  expect(screen.getByText(/43,122 remaining mints were never signed/)).toBeTruthy()
+})
+
 test('bar widths reflect their percentages', async () => {
   renderPage()
   const interest = await screen.findByTestId('share-interest')
