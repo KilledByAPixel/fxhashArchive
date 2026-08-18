@@ -1,0 +1,121 @@
+<head>
+  <style> body { margin: 0; } </style>
+  <script src="js/unpkg/three.js"></script>
+  <script src="js/unpkg/perlin.min.js"></script>
+  <script src="js/postprocessing/EffectComposer.js"></script>
+  <script src="js/postprocessing/RenderPass.js"></script>
+  <script src="js/postprocessing/MaskPass.js"></script>
+  <script src="js/postprocessing/ShaderPass.js"></script>
+  <script src="js/shaders/CopyShader.js"></script>
+  <script src="js/shaders/C64Shader.js"></script>
+  <script src="js/shaders/LuminosityHighPassShader.js"></script>
+  <script src="js/postprocessing/UnrealBloomPass.js"></script>
+  <script src="js/shaders/CopyShader.js"></script>
+  <script src="js/postprocessing/Pass.js"></script>
+  <script src="js/subdivision_module/subdivision.js"></script>
+  <script src="js/subdivision_module/lattice_generation.js"></script>
+  <script src="js/capture/CCapture.all.min.js"></script>
+
+  <link rel="stylesheet" href="style.css">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+  <link rel="manifest" href="site.webmanifest">
+
+  <script id="fxhash-snippet">
+      let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+      var fxhash = new URLSearchParams(window.location.search).get('fxhash')
+      let b58dec = str=>[...str].reduce((p,c)=>p*alphabet.length+alphabet.indexOf(c)|0, 0)
+      let fxhashTrunc = fxhash.slice(2)
+      let regex = new RegExp(".{" + ((fxhashTrunc.length/4)|0) + "}", 'g')
+      let hashes = fxhashTrunc.match(regex).map(h => b58dec(h))
+      let sfc32 = (a, b, c, d) => {
+        return () => {
+          a |= 0; b |= 0; c |= 0; d |= 0
+          var t = (a + b | 0) + d | 0
+          d = d + 1 | 0
+          a = b ^ b >>> 9
+          b = c + (c << 3) | 0
+          c = c << 21 | c >>> 11
+          c = c + t | 0
+          return (t >>> 0) / 4294967296
+        }
+      }
+      var fxrand = sfc32(...hashes)
+      // used to get features during token mint
+      window.addEventListener("message", (event) => {
+        if (event.data === "fxhash_getFeatures") {
+          parent.postMessage({
+            id: "fxhash_getFeatures",
+            data: window.$fxhashFeatures
+          }, "*")
+        }
+      })
+      var isFxpreview = new URLSearchParams(window.location.search).get('preview') === "1"
+      function fxpreview() {
+        window.dispatchEvent(new Event("fxhash-preview"))
+        setTimeout(() => fxpreview(), 500)
+      }
+</script>
+
+</head>
+
+<body>
+
+  
+  <div id="loading">
+      <div id="loading_background"></div>
+      <img src="loading/protocell_labs_lattice_200pix_20fps_4col_v5.gif" class="spinner" style="display: block;">
+      <div id="loading_overlay"></div>
+      <span id="loading_text" style="font-weight: bold;">
+        O B S C V R V M
+      </span>
+      <span id="loading_text" style="font-size: 10px; transform: translate(-50%, 145px);">
+        { p r o t o c e l l : l a b s }<br><br>
+        2 0 2 2
+      </span>
+  </div>
+
+  
+  <div id="keybinding" style="display: none;">
+      <div id="keybinding_modal"></div>
+      <span id="keybinding_text" style="font-weight: bold;">
+        <ul style="list-style-type: none;">
+          <li>C O N T R O L S</li><br>
+          <li><b>a</b> : j u m p&nbsp;&nbsp;l i g h t&nbsp;&nbsp;a n g l e</li>
+          <li><b>f</b>  : c y c l e&nbsp;&nbsp;l i g h t&nbsp;&nbsp;f r a m e r a t e</li>
+          <li><b>t</b>  : c y c l e&nbsp;&nbsp;l i g h t&nbsp;&nbsp;t i c k</li>
+          <li><b>g</b>  : s t a r t / s t o p&nbsp;&nbsp;g i f&nbsp;&nbsp;c a p t u r e</li>
+          <li><b>b</b> : w h i t e / b l a c k&nbsp;&nbsp;b a c k g r o u n d</li>
+          <li><b>i</b>  : i n f o</li>
+          <li><b>1 - 5</b>  : i m a g e&nbsp;&nbsp;c a p t u r e&nbsp;&nbsp;1 - 5 x</li><br><br>
+          <li>O B S C V R V M</li>
+          <li>{ p r o t o c e l l : l a b s }</li>
+          <li>2 0 2 2</li>
+        </ul>
+      </span>
+  </div>
+
+  <div class="container-fluid">
+      <div class="row">
+          <div class="col-lg-2 col-md-2 col-sm-2 col-xs-2" id="leftMenu">
+          </div>
+          <div class="col-lg-8 col-md-8 col-sm-8 col-xs-8">
+              <div class="row" id="viewport">
+              </div>
+              <div class="row" id="informationMenu">
+              </div>
+          </div>
+          <div class="col-lg-2 col-md-2 col-sm-2 col-xs-2" id="rightMenu">
+          </div>
+      </div>
+  </div>
+  
+
+  
+  <script src="js/utils_and_params/utils.js"></script>
+  <script src="js/utils_and_params/params.js"></script>
+  <script defer="defer" src="main.js"></script>
+
+</body>

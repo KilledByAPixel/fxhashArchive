@@ -1,0 +1,36 @@
+/*!
+Elo, comes from the word connection.
+
+When different elements come together, they tend to influence the entire universe, its paths, its stories, each element leaves its mark in time. 
+
+This is a work that explores space and the connection between elements.
+
+The piece has a few types of variations. Its pattern can follow 4 different formulas, where according to the defined values ​​such as speed, distance and frequency, it presents a certain result.
+
+There are no predetermined color palettes, the code chooses the amount and colors that will be used, creating a very wide variety of combinations.
+
+— 
+
+Features:
+
+- 6 background colors;
+- 22 colors;
+- 4 formulas;
+- Light or Dark background;
+- 1 to 6 colors combination;
+- All colors mode;
+- Tiles: 2 to 10
+- Margin: 5, 50, 100
+- Opacity: true/false
+- Limited space
+- There can be more than one color combination
+
+This artwork requires processing power and is intended for laptops and desktops primarily. It may take some time to render. 
+
+Licences:
+
+- p5.js
+- perlin-noise.js by Stefan Gustavson
+
+October 2022 - @gpitombo - fx(hash)
+*/

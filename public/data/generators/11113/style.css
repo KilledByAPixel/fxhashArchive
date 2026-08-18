@@ -1,0 +1,22 @@
+body {
+  background-color: rgb(255, 255, 255);
+
+  /* leave it to hide the scrollbars */
+  overflow: hidden;
+
+  margin: 0;
+  display: flex;
+
+  /* This centers our sketch horizontally. */
+  justify-content: center;
+
+  /* This centers our sketch vertically. */
+  align-items: center;
+}
+
+canvas{
+
+  aspect-ratio: auto 1200 / 2000;
+  width:100%;
+  height:100%;
+}

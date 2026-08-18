@@ -1,0 +1,104 @@
+/*html {
+  height: 100%;
+}
+body {
+  min-height: 100%;
+}*/
+
+body {
+  overflow: hidden; /* Hide scrollbars */
+}
+
+#loading{
+  z-index: 997;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: white;
+}
+
+#loading img{
+  z-index: 998;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+#loading_overlay{
+  z-index: 999;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: white;
+  mix-blend-mode: multiply;
+  border: none;
+}
+
+#background, #loading_background{
+  z-index: 992;
+  position: absolute;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: black;
+}
+
+#loading_text{
+  z-index: 9999;
+  font-family: "Courier New", monospace;
+  /*font-style: italic;*/
+  color: white;
+  font-size: 15px;
+  font-weight: normal;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, 120px);
+  text-align: center;
+}
+
+#keybinding{
+  z-index: 500;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  transform: translate(-50%, -50%);
+  background-color: black;
+}
+
+#keybinding_text{
+  z-index: 550;
+  font-family: "Courier New", monospace;
+  /*font-style: normal;*/
+  color: white;
+  font-size: 15px;
+  font-weight: normal;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+#keybinding_text li{
+  margin: 10px 0;
+}
+
+/*FOR A FIXED WIDTH*/
+.keepcentered {
+  position:    absolute;
+  left:        50%;        /* Start with top left in the center */
+  top:         50%;
+  width:       200px;      /* The fixed width... */
+  height:      100px;      /* ...and height */
+  margin-left: -100px;     /* Shift over half the width */
+  margin-top:  -50px;      /* Shift up half the height */
+  border: 1px solid black; /* Just for demo */
+}

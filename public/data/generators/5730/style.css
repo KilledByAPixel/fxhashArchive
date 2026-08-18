@@ -1,0 +1,34 @@
+html, body {
+	width: 100%;
+	height: 100%;
+  	margin: 0;
+  	padding: 0;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+html {	
+	flex-direction: column;
+}
+
+body {
+	flex-direction: row;
+	overflow: hidden;
+    touch-action: none;
+	background: black;
+}
+
+canvas {
+	margin: auto;
+	display: block;
+}
+
+* {
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}

@@ -1,0 +1,45 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: radial-gradient(#efefef, #cccccc);
+}
+
+* {
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+#info {
+  position: absolute;
+  bottom: 0px;
+  left: 0px;
+  margin-bottom: 3%;
+  background: #000;
+  color: #fff;
+  font: bold 24px/60px monospace;
+  text-align: center;
+  width: 100vw;
+  opacity: 0;
+}
+
+.fadeout #info {
+  animation: fade 2s;
+}
+
+@keyframes fade {
+  0%   { opacity: 0; }
+  1%   { opacity: 1; }
+  15%   { opacity: 1; }
+  100% { opacity: 0; }
+}
