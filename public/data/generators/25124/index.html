@@ -1,0 +1,35 @@
+<!doctype html><html lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta http-equiv="X-UA-Compatible" content="ie=edge"><title>Seekers by ECKER_O_</title><script id="fxhash-snippet">
+      let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+      var fxhash = new URLSearchParams(window.location.search).get('fxhash')
+      let b58dec = str=>[...str].reduce((p,c)=>p*alphabet.length+alphabet.indexOf(c)|0, 0)
+      let fxhashTrunc = fxhash.slice(2)
+      let regex = new RegExp(".{" + ((fxhashTrunc.length/4)|0) + "}", 'g')
+      let hashes = fxhashTrunc.match(regex).map(h => b58dec(h))
+      let sfc32 = (a, b, c, d) => {
+        return () => {
+          a |= 0; b |= 0; c |= 0; d |= 0
+          var t = (a + b | 0) + d | 0
+          d = d + 1 | 0
+          a = b ^ b >>> 9
+          b = c + (c << 3) | 0
+          c = c << 21 | c >>> 11
+          c = c + t | 0
+          return (t >>> 0) / 4294967296
+        }
+      }
+      var fxrand = sfc32(...hashes)
+      // used to get features during token mint
+      window.addEventListener("message", (event) => {
+        if (event.data === "fxhash_getFeatures") {
+          parent.postMessage({
+            id: "fxhash_getFeatures",
+            data: window.$fxhashFeatures
+          }, "*")
+        }
+      })
+      var isFxpreview = new URLSearchParams(window.location.search).get('preview') === "1"
+      function fxpreview() {
+        window.dispatchEvent(new Event("fxhash-preview"))
+        setTimeout(() => fxpreview(), 500)
+      }
+</script><style>@font-face{font-family:PTMono;src:url(./assets/PTMono-Regular.51b98478.ttf)}body{height:100vh;overflow:hidden;display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr 1fr;margin:0;padding:0;background-color:#000}#app{grid-column-start:2;grid-row-start:2}#HUD.recording #recording,.visible{visibility:visible;opacity:1;transition:opacity .2s linear}#HUD #recording,.hidden{visibility:hidden;opacity:0;transition:visibility 0s .2s,opacity .2s linear}#newres{position:fixed;background:0 0;top:0;left:0;bottom:0;right:0;display:grid;grid-template-columns:20px 1fr 20px;grid-template-rows:1fr 1fr 1fr}#newres span{text-align:center;font-family:PTMono;font-size:18px;color:#fff;display:inline-block;grid-column-start:2;grid-row-start:2}#HUD{font-family:PTMono;background:0 0;color:#fff;font-size:9px;line-height:13px;position:fixed;top:0;left:0;bottom:0;right:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:20px 1fr 35px}#recording{display:block;grid-column-start:2;grid-row-start:1;text-align:right;padding:10px 10px}#recording span{display:inline-block;border:2px solid #c00;padding:2px;background:#c00;color:#fff;border-radius:5px}#measures{display:block;grid-column-start:1;grid-row-start:3;padding:10px;font-size:14px}#framecount{display:block;grid-column-start:1;grid-row-start:1;padding:10px;font-size:14px}.fadeInOut{background:0 0;-webkit-animation:fadeinout 3s linear forwards;animation:fadeinout 3s linear forwards}.fadeInOutFast{background:0 0;-webkit-animation:fadeinout 1s linear forwards;animation:fadeinout 1s linear forwards}@-webkit-keyframes fadeinout{0%,100%{opacity:0}15%{opacity:1}35%{opacity:1}}@keyframes fadeinout{0%,100%{opacity:0}15%{opacity:1}35%{opacity:1}}</style><script type="module" crossorigin src="./assets/index.b8cb4e7b.js"></script></head><body><div id="app"><canvas id="main"></canvas><div id="HUD" class="hidden"><div id="framecount"></div><div id="measures"></div><div id="recording"><span>REC</span></div></div><div id="newres"><span class="fadeInOut">S E E K E R S</span></div></div><script></script></body></html>

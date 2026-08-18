@@ -1,0 +1,35 @@
+<!doctype html><html><head><title>˚｡⋆ shift reality instantly ~ very powerful ⋆｡˚</title><meta charset="utf-8"><link rel="icon" type="image/x-icon" href="./star.png"><script id="fxhash-snippet">
+      let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+      var fxhash = new URLSearchParams(window.location.search).get('fxhash')
+      let b58dec = str=>[...str].reduce((p,c)=>p*alphabet.length+alphabet.indexOf(c)|0, 0)
+      let fxhashTrunc = fxhash.slice(2)
+      let regex = new RegExp(".{" + ((fxhashTrunc.length/4)|0) + "}", 'g')
+      let hashes = fxhashTrunc.match(regex).map(h => b58dec(h))
+      let sfc32 = (a, b, c, d) => {
+        return () => {
+          a |= 0; b |= 0; c |= 0; d |= 0
+          var t = (a + b | 0) + d | 0
+          d = d + 1 | 0
+          a = b ^ b >>> 9
+          b = c + (c << 3) | 0
+          c = c << 21 | c >>> 11
+          c = c + t | 0
+          return (t >>> 0) / 4294967296
+        }
+      }
+      var fxrand = sfc32(...hashes)
+      // used to get features during token mint
+      window.addEventListener("message", (event) => {
+        if (event.data === "fxhash_getFeatures") {
+          parent.postMessage({
+            id: "fxhash_getFeatures",
+            data: window.$fxhashFeatures
+          }, "*")
+        }
+      })
+      var isFxpreview = new URLSearchParams(window.location.search).get('preview') === "1"
+      function fxpreview() {
+        window.dispatchEvent(new Event("fxhash-preview"))
+        setTimeout(() => fxpreview(), 500)
+      }
+</script><link rel="stylesheet" href="./style.css"><script src="./p5.min.js"></script><script src="./sketch.js" charset="utf-8"></script></head><body><div class="affirmations">✧˚｡⋆ i can shift, i am prepared to shift, i can shift realities easily, i have successfully shifted, i am not attached to this physical body, i am more than the matter that makes up this body, i am not attached to any reality, i am pure consciousness, i have the ability to shift, i am focused on shifting, i will shift successfully, i can shift successfully, i am able to shift successfully, i am confident in my ability to shift, i am in my desired reality, i am already in my desired reality, i know i am in my desired reality, i know i can shift successfully, i'm shifting, i know i'm shifting, i'm shifting right now, i know i have successfully shifted, i am in my desired reality, i have succeeded at shifting to my desired reality, i know i have succeeded at shifting, i have successfully shifted to my desired reality, i'm happy to be in my desired reality, i'm grateful to be in my desired reality, i'm thankful to be in my desired reality, i am shifting to my desired reality, i can shift to my desired reality easily, i know i will shift to my desired reality, i know i have the power to shift, i will wake up in my desired reality, i have shifted realities, i know i have shifted realities, i can shift realities with ease, i am going to go to my desired reality, i have faith in shifting realities, it is easy to shift realities, i know i am going to go to my desired reality, i know i have shifted realities, i am capable of shifting realities, i'm finally in my desired reality, i am a master shifter, i am in my ideal reality ⋆｡˚✧</div><script defer="defer" src="./bundle.js"></script></body></html>

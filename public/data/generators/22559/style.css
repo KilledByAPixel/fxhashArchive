@@ -1,0 +1,34 @@
+/* style.css */
+
+html,body {
+    margin: 0;
+    padding: 0;
+  background: #222;
+}
+
+main {
+    text-align: center;
+    width: 100%;
+}
+
+canvas {
+  display: block;
+}
+
+
+main {
+  align-items: center;
+  display: flex;
+  height: 100vh; /* Fallback for browsers that do not support Custom Properties */
+  justify-content: center;
+}
+main canvas { 
+  height: auto !important;
+  width: auto !important;
+  max-width: 100%;
+  max-height: 100%;
+  display: inline-block; /* Instead of display: block; */
+  margin: 0 auto;
+  vertical-align: middle;
+  touch-action: none;
+}
