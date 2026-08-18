@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { loadSummary, loadAllTokens, isVisible } from '../lib/data'
+import { loadSummary, isVisible } from '../lib/data'
 import { seededShuffle } from '../lib/shuffle'
-import type { LeanToken, Summary } from '../lib/types'
+import type { Summary } from '../lib/types'
 import TokenCard from '../components/TokenCard'
 
 // The collected strip is deliberately the longer of the two: it is deterministic,
@@ -39,15 +39,14 @@ function ShareBar({ label, percent, testId }: { label: string; percent: number; 
 
 export default function LandingPage() {
   const [summary, setSummary] = useState<Summary | null>(null)
-  const [tokens, setTokens] = useState<LeanToken[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [seed] = useState(() => Math.floor(Math.random() * 0xffffffff))
 
   useEffect(() => {
+    // Only summary.json — about 200 KB. This page previously called
+    // loadAllTokens(), pulling the entire 16.5 MB catalog across 29 requests to
+    // show thirty thumbnails, on the one page every visitor lands on first.
     loadSummary().then(setSummary, (e) => setError(String(e)))
-    // The art strips are a bonus; the archive statistics are the point. A failed
-    // catalog fetch must not take the whole page down with it.
-    loadAllTokens().then(setTokens, () => setTokens(null))
   }, [])
 
   // The strips are where the badge matters most: the most-collected strip is
@@ -55,13 +54,14 @@ export default function LandingPage() {
   // the one row where nearly every card should carry one.
   const archivedIds = useMemo(() => new Set(summary?.archived ?? []), [summary])
 
-  const shown = useMemo(() => (tokens ?? []).filter(isVisible), [tokens])
-  const random = useMemo(() => seededShuffle(shown, seed).slice(0, RANDOM_STRIP), [shown, seed])
-  const collected = useMemo(() => {
-    if (!summary) return []
-    const byId = new Map(shown.map((t) => [t.id, t]))
-    return summary.ranked.map((id) => byId.get(id)).filter((t): t is LeanToken => Boolean(t)).slice(0, COLLECTED_STRIP)
-  }, [summary, shown])
+  const random = useMemo(
+    () => seededShuffle((summary?.featured.sample ?? []).filter(isVisible), seed).slice(0, RANDOM_STRIP),
+    [summary, seed],
+  )
+  const collected = useMemo(
+    () => (summary?.featured.top ?? []).filter(isVisible).slice(0, COLLECTED_STRIP),
+    [summary],
+  )
 
   const archivedPct = summary
     ? (100 * summary.counts.archived) / summary.counts.projects

@@ -1,12 +1,12 @@
 import { Link } from 'react-router-dom'
 import IpfsImage from './IpfsImage'
-import type { LeanToken } from '../lib/types'
+import type { CardToken } from '../lib/types'
 
 export default function TokenCard({
   token,
   archived = false,
 }: {
-  token: LeanToken
+  token: CardToken
   archived?: boolean
 }) {
   return (

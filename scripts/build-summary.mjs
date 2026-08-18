@@ -32,9 +32,18 @@ const shardLabels = async (dir, prefix) =>
 async function main() {
   const tokenLabels = await shardLabels(join(DATA, 'tokens'), 'index')
 
+  // Kept in step with HIDDEN_FLAGS in src/lib/data.ts. Featured cards are shipped
+  // to the landing page directly, so a flagged project must be excluded here as
+  // well as at render time — otherwise moderation would depend on the client
+  // remembering to re-check data we handed it.
+  const HIDDEN_FLAGS = new Set(['MALICIOUS', 'HIDDEN', 'REPORTED', 'AUTO_DETECT_COPY'])
+
   let projectCount = 0
+  const visibleTokens = []
   for (const label of tokenLabels) {
-    projectCount += (await loadJson(join(DATA, 'tokens', `index-${label}.json`), [])).length
+    const shard = await loadJson(join(DATA, 'tokens', `index-${label}.json`), [])
+    projectCount += shard.length
+    for (const t of shard) if (!HIDDEN_FLAGS.has(t.flag)) visibleTokens.push(t)
   }
 
   const artists = await loadJson(join(DATA, 'artists', 'index.json'), [])
@@ -64,6 +73,7 @@ async function main() {
     seedCount: seedsMeta.seedsCaptured ?? 0,
     volumes,
     archivedIds: Object.keys(manifest).map(Number),
+    visibleTokens,
     generatedAt: new Date().toISOString(),
   })
 

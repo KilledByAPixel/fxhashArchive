@@ -55,3 +55,20 @@ test('a failed load offers a retry instead of claiming the artist does not exist
   fireEvent.click(screen.getByRole('button', { name: /retry/i }))
   expect(await screen.findByRole('heading', { name: 'Alice' })).toBeTruthy()
 })
+
+test('badges the artist works whose code is fully archived', async () => {
+  vi.spyOn(data, 'loadSummary').mockResolvedValue({
+    generatedAt: '2026-08-18T00:00:00.000Z',
+    counts: {
+      projects: 2, artists: 1, iterations: 0, seeds: 0, archived: 1,
+      archivedShareOfVolume: 50,
+    },
+    ranked: [1], archived: [1],
+    featured: { top: [], sample: [] },
+  })
+  renderAt('tz1a')
+  // An artist checking their own page is who the preservation request form is
+  // for, so the archived state has to be visible right here.
+  await screen.findByText('Tok 1')
+  expect(screen.getAllByTitle(/fully archived/i)).toHaveLength(1)
+})

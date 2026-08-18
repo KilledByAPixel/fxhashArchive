@@ -3,12 +3,11 @@ import { test, expect, vi, beforeEach, afterEach } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import LandingPage from './LandingPage'
 import * as data from '../lib/data'
-import type { LeanToken } from '../lib/types'
+import type { CardToken } from '../lib/types'
 
-const token = (id: number): LeanToken => ({
-  id, slug: `tok-${id}`, name: `Tok ${id}`, flag: 'CLEAN', supply: 1, iterationsCount: 0,
-  createdAt: null, mintOpensAt: '2022-01-01T00:00:00Z', thumbnailUri: null, displayUri: null,
-  generativeUri: 'ipfs://gen', tags: [], author: { id: 'tz1a', name: 'Alice', avatarUri: null },
+const card = (id: number): CardToken => ({
+  id, slug: `tok-${id}`, name: `Tok ${id}`, flag: 'CLEAN',
+  thumbnailUri: null, author: { id: 'tz1a', name: 'Alice' },
 })
 
 const summary = {
@@ -19,21 +18,16 @@ const summary = {
   },
   ranked: [3, 1, 2],
   archived: [1],
-  // Deliberately does NOT start at p:1 — the real curve starts at p:0.25 (see
-  // CURVE_POINTS in scripts/summary-lib.mjs). A fixture starting at p:1 would let
-  // a bug that reads curve[0] instead of the p===1 point pass by accident.
-  curve: [
-    { p: 0.25, share: 45.6 },
-    { p: 0.5, share: 56.5 },
-    { p: 1, share: 67.1 },
-    { p: 10, share: 94.6 },
-    { p: 100, share: 100 },
-  ],
+  // The strips now come from here rather than the 16.5 MB catalog. `top` is in
+  // rank order; `sample` is the pool the random strip shuffles.
+  featured: {
+    top: [card(3), card(1), card(2)],
+    sample: [card(1), card(2), card(3)],
+  },
 }
 
 beforeEach(() => {
   vi.spyOn(data, 'loadSummary').mockResolvedValue(summary)
-  vi.spyOn(data, 'loadAllTokens').mockResolvedValue([token(1), token(2), token(3)])
 })
 
 afterEach(() => {
@@ -103,11 +97,21 @@ test('most-collected strip follows the ranking', async () => {
   expect(names).toEqual(['Tok 3', 'Tok 1', 'Tok 2'])
 })
 
-test('survives the catalog failing to load', async () => {
-  vi.spyOn(data, 'loadAllTokens').mockRejectedValue(new Error('offline'))
+test('never fetches the full catalog — the strips come from summary.json', async () => {
+  const all = vi.spyOn(data, 'loadAllTokens')
   renderPage()
-  // Statistics still render; the art strips simply do not appear.
-  expect(await screen.findByText('27,430')).toBeTruthy()
+  await screen.findByRole('heading', { name: /collected/i })
+  // This is the point of the featured cards: 200 KB instead of 16.5 MB across 29
+  // requests, on the page every visitor lands on first.
+  expect(all).not.toHaveBeenCalled()
+})
+
+test('says so when the summary fails, rather than showing an empty page', async () => {
+  vi.spyOn(data, 'loadSummary').mockRejectedValue(new Error('offline'))
+  renderPage()
+  expect(await screen.findByText(/could not load archive statistics/i)).toBeTruthy()
+  // The heading and intro are static, so they still explain what this site is.
+  expect(screen.getByRole('heading', { level: 1, name: /archive/i })).toBeTruthy()
 })
 
 test('badges the archived projects in the strips', async () => {

@@ -3,7 +3,13 @@ import type { LeanToken, Artist, SnapshotMeta, Summary, MarketStats } from './ty
 const BASE = `${import.meta.env.BASE_URL}data/`
 const HIDDEN_FLAGS = new Set(['MALICIOUS', 'HIDDEN', 'REPORTED', 'AUTO_DETECT_COPY'])
 
-export const isVisible = (t: LeanToken) => !HIDDEN_FLAGS.has(t.flag)
+/**
+ * Typed on the flag alone, so it applies equally to a full catalog entry and to
+ * a lean card from summary.json. The featured cards are filtered when that file
+ * is built, but they are still re-checked here — moderation should not depend on
+ * a data file having been generated correctly.
+ */
+export const isVisible = (t: { flag: string }) => !HIDDEN_FLAGS.has(t.flag)
 
 let cache = new Map<string, Promise<unknown>>()
 

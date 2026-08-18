@@ -67,5 +67,27 @@ export interface Summary {
   ranked: number[]
   /** Project ids whose generator code is archived in this repo. */
   archived: number[]
-  curve: Array<{ p: number; share: number }>
+  /**
+   * Enough cards for the landing page to render its two strips without
+   * fetching the 16.5 MB catalog. `top` is in rank order; `sample` is spread
+   * across the catalog so the random strip covers every era of the platform.
+   */
+  featured: {
+    top: CardToken[]
+    sample: CardToken[]
+  }
+}
+
+/**
+ * The fields a project card renders. `thumbnailUri` is an ipfs:// pointer, not
+ * image data. `LeanToken` satisfies this, so the grid can pass its own tokens
+ * straight through.
+ */
+export interface CardToken {
+  id: number
+  slug: string
+  name: string
+  flag: string
+  thumbnailUri: string | null
+  author: { id: string; name: string | null } | null
 }

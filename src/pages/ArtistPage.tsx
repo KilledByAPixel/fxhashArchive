@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { loadArtists, loadTokensMap, loadAllTokens, isVisible } from '../lib/data'
+import { loadArtists, loadTokensMap, loadAllTokens, loadSummary, isVisible } from '../lib/data'
 import type { Artist, LeanToken } from '../lib/types'
 import TokenCard from '../components/TokenCard'
 import IpfsImage from '../components/IpfsImage'
@@ -19,6 +19,10 @@ export default function ArtistPage() {
   const [state, setState] = useState<ArtistState>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
   const [tokens, setTokens] = useState<LeanToken[]>([])
+  // An artist looking at their own page is exactly who needs to know which of
+  // their works are fully archived — it is what the preservation request form
+  // asks them to check. A failed summary just means no badges, never a broken page.
+  const [archivedIds, setArchivedIds] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     let cancelled = false
@@ -27,6 +31,10 @@ export default function ArtistPage() {
     // or project grid visible while the new one loads.
     setState({ status: 'loading' })
     setTokens([])
+    loadSummary().then(
+      (s) => { if (!cancelled) setArchivedIds(new Set(s.archived)) },
+      () => { if (!cancelled) setArchivedIds(new Set()) },
+    )
     ;(async () => {
       try {
         const [artists, map, all] = await Promise.all([loadArtists(), loadTokensMap(), loadAllTokens()])
@@ -65,7 +73,9 @@ export default function ArtistPage() {
         ? <p className="muted">No visible projects from this artist.</p>
         : (
           <div className="token-grid">
-            {tokens.map((t) => <TokenCard key={t.id} token={t} />)}
+            {tokens.map((t) => (
+              <TokenCard key={t.id} token={t} archived={archivedIds.has(t.id)} />
+            ))}
           </div>
         )}
     </div>

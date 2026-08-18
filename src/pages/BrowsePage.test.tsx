@@ -19,7 +19,7 @@ const summary = {
   counts: { projects: 4, artists: 1, iterations: 0, seeds: 0, archived: 1, archivedShareOfVolume: 25 },
   ranked: [3, 1, 4, 2],
   archived: [2],
-  curve: [{ p: 1, share: 50 }],
+  featured: { top: [], sample: [] },
 }
 
 beforeEach(() => {
@@ -69,7 +69,7 @@ test('unranked projects sort last while keeping their relative order', async () 
     counts: { projects: 4, artists: 1, iterations: 0, seeds: 0, archived: 0, archivedShareOfVolume: 0 },
     ranked: [3, 1], // Only tokens 3 and 1 have recorded trades; 2 and 4 are unranked
     archived: [],
-    curve: [{ p: 1, share: 50 }],
+    featured: { top: [], sample: [] },
   }
   vi.spyOn(data, 'loadSummary').mockResolvedValue(summaryWithUnranked)
   renderPage()

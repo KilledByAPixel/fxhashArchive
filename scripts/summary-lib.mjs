@@ -1,8 +1,59 @@
 // Pure builders for public/data/summary.json. Kept free of I/O so they can be
 // tested directly, mirroring scripts/snapshot-lib.mjs.
 
-/** Percent positions sampled for the landing-page concentration curve. */
-export const CURVE_POINTS = [0.25, 0.5, 1, 2, 3, 5, 10, 25, 50, 100]
+/**
+ * How many cards the landing page ships with, so it never has to fetch the
+ * 16.5 MB catalog just to show two strips of artwork. `top` feeds the
+ * most-collected strip, `sample` the random one — the sample is larger than the
+ * strip so the shuffle has something to vary between visits.
+ */
+export const FEATURED_TOP = 40
+export const FEATURED_SAMPLE = 200
+
+/**
+ * The subset of a project's fields a card actually renders: thumbnail, name,
+ * author, and a link. `thumbnailUri` is an ipfs:// pointer of about fifty
+ * characters, not image data — the images still load from IPFS as before.
+ *
+ * `flag` is carried so the client can still apply its own moderation check
+ * rather than trusting that this file was built with one.
+ */
+export function leanCard(t) {
+  return {
+    id: t.id,
+    slug: t.slug,
+    name: t.name,
+    flag: t.flag,
+    thumbnailUri: t.thumbnailUri ?? null,
+    author: t.author ? { id: t.author.id, name: t.author.name ?? null } : null,
+  }
+}
+
+/**
+ * Cards for the landing page: the highest-ranked projects, plus a spread across
+ * the whole catalog. The spread is taken at even intervals rather than at
+ * random so the file is byte-identical between runs, and so the sample covers
+ * every era of the platform instead of clustering wherever a PRNG landed.
+ *
+ * `tokens` must already be filtered to visible projects.
+ */
+export function buildFeatured(tokens, ranked, topCount = FEATURED_TOP, sampleCount = FEATURED_SAMPLE) {
+  const byId = new Map(tokens.map((t) => [t.id, t]))
+  const top = []
+  for (const id of ranked) {
+    if (top.length >= topCount) break
+    const t = byId.get(id)
+    if (t) top.push(leanCard(t))
+  }
+
+  const sample = []
+  const n = Math.min(sampleCount, tokens.length)
+  for (let i = 0; i < n; i++) {
+    // Even spacing across the catalog, which is ordered by mint date.
+    sample.push(leanCard(tokens[Math.floor((i * (tokens.length - 1)) / Math.max(1, n - 1))]))
+  }
+  return { top, sample }
+}
 
 /** Project ids, highest volume first. Zero-volume projects are not ranked at all. */
 export function buildRanking(volumes) {
@@ -12,20 +63,6 @@ export function buildRanking(volumes) {
     // ranking would show up as a spurious diff on every regeneration.
     .sort((a, b) => b[1] - a[1] || a[0] - b[0])
     .map(([id]) => id)
-}
-
-export function buildCurve(volumes, points = CURVE_POINTS) {
-  const ranked = buildRanking(volumes)
-  const sorted = ranked.map((id) => volumes.get(id))
-  const total = sorted.reduce((a, b) => a + b, 0)
-  if (total === 0) return points.map((p) => ({ p, share: 0 }))
-  return points.map((p) => {
-    // At least one project: rounding 1% of a small catalog to zero would report
-    // a 0% share, which reads as "the top projects hold nothing".
-    const n = Math.max(1, Math.round((ranked.length * p) / 100))
-    const share = sorted.slice(0, n).reduce((a, b) => a + b, 0)
-    return { p, share: Math.round((1000 * share) / total) / 10 }
-  })
 }
 
 /**
@@ -46,8 +83,10 @@ export function buildArchivedVolumeShare(volumes, archivedIds) {
 
 export function buildSummary({
   projectCount, artistCount, iterationCount, seedCount, volumes, archivedIds, generatedAt,
+  visibleTokens = [],
 }) {
   const archived = [...archivedIds].sort((a, b) => a - b)
+  const ranked = buildRanking(volumes)
   return {
     generatedAt,
     counts: {
@@ -58,8 +97,8 @@ export function buildSummary({
       archived: archived.length,
       archivedShareOfVolume: buildArchivedVolumeShare(volumes, archivedIds),
     },
-    ranked: buildRanking(volumes),
+    ranked,
     archived,
-    curve: buildCurve(volumes),
+    featured: buildFeatured(visibleTokens, ranked),
   }
 }

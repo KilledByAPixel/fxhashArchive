@@ -15,7 +15,8 @@ const summary = {
     projects: 27430, artists: 5407, iterations: 1845509, seeds: 1802387, archived: 396,
     archivedShareOfVolume: 70.5,
   },
-  ranked: [1], archived: [1], curve: [{ p: 1, share: 67.9 }],
+  ranked: [1], archived: [1],
+  featured: { top: [], sample: [] },
 }
 
 function renderAt(path: string) {
