@@ -1,0 +1,1 @@
+window.$fxhashFeatures={Fog:function(e){return e<15?"thin":e<20?"murky":e<25?"dense":e<31?"thick":void 0}(nebel),Forest:function(e){return e<3?"solitary":e<8?"sparse":e<13?"tangled":e<18?"wooded":e<23?"thickly wooded":e<27?"old growth":void 0}(dauer),Snow:function(e){return e<9?"heavy":e<16?"soft":e<19?"flurries":void 0}(neigeFeature)};

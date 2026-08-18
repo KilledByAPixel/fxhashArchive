@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Blind Gallery VISTAS EDITION Mint Pass</title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="Author" content="Mark Knol and Blind Gallery">
+	<meta name="License" content="This NFT is released under the NFT License 2.0 - www.nftlicense.org">
+	
+	<script id="fxhash-snippet">
+    //---- do not edit the following code (you can indent as you wish)
+    let search = new URLSearchParams(window.location.search)
+    let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+    let b58dec = str=>[...str].reduce((p,c)=>p*alphabet.length+alphabet.indexOf(c)|0, 0)
+    let sfc32 = (a, b, c, d) => {
+      return () => {
+        a |= 0; b |= 0; c |= 0; d |= 0
+        var t = (a + b | 0) + d | 0
+        d = d + 1 | 0
+        a = b ^ b >>> 9
+        b = c + (c << 3) | 0
+        c = c << 21 | c >>> 11
+        c = c + t | 0
+        return (t >>> 0) / 4294967296
+      }
+    }
+    let rndHash = (n) => Array(n).fill(0).map(_=>alphabet[(Math.random()*alphabet.length)|0]).join("")
+    let matcher = (str, start) => str.slice(start).match(new RegExp(".{"+((str.length-start)>>2)+"}","g")).map(b58dec)
+    // make fxrand from hash
+    var fxhash = search.get("fxhash") || "oo" + rndHash(49)
+    var fxrand = sfc32(...matcher(fxhash, 2))
+    // make fxrandminter from minter address
+    var fxminter = search.get("fxminter") || "tz1" + rndHash(33)
+    var fxrandminter = sfc32(...matcher(fxminter, 3))
+    // true if preview mode active, false otherwise
+    // you can append preview=1 to the URL to simulate preview active
+    var isFxpreview = search.get('preview') === "1"
+    // call this method to trigger the preview
+    function fxpreview() {
+      window.dispatchEvent(new Event("fxhash-preview"))
+      setTimeout(() => fxpreview(), 500)
+    }
+    // get the byte params from the URL
+    const searchParams = window.location.hash
+    let initialInputBytes = searchParams?.replace("#0x", "")
+    const throttle = (func, delay) => {
+      let isThrottled = false
+
+      return function (...args) {
+        if (!isThrottled) {
+          func.apply(this, args)
+          isThrottled = true
+          
+          setTimeout(() => {
+            isThrottled = false
+          }, delay)
+        }
+      }
+    }
+
+    const stringToHex = (s) => {
+      let rtn = ""
+      for (let i = 0; i < s.length; i++) {
+        rtn += s.charCodeAt(i).toString(16).padStart(4, "0")
+      }
+      return rtn
+    }
+
+    const completeHexColor = (hexCode) => {
+      let hex = hexCode.replace("#", "")
+      if (hex.length === 6) {
+        hex = `${hex}ff`
+      }
+      if (hex.length === 3) {
+        hex = `${hex[0]}${hex[0]}${hex[1]}${hex[1]}${hex[2]}${hex[2]}ff`
+      }
+      return hex
+    }
+
+    // the parameter processor, used to parse fxparams
+    const processors = {
+      number: {
+        serialize: (input) => {
+          const view = new DataView(new ArrayBuffer(8))
+          view.setFloat64(0, input)
+          return view.getBigUint64(0).toString(16).padStart(16, "0")
+        },
+        deserialize: (input) => {
+          const view = new DataView(new ArrayBuffer(8))
+          for (let i = 0; i < 8; i++) {
+            view.setUint8(i, parseInt(input.substring(i * 2, i * 2 + 2), 16))
+          }
+          return view.getFloat64(0)
+        },
+        bytesLength: () => 8,
+        constrain: (value, definition) => {
+          let min = Number.MIN_SAFE_INTEGER
+          if (typeof definition.options?.min !== "undefined")
+            min = Number(definition.options.min)
+          let max = Number.MAX_SAFE_INTEGER
+          if (typeof definition.options?.max !== "undefined")
+            max = Number(definition.options.max)
+          max = Math.min(max, Number.MAX_SAFE_INTEGER)
+          min = Math.max(min, Number.MIN_SAFE_INTEGER)
+          const v = Math.min(Math.max(value, min), max)
+          if (definition?.options?.step) {
+            const t = 1.0 / definition?.options?.step
+            return Math.round(v * t) / t
+          }
+          return v
+        },
+        random: (definition) => {
+          let min = Number.MIN_SAFE_INTEGER
+          if (typeof definition.options?.min !== "undefined")
+            min = Number(definition.options.min)
+          let max = Number.MAX_SAFE_INTEGER
+          if (typeof definition.options?.max !== "undefined")
+            max = Number(definition.options.max)
+          max = Math.min(max, Number.MAX_SAFE_INTEGER)
+          min = Math.max(min, Number.MIN_SAFE_INTEGER)
+          const v = Math.random() * (max - min) + min
+          if (definition?.options?.step) {
+            const t = 1.0 / definition?.options?.step
+            return Math.round(v * t) / t
+          }
+          return v
+        },
+      },
+      bigint: {
+        serialize: (input) => {
+          const view = new DataView(new ArrayBuffer(8))
+          view.setBigInt64(0, BigInt(input))
+          return view.getBigUint64(0).toString(16).padStart(16, "0")
+        },
+        deserialize: (input) => {
+          const view = new DataView(new ArrayBuffer(8))
+          for (let i = 0; i < 8; i++) {
+            view.setUint8(i, parseInt(input.substring(i * 2, i * 2 + 2), 16))
+          }
+          return view.getBigInt64(0)
+        },
+        bytesLength: () => 8,
+        random: (definition) => {
+          const MIN_SAFE_INT64 = -9223372036854775808n
+          const MAX_SAFE_INT64 = 9223372036854775807n
+          let min = MIN_SAFE_INT64
+          let max = MAX_SAFE_INT64
+          if (typeof definition.options?.min !== "undefined")
+            min = BigInt(definition.options.min)
+          if (typeof definition.options?.max !== "undefined")
+            max = BigInt(definition.options.max)
+          const range = max - min
+          const bits = range.toString(2).length
+          let random
+          do {
+            random = BigInt(
+              "0b" +
+                Array.from(
+                  crypto.getRandomValues(new Uint8Array(Math.ceil(bits / 8)))
+                )
+                  .map((b) => b.toString(2).padStart(8, "0"))
+                  .join("")
+            )
+          } while (random > range)
+          return random + min
+        },
+      },
+      boolean: {
+        serialize: (input) =>
+          (typeof input === "boolean" && input) ||
+          (typeof input === "string" && input === "true")
+            ? "01"
+            : "00",
+        // if value is "00" -> 0 -> false, otherwise we consider it's 1
+        deserialize: (input) => {
+          return input === "00" ? false : true
+        },
+        bytesLength: () => 1,
+        random: () => Math.random() < 0.5,
+      },
+      color: {
+        serialize: (input) => {
+          return completeHexColor(input)
+        },
+        deserialize: (input) => input,
+        bytesLength: () => 4,
+        transform: (input) => {
+          const r = parseInt(input.slice(0, 2), 16)
+          const g = parseInt(input.slice(2, 4), 16)
+          const b = parseInt(input.slice(4, 6), 16)
+          const a = parseInt(input.slice(6, 8), 16)
+          return {
+            hex: {
+              rgb: "#" + input.slice(0, 6),
+              rgba: "#" + input,
+            },
+            obj: {
+              rgb: { r, g, b },
+              rgba: { r, g, b, a },
+            },
+            arr: {
+              rgb: [r, g, b],
+              rgba: [r, g, b, a],
+            },
+          }
+        },
+        constrain: (value, definition) => {
+          const hex = value.replace("#", "")
+          return hex.slice(0, 8).padEnd(8, "f")
+        },
+        random: () =>
+          `${[...Array(8)]
+            .map(() => Math.floor(Math.random() * 16).toString(16))
+            .join("")}`,
+      },
+      string: {
+        serialize: (input, def) => {
+          let max = 64
+          if (typeof def.options?.maxLength !== "undefined")
+            max = Number(def.options.maxLength)
+          let hex = stringToHex(input.substring(0, max))
+          hex = hex.padEnd(max * 4, "0")
+          return hex
+        },
+        deserialize: (input) => {
+          const hx = input.match(/.{1,4}/g) || []
+          let rtn = ""
+          for (let i = 0; i < hx.length; i++) {
+            const int = parseInt(hx[i], 16)
+            if (int === 0) break
+            rtn += String.fromCharCode(int)
+          }
+          return rtn
+        },
+        bytesLength: (options) => {
+          if (typeof options?.maxLength !== "undefined")
+            return Number(options.maxLength) * 2
+          return 64 * 2
+        },
+        constrain: (value, definition) => {
+          let min = 0
+          if (typeof definition.options?.minLength !== "undefined")
+            min = definition.options.minLength
+          let max = 64
+          if (typeof definition.options?.maxLength !== "undefined")
+            max = definition.options.maxLength
+          let v = value.slice(0, max)
+          if (v.length < min) {
+            return v.padEnd(min)
+          }
+          return v
+        },
+        random: (definition) => {
+          let min = 0
+          if (typeof definition.options?.minLength !== "undefined")
+            min = definition.options.minLength
+          let max = 64
+          if (typeof definition.options?.maxLength !== "undefined")
+            max = definition.options.maxLength
+          const length = Math.round(Math.random() * (max - min) + min)
+          return [...Array(length)]
+            .map((i) => (~~(Math.random() * 36)).toString(36))
+            .join("")
+        },
+      },
+      bytes: {
+        serialize: (input, def) => {
+          const out = Array.from(input)
+            .map((i) => i.toString(16).padStart(2, '0'))
+            .join('')
+          return out
+        },
+        deserialize: (input, def) => {
+          const len = input.length / 2
+          const uint8 = new Uint8Array(len)
+          let idx
+          for (let i = 0; i < len; i++) {
+            idx = i*2
+            uint8[i] = parseInt(`${input[idx]}${input[idx + 1]}`, 16)
+          }
+          return uint8
+        },
+        bytesLength: opt => opt.length,
+        constain: (value, def) => {
+          return value
+        },
+        random: (def) => {
+          const len = def.options?.length || 0
+          const uint8 = new Uint8Array(len)
+          for (let i = 0; i < len; i++) {
+            uint8[i] = (Math.random() * 255) | 0
+          }
+          return uint8
+        },
+      },
+      select: {
+        serialize: (input, def) => {
+          // find the index of the input in the array of options
+          return Math.min(255, def.options?.options?.indexOf(input) || 0)
+            .toString(16)
+            .padStart(2, "0")
+        },
+        deserialize: (input, definition) => {
+          return (
+            definition.options.options[parseInt(input, 16)] ||
+            definition.default
+          )
+        },
+        bytesLength: () => 1,
+        constrain: (value, definition) => {
+          if (definition.options.options.includes(value)) {
+            return value
+          }
+          return definition.options.options[0]
+        },
+        random: (definition) => {
+          const index = Math.round(
+            Math.random() * (definition?.options?.options?.length - 1) + 0
+          )
+          return definition?.options?.options[index]
+        },
+      },
+    }
+
+    // Utility function to get parameter value, default value, or a random value
+    const getParamValue = (param, def, processor) => {
+      if (typeof param !== "undefined") return param
+      if (typeof def.default !== "undefined") return def.default
+      return processor.random(def)
+    }
+
+    // params are injected into the piece using the binary representation of the
+    // numbers, to keep precision
+    const serializeParams = (params, definition) => {
+      // Initialization of the hex string for parameters
+      let hexString = ""
+      // If definition is not provided, return an empty hex string
+      if (!definition) return hexString
+      // Iterating over the definitions
+      for (const def of definition) {
+        const { id, type } = def
+        // Get the processor for the given type
+        const processor = processors[type]
+        // Get the param value, fall back to default or a random value
+        const paramValue = getParamValue(params[id], def, processor)
+        // Serialize the param value
+        const serializedParam = processor.serialize(paramValue, def)
+        // Concatenate serialized params
+        hexString += serializedParam
+      }
+      return hexString
+    }
+
+    // takes the parameters as bytes and outputs an object with the
+    // deserialized parameters, identified by their id in an object
+    const deserializeParams = (bytes, definition) => {
+      const params = {}
+      for (const def of definition) {
+        const processor = processors[def.type]
+        // if we don't have any parameters defined in the URL, set the
+        // default value and move on
+        if (!bytes) {
+          let v
+          if (typeof def.default === "undefined") v = processor.random(def)
+          else v = def.default
+          params[def.id] = processor.constrain?.(v, def) || v
+          continue
+        }
+        // extract the length from the bytes & shift the initial bytes string
+        const valueBytes = bytes.substring(
+          0,
+          processor.bytesLength(def?.options) * 2
+        )
+        bytes = bytes.substring(processor.bytesLength(def?.options) * 2)
+        // deserialize the bytes into the params
+        const value = processor.deserialize(valueBytes, def)
+        params[def.id] = processor.constrain?.(value, def) || value
+      }
+      return params
+    }
+
+    const processParam = (paramId, value, definitions, transformer) => {
+      const definition = definitions.find((d) => d.id === paramId)
+      const processor = processors[definition.type]
+      return processor[transformer]?.(value, definition) || value
+    }
+
+    const processParams = (values, definitions, transformer) => {
+      const paramValues = {}
+      for (const definition of definitions) {
+        const processor = processors[definition.type]
+        const value = values[definition.id]
+        // deserialize the bytes into the params
+        paramValues[definition.id] =
+          processor[transformer]?.(value, definition) || value
+      }
+      return paramValues
+    }
+
+    window.$fx = {
+      _version: "3.3.0",
+      _processors: processors,
+      // where params def & features will be stored
+      _params: undefined,
+      _features: undefined,
+      // where the parameter values are stored
+      _paramValues: {},
+      _listeners: {},
+      _receiveUpdateParams: async function (newRawValues, onDefault) {
+        const handlers = await this.propagateEvent(
+          "params:update",
+          newRawValues
+        )
+        handlers.forEach(([optInDefault, onDone]) => {
+          if (!(typeof optInDefault == "boolean" && !optInDefault)) {
+            this._updateParams(newRawValues)
+            onDefault?.()
+          }
+          onDone?.(optInDefault, newRawValues)
+        })
+        if (handlers.length === 0) {
+          this._updateParams(newRawValues)
+          onDefault?.()
+        }
+      },
+      _updateParams: function (newRawValues) {
+        const constrained = processParams(
+          { ...this._rawValues, ...newRawValues },
+          this._params,
+          "constrain"
+        )
+        Object.keys(constrained).forEach((paramId) => {
+          this._rawValues[paramId] = constrained[paramId]
+        })
+        this._paramValues = processParams(
+          this._rawValues,
+          this._params,
+          "transform"
+        )
+        this._updateInputBytes()
+      },
+      _updateInputBytes: function () {
+        const bytes = serializeParams(this._rawValues, this._params)
+        this.inputBytes = bytes
+      },
+      _emitParams: function (newRawValues) {
+        const constrainedValues = Object.keys(newRawValues).reduce(
+            (acc, paramId) => {
+              acc[paramId] = processParam(
+                paramId,
+                newRawValues[paramId],
+                this._params,
+                "constrain"
+              )
+              return acc
+            },
+            {}
+          )
+        this._receiveUpdateParams(constrainedValues, () => {
+          parent.postMessage(
+            {
+              id: "fxhash_emit:params:update",
+              data: {
+                params: constrainedValues,
+              },
+            },
+            "*"
+          )
+        })
+      },
+      hash: fxhash,
+      rand: fxrand,
+      minter: fxminter,
+      randminter: fxrandminter,
+      iteration: Number(search.get('fxiteration')) || 1,
+      context: search.get("fxcontext") || "standalone",
+
+      preview: fxpreview,
+      isPreview: isFxpreview,
+      params: function(definition) {
+        this._params = definition
+        this._rawValues = deserializeParams(initialInputBytes, definition)
+        this._paramValues = processParams(
+          this._rawValues,
+          definition,
+          "transform"
+        )
+        this._updateInputBytes()
+      },
+      features: function(features) {
+        this._features = features
+      },
+      getFeature: function(id) {
+        return this._features[id]
+      },
+      getFeatures: function() {
+        return this._features
+      },
+      getParam: function(id) {
+        return this._paramValues[id]
+      },
+      getParams: function() {
+        return this._paramValues
+      },
+      getRawParam: function(id) {
+        return this._rawValues[id]
+      },
+      getRawParams: function() {
+        return this._rawValues
+      },
+      getRandomParam: function(id) {
+        const definition = this._params.find(d => d.id === id)
+        const processor = processors[definition.type]
+        return processor.random(definition)
+      },
+      getDefinitions: function() {
+        return this._params
+      },
+      stringifyParams: function(params) {
+        return JSON.stringify(
+          params || this._rawValues,
+          (key, value) => {
+            if (typeof value === "bigint") return value.toString()
+            return value
+          }, 
+          2,
+        )
+      },
+      on: function (name, callback, onDone) {
+        if (!this._listeners[name]) {
+          this._listeners[name] = []
+        }
+        this._listeners[name].push([callback, onDone])
+        return () => {
+          const index = this._listeners[name].findIndex(
+            ([c]) => c === callback
+          )
+          if (index > -1) {
+            this._listeners[name].splice(index, 1)
+          }
+        }
+      },
+      propagateEvent: async function (name, data) {
+        const results = []
+        if (this._listeners?.[name]) {
+          for (const [callback, onDone] of this._listeners[name]) {
+            const result = callback(data)
+            results.push([
+              result instanceof Promise ? (await result) : result,
+              onDone
+            ])
+          }
+        }
+        return results
+      },
+      emit: function (id, data) {
+        switch (id) {
+          case "params:update":
+            this._emitParams(data)
+            break
+          default:
+            console.log("$fx.emit called with unknown id:", id)
+            break
+        }
+      },
+    }
+    const resetFxRand = () => {
+      fxrand = sfc32(...matcher(fxhash, 2))
+      $fx.rand = fxrand
+      fxrand.reset = resetFxRand
+    }
+    fxrand.reset = resetFxRand
+    const resetFxRandMinter = () => {
+      fxrandminter = sfc32(...matcher(fxminter, 3))
+      $fx.randminter = fxrandminter
+      fxrandminter.reset = resetFxRandMinter
+    }
+    fxrandminter.reset = resetFxRandMinter
+    window.addEventListener("message", (event) => {
+      if (event.data === "fxhash_getInfo") {
+        parent.postMessage({
+          id: "fxhash_getInfo",
+          data: { 
+            version: window.$fx._version,
+            hash: window.$fx.hash,
+            iteration: window.$fx.iteration,
+            features: window.$fx.getFeatures(),
+            params: {
+              definitions: window.$fx.getDefinitions(),
+              values: window.$fx.getRawParams(),
+            },
+            minter: window.$fx.minter,
+          },
+        }, "*")
+      }
+      if (event.data?.id === "fxhash_params:update") {
+        const { params } = event.data.data
+        if (params) window.$fx._receiveUpdateParams(params)
+      }
+    })
+    // END NEW
+
+    //---- /do not edit the following code
+
+</script>
+</head>
+<body>
+<style>
+body,html {margin:0;padding:0;width:100vw;height:100vh;overflow:hidden;background:#000;color:#fff;font:21px monospace;}
+canvas {display:block;width:100vmin;height:100vmin;bottom:0;left:0;margin:auto;position:absolute;right:0;top:0;}
+.hidden {visibility:hidden}</style>
+<img src="ticket.png" id=ticket class="hidden">
+<canvas id=ticketCanvas width="1236" height="2400" class="hidden"></canvas>
+<canvas id=canvas width="3000" height="3000"></canvas>
+<canvas id=patternCanvas width="3000" height="3000"></canvas>
+<script>
+console.log({fxhash});
+let mainCtx = canvas.getContext("2d"), 
+  ticketCtx = ticketCanvas.getContext("2d"), 
+  patternCtx = patternCanvas.getContext("2d");
+  
+let logo,feralFileLogo;
+
+const isMonochrome = fxrand() < 0.01;
+const useRareGradient = fxrand() < 0.3;
+
+const colors = ["#A7CECB","#4379A8","#154B81","#154B81","#6A888C", "#8EA98D", "#B4D3B2", "#E66972","#E66972", "#57838C", "#78B293"]; 
+const backgroundColor = pick(colors);
+const monochromeColors = ["#E66972", "#57838C", "#4379A8","#154B81","#CCCCCC"];
+const monochromeColor = pick(monochromeColors);
+const qr = "1111111000001000101111111100000101010011100100000110111010000100111010111011011101011111111001011101101110100101100010101110110000010110010010010000011111111010101010101111111000000000111101010000000011111011110101100101010100011100010110100110100010000001101010001111111101101110101000010010101000010000111111110110011110111100101010001010011010101010001111010010110111110111011010110101001110110001100011100111011011111010000000000111100011000110001111111011101010101010111100000100101001010001101110111010111111111111101101011101010011011101011111101110101010010100000110110000010100010011101110011111111011010110000111111";
+const BOLD_FONT = "GillSansBold", LIGHT_FONT = "GillSansMedium";
+
+let mountainX = 100;
+let mountainY = 100;
+let mountainWidth = 100;
+let mountainHeight = 100;
+
+window.addEventListener("load", async () => {
+	document.fonts.add(await new FontFace(BOLD_FONT, `url('${BOLD_FONT}.otf') format("truetype")`).load());
+	document.fonts.add(await new FontFace(LIGHT_FONT, `url('${LIGHT_FONT}.otf') format("truetype")`).load());
+
+	logo = await loadImage("logo.png");
+	feralFileLogo = await loadImage("feral-file.png");
+
+	await clouds(patternCtx);
+	patternCtx.canvas.classList.add('hidden');
+	let mountainPattern = mainCtx.createPattern(patternCtx.canvas, 'no-repeat');
+	
+	await clouds(mainCtx);
+	drawPoints(mainCtx, getMountain(canvas.width/2,canvas.height*0.75,canvas.width,canvas.height/2, fxrand()*777,1,75), true, [mountainPattern], 1.0);
+
+	let pixels = mainCtx.getImageData(0,0,mainCtx.canvas.width, mainCtx.canvas.height).data;
+	await scribble(mainCtx, pixels, range(0.1,0.85), range(0.25,0.5));
+	
+	let angle = range(-0.1, 0.1);
+	let mainTicketScale = 2.1;
+	mainCtx.shadowColor = "rgba(0,0,0,0.2)";
+	mainCtx.shadowBlur = 80;
+	mainCtx.shadowOffsetX = 30;
+	mainCtx.shadowOffsetY = 30;
+	drawTicket(1500, 1500, mainTicketScale, angle, true);
+
+	mainCtx.shadowColor = "rgba(0,0,0,0.2)";
+	mainCtx.shadowBlur = 240;
+	mainCtx.shadowOffsetX = 60;
+	mainCtx.shadowOffsetY = 60;
+	drawTicket(1500, 1500, mainTicketScale, angle, false);
+	
+	fxpreview();
+});
+
+async function pixelshift(ctx) {
+	ctx.save();
+	let canvas = ctx.canvas;
+	let horizon = range(0.1, 0.9);
+	let pixels1 = ctx.getImageData(0,0,canvas.width, canvas.height*(1-horizon));
+	let pixels2 = ctx.getImageData(0,canvas.height*(1-horizon),canvas.width, canvas.height*horizon);
+	ctx.putImageData(pixels1, 0, canvas.height*horizon);
+	ctx.putImageData(pixels2, 0, 0);
+	ctx.restore();
+	
+	await sleep();
+}
+
+async function clouds(ctx) {
+	let canvas = ctx.canvas;
+	ctx.globalAlpha = 1;
+
+	let clrs = !isMonochrome ? [...colors, ...colors, ...colors, "#d9d498"] : '039cf'.split('').map(v=>`#${v.repeat(6)}`);
+	shuffle(clrs);
+	shuffle(clrs);
+
+	let gradient = ctx.createLinearGradient(0, 0, range(canvas.width / 2, canvas.width * 1.5), range(canvas.height * 0.75, canvas.height * 1.25));
+	if (fxrand() > 0.5) {
+		let gradientX = range(0,canvas.width);
+		let gradientY = range(0,canvas.height);
+		gradient = ctx.createRadialGradient(gradientX, gradientY, 0, gradientX, gradientY, range(canvas.height / 2, canvas.height * 1.25));
+	}
+	
+	let clr1=clrs.pop(),clr2=clrs.pop(),clr3=clrs.pop();
+	gradient.addColorStop(0, clr1);
+	gradient.addColorStop(0.5, clr2);
+	gradient.addColorStop(1, clr3);
+	fillRect(ctx, 0, 0, canvas.width, canvas.height, gradient);
+
+	barCode(ctx, 50, canvas.height/2 + 50, canvas.width - 100, canvas.height/2 - 100, backgroundColor, 0.2);
+	
+	await sleep();
+	let pixels = ctx.getImageData(0,0,canvas.width, canvas.height).data;
+	await scribble(ctx, pixels, range(1,3), 0.7);
+	ctx.filter = 'contrast(150%)';
+	await scribble(ctx, pixels, range(0.1,0.85), 0.9);
+	ctx.filter = 'none';
+	
+	barCode(ctx, 50, 50, canvas.width - 100, canvas.height/2 - 100, clr2, 0.2);
+	
+	await pixelshift(ctx);
+	await sleep();
+	pixels = ctx.getImageData(0,0,canvas.width, canvas.height).data;
+	await scribble(ctx, pixels,1.5, 0.25);
+	await pixelshift(ctx);
+	
+	await sleep();
+	pixels = ctx.getImageData(0,0,canvas.width, canvas.height).data;
+	if (fxrand() > 0.5) await scribble(ctx, pixels,1.5,0.25);
+	await scribble(ctx, pixels, 0.9, 0.09);
+
+	if (isMonochrome) {
+		clrs = [...monochromeColors, ...colors];
+		let gradient = ctx.createLinearGradient(0, 0, range(canvas.width / 2, canvas.width * 1.5), range(canvas.height * 0.75, canvas.height * 1.25));
+		shuffle(clrs)
+		gradient.addColorStop(0, clrs.pop());
+		gradient.addColorStop(0.5, clrs.pop());
+		gradient.addColorStop(1, clrs.pop());
+	
+		let monochromeFill = monochromeColor;
+		if (useRareGradient) monochromeFill = gradient;
+	
+		ctx.globalCompositeOperation = 'color';
+		fillRect(ctx, 0,0,canvas.width, canvas.height, monochromeFill);
+		ctx.globalCompositeOperation = 'source-over';
+	}
+	
+	await sleep();
+}
+
+async function scribble(ctx, pixels, lineWidthScale = 1, opacity = 1.0) {
+	ctx.save();
+	let canvas = ctx.canvas;
+	ctx.lineCap = 'round';
+	ctx.lineJoin = 'round';
+	let c = 0;
+	for(let y=-50;y<=canvas.height+50;y+=range(90*lineWidthScale,250)) {
+		for(let x=-50;x<=canvas.width+50;x+=range(90*lineWidthScale,250)) {
+			ctx.beginPath();
+			
+			let lineWidth = range(50, 300) * lineWidthScale;
+			
+			let path = new Path2D();
+			let moveRangeX = lineWidth;
+			let moveRangeY = lineWidth;
+			path.moveTo(range(x-moveRangeX,x+moveRangeX),range(y-moveRangeY,y+moveRangeY));
+			path.quadraticCurveTo(range(x-moveRangeX,x+moveRangeX),range(y-moveRangeY,y+moveRangeY),range(x-moveRangeX,x+moveRangeX),range(y-moveRangeY,y+moveRangeY));
+			if (fxrand() > 0.5) path.quadraticCurveTo(range(x-moveRangeX,x+moveRangeX),range(y-moveRangeY,y+moveRangeY),range(x-moveRangeX,x+moveRangeX),range(y-moveRangeY,y+moveRangeY));
+			if (fxrand() > 0.5) path.quadraticCurveTo(range(x-moveRangeX,x+moveRangeX),range(y-moveRangeY,y+moveRangeY),range(x-moveRangeX,x+moveRangeX),range(y-moveRangeY,y+moveRangeY));
+			
+			let colorRange = range(0,500);
+			let colorX = clamp(Math.round(x+range(-colorRange,colorRange)), 0, canvas.width);
+			let colorY = clamp(Math.round(y+range(-colorRange,colorRange)), 2, canvas.height - 2);
+			
+	ctx.globalAlpha = opacity;
+			let idx = (colorX + colorY*canvas.width) * 4 | 0;
+			let r = clamp(pixels[idx+0], 1, 254), 
+			  g = clamp(pixels[idx+1], 1, 254), 
+			  b = clamp(pixels[idx+2], 1, 254);
+			ctx.strokeStyle = `rgba(${r},${g},${b},1.0)`;
+			ctx.lineWidth = lineWidth;
+			ctx.stroke(path);
+			
+		}
+		if (c++ % 2 === 1) await sleep();
+	}
+	
+	ctx.restore();
+}
+
+function getMountain(x,y,w,h,seed=1, scale=1, baseHeight=0, totalPoints=50) {
+	let mountainX = x;
+	let mountainY = y;
+	let mountainWidth = w / 2;
+	let mountainHeight = h / 2;
+	baseHeight = baseHeight/50 * mountainHeight;
+	let noise = new SimplexNoise(seed);
+	let pts = [];
+	for(let i=0;i<totalPoints;i++) {
+		let t = i/(totalPoints-1);
+		let ns1 = (1 + noise.noise2D([seed + t*scale,seed]) / 2)
+		let ns2 = (1 + noise.noise2D([(seed*0.5) + t*scale*9,seed]) / 2) * 0.1
+		let ns3 = lerp(0.9,1.1,(1 + noise.noise2D([(seed*0.5) + t*scale*3,seed]) / 2));
+		pts.push([
+			mountainX + lerp(-mountainWidth, mountainWidth, t), 
+			mountainY + lerp(mountainHeight, mountainHeight-baseHeight, ns1*ns3+ns2)
+		]);
+	}
+	pts.push([mountainX + mountainWidth, mountainY + mountainHeight]);
+	pts.push([mountainX + -mountainWidth, mountainY + mountainHeight]);
+	return pts;
+}
+
+function drawMountains(ctx, x, y, w, h) {
+	let mountainColors = [...colors, "#e66972", "#57838c", "#78b293","#111"];
+	let allFilled = pick([1, 0]);
+	let allOutline = fxrand() > 0.5;
+	let baseSeed = fxrand();
+	let detail = 1+baseSeed;
+	let getFillType = () => allFilled ? !allOutline : fxrand() > 0.5;
+	drawPoints(ctx, getMountain(x, y, w, h, baseSeed+123,detail,75), getFillType(),mountainColors);
+	drawPoints(ctx, getMountain(x, y, w, h, baseSeed+234,detail*0.75),60,getFillType(),mountainColors);
+	drawPoints(ctx, getMountain(x, y, w, h, baseSeed+345,0.75,30),getFillType(),mountainColors);
+	drawPoints(ctx, getMountain(x, y, w, h, baseSeed+456,0.5,20),getFillType(),mountainColors);
+	drawPoints(ctx, getMountain(x, y, w, h, baseSeed+567,1.25,10),getFillType(),mountainColors);
+}
+
+function drawTicket(x, y, scale = 1, angle = 0, simple) {
+	let w = ticketCanvas.width,
+		h = ticketCanvas.height;
+		
+	let clrs = ["#131c24","#0b2947","#040b11"];
+	if (fxrand() > 0.05) clrs.push(pick(clrs));
+	shuffle(clrs);
+
+	let gradient = ticketCtx.createLinearGradient(0, 0, range(canvas.width / 2, canvas.width * 1.5), range(canvas.height / 2, canvas.height * 1.5));
+	let clr2;
+	gradient.addColorStop(0, clrs.pop());
+	gradient.addColorStop(0.5, clr2 = clrs.pop());
+	gradient.addColorStop(1, clrs.pop());
+	fillRect(ticketCtx, 0, 0, w, h, gradient);
+	
+	ticketCtx.globalCompositeOperation = 'multiply';
+	ticketCtx.globalAlpha = 0.7;
+	ticketCtx.globalAlpha = 1;
+	ticketCtx.globalCompositeOperation = 'source-over';
+	
+	let textColor = "#f0f0f0";
+
+	ticketCtx.strokeStyle = backgroundColor;
+	ticketCtx.globalAlpha = 0.5;
+	ticketCtx.lineWidth = 2.5;
+	
+	ticketCtx.stroke();
+	ticketCtx.globalAlpha = 1;
+
+	barCode(ticketCtx, 75, 175, w - 150, 75, textColor);
+	barCode(ticketCtx, 75, 265, w - 150, 20, textColor);
+	drawQR(ticketCtx, qr, w - 250, h - 350, 7, 7, "#4379a8");
+	
+	let logoScale = 0.43;
+	ticketCtx.drawImage(logo, 75, h - 350, 1373*logoScale,501*logoScale);
+	logoScale = 0.57;
+	ticketCtx.drawImage(feralFileLogo, w / 2 - 1617*logoScale*0.5, 400, 1617*logoScale,181*logoScale);
+
+	const getNo = () => (range(0,2)|0).toString(2).toUpperCase();
+	
+	ticketCtx.fillStyle = textColor;
+	ticketCtx.font = `112px "${BOLD_FONT}"`;
+	ticketCtx.textAlign = "center";
+	ticketCtx.fillText("VISTAS EDITION", w / 2, 650);
+	
+	ticketCtx.font = `52px "${LIGHT_FONT}"`;
+	ticketCtx.textAlign = "center";
+	ticketCtx.fillText("IN COLLAB WITH", w/2, 379);
+
+	ticketCtx.font = `45px "${LIGHT_FONT}"`;
+	ticketCtx.textAlign = "center";
+	ticketCtx.fillText("E X C H A N G E   A T   B L I N D G A L L E R Y . X Y Z", w / 2, h - 75);
+
+	drawMountains(ticketCtx, w/2, h-800, w-150, 700);
+
+	maskTicket(ticketCtx);
+	
+	mainCtx.save();
+	mainCtx.translate(x, y);
+	mainCtx.rotate(angle);
+	//mainCtx.scale(scale, scale);
+	mainCtx.drawImage(ticketCanvas, -w / 2, -h / 2, w, h);
+
+	mainCtx.restore();
+}
+
+function drawPoints(ctx, pts, doFill, colors, fillOpacity = 0.5) {
+	ctx.save()
+	if (doFill) ctx.strokeStyle = pick(colors);
+	ctx.lineWidth = 5;
+	ctx.fillStyle = pick(colors);
+	ctx.beginPath();
+    ctx.moveTo(...pts[pts.length-1])
+    pts.forEach(p => ctx.lineTo(...p));
+	ctx.closePath();
+	ctx.globalAlpha = fillOpacity;
+	if (doFill) ctx.fill();
+	ctx.globalAlpha = 1;
+	ctx.stroke();
+	ctx.restore()
+}
+
+function circle(ctx, x, y, r, color) {
+	ctx.fillStyle = color;
+	ctx.beginPath();
+	ctx.arc(x, y, r, 0, Math.PI * 2);
+	ctx.fill();
+}
+
+function barCode(ctx, x, y, width, height, color, opacity = 1.0) {
+	let x1 = 0;
+	let barWidth = 5;
+	let c = 0;
+	while (x1 <= width - barWidth*2) {
+		let isLong = c == 0 || c == 19 || c == 20;
+		fillRect(ctx, x+ x1, y, barWidth, height, color);
+		x1 += barWidth + pick([20, 10, 10, 5,6,7,8,0]);
+		barWidth = isLong ? 25 : pick([2,5,10]);
+
+		c++;
+	}
+	ctx.save()
+	ctx.globalAlpha = opacity
+	fillRect(ctx, x + width - 5, y, 5, height, color);
+	ctx.restore();
+}
+
+function drawQR(ctx, qr, x, y, w, h, color) {
+	let chars = qr.split("").map((v) => v === "1");
+	let s = 25;
+	for (let x1 = 0; x1 < s; x1++)
+		for (let y1 = 0; y1 < s; y1++) {
+			if (chars[y1 * s + x1]) {
+				fillRect(ctx, x + x1 * w, y + y1 * h, w, h, color);
+			}
+		}
+}
+
+function fillRect(ctx, x, y, w, h, color) {
+	ctx.fillStyle = Array.isArray(color) ? pick(color) : color;
+	ctx.fillRect(x, y, w, h);
+}
+
+function roundedRect(ctx, x, y, w, h, r) {
+	if (w < 2 * r) r = w / 2;
+	if (h < 2 * r) r = h / 2;
+	ctx.beginPath();
+	ctx.moveTo(x + r, y);
+	ctx.arcTo(x + w, y, x + w, y + h, r);
+	ctx.arcTo(x + w, y + h, x, y + h, r);
+	ctx.arcTo(x, y + h, x, y, r);
+	ctx.arcTo(x, y, x + w, y, r);
+	ctx.closePath();
+}
+
+function maskTicket(ctx) {
+	ctx.save();
+	let maskCanvas = document.createElement("canvas");
+	let maskCtx = maskCanvas.getContext("2d");
+	maskCanvas.width = ticketCanvas.width;
+	maskCanvas.height = ticketCanvas.height;
+	maskCtx.drawImage(ticket, 0, 0, maskCanvas.width, maskCanvas.height);
+
+	ctx.globalCompositeOperation = "destination-in";
+	ctx.drawImage(maskCanvas, 0, 0);
+	ctx.globalCompositeOperation = "source-over";
+	ctx.restore();
+}
+
+function pick(arr) {
+	return arr[(fxrand() * arr.length) | 0];
+}
+
+function range(a, b) {
+	return a + (b - a) * fxrand();
+}
+
+function lerp(a, b, t) {
+	return a + (b - a) * t;
+}
+
+function clamp(v,min=0,max=1) {
+	if (v<=min) {return min;}
+	else if (v>=max) {return max;}
+	else {return v;}
+}
+
+function sleep() {
+	return new Promise(requestAnimationFrame); 
+}
+
+function shuffle(array) {
+	for (let i = array.length - 1; i > 0; i--) {
+		const j = Math.floor(fxrand() * (i + 1));
+		[array[i], array[j]] = [array[j], array[i]];
+	}
+	return array;
+}
+
+function loadImage(src) {
+	return new Promise((resolve, reject) => {
+		let img = new Image();
+		img.onload = () => resolve(img);
+		img.onerror = reject;
+		img.src = src;
+	});
+}
+
+////////////////////////////////////////////////////////////////
+// Simplex Noise utility code. Created by Reinder Nijhoff 2020
+// https://turtletoy.net/turtle/6e4e06d42e
+// Based on: http://webstaff.itn.liu.se/~stegu/simplexnoise/simplexnoise.pdf
+////////////////////////////////////////////////////////////////
+function SimplexNoise(seed = 1) {
+	const grad = [  [1, 1, 0], [-1, 1, 0], [1, -1, 0], [-1, -1, 0],
+	            	[1, 0, 1], [-1, 0, 1], [1, 0, -1], [-1, 0, -1],
+            		[0, 1, 1], [0, -1, 1], [0, 1, -1], [0, -1, -1] ];
+	const perm = new Uint8Array(512);
+            		
+	const F2 = (Math.sqrt(3) - 1) / 2, F3 = 1/3;
+	const G2 = (3 - Math.sqrt(3)) / 6, G3 = 1/6;
+
+	const dot2 = (a, b) => a[0] * b[0] + a[1] * b[1];
+	const sub2 = (a, b) => [a[0] - b[0], a[1] - b[1]];
+	const dot3 = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+	const sub3 = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+
+	class SimplexNoise {
+		constructor(seed = 1) {
+			for (let i = 0; i < 512; i++) {
+				perm[i] = i & 255;
+			}
+			for (let i = 0; i < 255; i++) {
+				const r = (seed = this.hash(i+seed)) % (256 - i)  + i;
+				const swp = perm[i];
+				perm[i + 256] = perm[i] = perm[r];
+				perm[r + 256] = perm[r] = swp;
+			}
+		}
+		noise2D(p) {
+			const s = dot2(p, [F2, F2]);
+			const c = [Math.floor(p[0] + s), Math.floor(p[1] + s)];
+			const i = c[0] & 255, j = c[1] & 255;
+			const t = dot2(c, [G2, G2]);
+
+			const p0 = sub2(p, sub2(c, [t, t]));
+			const o  = p0[0] > p0[1] ? [1, 0] : [0, 1];
+			const p1 = sub2(sub2(p0, o), [-G2, -G2]);
+			const p2 = sub2(p0, [1-2*G2, 1-2*G2]);
+			
+			let n =  Math.max(0, 0.5-dot2(p0, p0))**4 * dot2(grad[perm[i+perm[j]] % 12], p0);
+			    n += Math.max(0, 0.5-dot2(p1, p1))**4 * dot2(grad[perm[i+o[0]+perm[j+o[1]]] % 12], p1);
+		    	n += Math.max(0, 0.5-dot2(p2, p2))**4 * dot2(grad[perm[i+1+perm[j+1]] % 12], p2);
+			
+			return 70 * n;
+		}
+		hash(i) {
+            i = 1103515245 * ((i >> 1) ^ i);
+            const h32 = 1103515245 * (i ^ (i>>3));
+            return h32 ^ (h32 >> 16);
+		}
+	}
+	return new SimplexNoise(seed);
+}
+</script>
+</body>
+</html>
