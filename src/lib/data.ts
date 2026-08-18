@@ -157,8 +157,10 @@ const loadSeedChunk = (contractIndex: number, chunk: number) =>
  * A minted iteration's seed, read entirely from this repository.
  *
  * This is what lets an archived project run with no network at all: the seed is
- * the only thing besides the generator that a piece cannot be recreated without,
- * and it is not on chain — see scripts/snapshot-seeds.mjs.
+ * the only thing besides the generator that a piece cannot be recreated without.
+ * Tezos stores an IPFS pointer, never the seed itself; for most tokens the seed
+ * does equal their mint operation's hash, but 9% have no on-chain copy at all —
+ * see scripts/snapshot-seeds.mjs.
  *
  * Returns null rather than throwing for the two honest "no seed" cases: a project
  * whose contract we do not know, and a token that was minted but never signed, so

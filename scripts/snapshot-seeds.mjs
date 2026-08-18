@@ -3,23 +3,43 @@
 //
 // WHY THIS EXISTS
 // ---------------
-// The seed is NOT stored on-chain. Verified against gentk contract
-// KT1KEa8z6vWXDJrVqtMrAeDVzsvxat3kHaCE at every layer:
+// No layer of Tezos *state* holds the seed. Verified against gentk contract
+// KT1KEa8z6vWXDJrVqtMrAeDVzsvxat3kHaCE:
 //   - token_data bigmap      -> {assigned, issuer_id, iteration, royalties}
 //   - token_metadata bigmap  -> an ipfs:// URI, nothing else
 //   - the mint operation     -> an ipfs:// URI, nothing else
 //   - the assign_metadata op -> an ipfs:// URI, nothing else
-// Tezos only ever stores a pointer. The seed exists solely inside the JSON
-// document that pointer names, which lives on IPFS. If those pins lapse the
-// seed is unrecoverable by any means, because nothing else derives it.
-// Ownership and provenance survive on-chain; *which artwork you own* does not.
+// Tezos only ever stores a pointer; the seed lives in the JSON document that
+// pointer names, on IPFS. That document is what this script drains.
 //
-// The seed is therefore both the most irreplaceable and the smallest piece of
-// the archive: ~51 bytes each, and without it a generator can never be re-run
-// to reproduce a specific piece.
+// CORRECTION (2026-08-18). The audit above inspected storage and operation
+// *contents*, and so missed the one place the seed does appear on chain: for
+// most tokens the seed IS the hash of the mint operation. It is the operation's
+// name rather than data inside it, which is exactly why a storage-layer check
+// cannot see it. Sampled against TzKT /operations/{hash}:
+//   KT1KEa8z...   60/60 resolve to a real operation
+//   KT1U6EHm...   59/60
+//   KT1EfsNu...  46/220 -- and not at random. This contract stops deriving
+//                          seeds from mint operations at tokenId 46890,
+//                          sharply: 46889 resolves, 46890 does not, and no
+//                          sampled token above it does either.
+// So ~91% of seeds could in principle be rebuilt by indexing the chain and
+// joining each token to its mint operation. That join is not demonstrated here,
+// and it is a rebuild rather than a lookup. The other ~162,315 seeds (9%, all
+// above the cutover) have no on-chain copy and could not be rebuilt at all.
+// Draining them from IPFS stays the practical route for both halves.
 //
-// We source it from TzKT, which cached the IPFS metadata when each token was
-// indexed. That cache is currently the only copy outside IPFS itself.
+// The chain-side mapping is lossy in one direction too: 163 mint operations are
+// batch mints covering 783 consecutive tokens between them, so those tokens
+// share a seed and are genuinely identical pieces.
+//
+// Seeds are the smallest piece of the archive by far -- ~51 bytes each -- and
+// without one a generator can never be re-run to reproduce a specific piece.
+// For the ~162,315 above the cutover they are also the most irreplaceable.
+//
+// We source them from TzKT, which cached the IPFS metadata when each token was
+// indexed. For seeds with no on-chain copy, that cache and the IPFS pins are
+// the only two copies that exist.
 //
 // Usage:
 //   node scripts/snapshot-seeds.mjs [--out DIR] [--limit N] [--commit] [--verify]
