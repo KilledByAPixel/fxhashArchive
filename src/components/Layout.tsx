@@ -6,6 +6,7 @@ export default function Layout() {
       <header className="site-header">
         <Link to="/" className="brand">fxhash viewer</Link>
         <nav>
+          <Link to="/artwork">Artwork</Link>
           <Link to="/artists">Artists</Link>
         </nav>
       </header>
