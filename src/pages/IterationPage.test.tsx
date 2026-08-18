@@ -3,6 +3,7 @@ import { test, expect, vi, beforeEach, afterEach } from 'vitest'
 import { MemoryRouter, Routes, Route, Link } from 'react-router-dom'
 import IterationPage from './IterationPage'
 import * as tzkt from '../lib/tzkt'
+import * as data from '../lib/data'
 import type { Iteration } from '../lib/tzkt'
 
 const iteration: Iteration = {
@@ -15,7 +16,7 @@ beforeEach(() => {
   vi.spyOn(tzkt, 'fetchIteration').mockResolvedValue(iteration)
 })
 
-afterEach(cleanup)
+afterEach(() => { cleanup(); vi.restoreAllMocks() })
 
 const renderPage = () =>
   render(
@@ -134,4 +135,73 @@ test('a rejected fetch renders a retry-able error, not not-found', async () => {
   renderPage()
   expect(await screen.findByText(/could not load/i)).toBeTruthy()
   expect(screen.queryByText(/not found/i)).toBeNull()
+})
+
+// --- the archived copy -------------------------------------------------------
+// A gentk URL names a contract and a token, not a project, so the project id is
+// carried in the link from the project page. With it, the page can run the copy
+// stored in this repo instead of streaming from IPFS.
+
+const renderWithProject = (search = '?p=42') =>
+  render(
+    <MemoryRouter initialEntries={[`/gentk/KT1x/9${search}`]}>
+      <Routes><Route path="/gentk/:contract/:tokenId" element={<IterationPage />} /></Routes>
+    </MemoryRouter>,
+  )
+
+const archivedSummary = {
+  generatedAt: '2026-08-18T00:00:00.000Z',
+  counts: { projects: 1, artists: 1, iterations: 1, seeds: 1, archived: 1, archivedShareOfVolume: 100 },
+  ranked: [42], archived: [42],
+  featured: { top: [], sample: [] },
+}
+
+test('with the indexer dead, an archived iteration still renders from local files', async () => {
+  vi.spyOn(tzkt, 'fetchIteration').mockRejectedValue(new Error('offline'))
+  vi.spyOn(data, 'loadSummary').mockResolvedValue(archivedSummary)
+  vi.spyOn(data, 'loadProjectSeed').mockResolvedValue('ooLOCAL')
+
+  renderWithProject()
+
+  const frame = (await screen.findByTitle(/archived generator/i)) as HTMLIFrameElement
+  expect(frame.getAttribute('src')).toContain('data/generators/42/index.html?fxhash=ooLOCAL')
+  // The seed is the identity of the piece, so it is still shown even with no indexer.
+  expect(screen.getByText('ooLOCAL')).toBeTruthy()
+  // The old behaviour was a dead end here.
+  expect(screen.queryByRole('button', { name: /retry/i })).toBeNull()
+})
+
+test('the archived copy is offered as a choice when the indexer is alive', async () => {
+  vi.spyOn(data, 'loadSummary').mockResolvedValue(archivedSummary)
+  vi.spyOn(data, 'loadProjectSeed').mockResolvedValue('ooLOCAL')
+
+  renderWithProject()
+  await screen.findByRole('heading', { name: 'Piece #9' })
+
+  fireEvent.click(await screen.findByRole('button', { name: /run archived copy/i }))
+  const frame = (await screen.findByTitle(/archived generator/i)) as HTMLIFrameElement
+  expect(frame.getAttribute('src')).toContain('fxhash=ooLOCAL')
+  expect(frame.getAttribute('sandbox')).toBe('allow-scripts')
+})
+
+test('a project that is not archived gets no local option', async () => {
+  vi.spyOn(data, 'loadSummary').mockResolvedValue({ ...archivedSummary, archived: [] })
+  vi.spyOn(data, 'loadProjectSeed').mockResolvedValue('ooLOCAL')
+
+  renderWithProject()
+  await screen.findByRole('heading', { name: 'Piece #9' })
+  expect(screen.queryByRole('button', { name: /run archived copy/i })).toBeNull()
+})
+
+test('without the project hint the page behaves exactly as before', async () => {
+  const summary = vi.spyOn(data, 'loadSummary')
+  const seed = vi.spyOn(data, 'loadProjectSeed')
+
+  renderPage()
+  await screen.findByRole('heading', { name: 'Piece #9' })
+
+  // A cold deep link cannot know the project, so it must not even ask.
+  expect(summary).not.toHaveBeenCalled()
+  expect(seed).not.toHaveBeenCalled()
+  expect(screen.queryByRole('button', { name: /run archived copy/i })).toBeNull()
 })

@@ -251,7 +251,9 @@ export default function TokenPage() {
           {localCells.map((cell) => (
             <Link
               key={cell.id}
-              to={`/gentk/${cell.contract}/${cell.tokenId}`}
+              // Carry the project so the iteration page can find its archived
+              // generator; a gentk URL alone does not say which project it belongs to.
+              to={`/gentk/${cell.contract}/${cell.tokenId}?p=${project.id}`}
               className="token-card"
             >
               {/* No row means the indexer never answered for this id, so we do not
@@ -277,7 +279,7 @@ export default function TokenPage() {
       {!localCells && iterations && iterations.length > 0 && (
         <div className="token-grid">
           {iterations.map((it) => (
-            <Link key={`${it.contract}-${it.tokenId}`} to={`/gentk/${it.contract}/${it.tokenId}`} className="token-card">
+            <Link key={`${it.contract}-${it.tokenId}`} to={`/gentk/${it.contract}/${it.tokenId}?p=${project.id}`} className="token-card">
               <IpfsImage uri={it.thumbnailUri ?? it.displayUri} alt={it.name ?? it.tokenId} className="token-thumb" />
               <div className="token-name">{it.name ?? `#${it.tokenId}`}</div>
             </Link>

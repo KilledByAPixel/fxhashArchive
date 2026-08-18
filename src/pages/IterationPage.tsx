@@ -1,8 +1,10 @@
 import { Fragment, useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { fetchIteration, GENTK_V1_CONTRACT, type Iteration } from '../lib/tzkt'
 import { ipfsToHttp } from '../lib/ipfs'
 import { artifactBaseHref, injectLegacyPatch, needsLegacyPatch } from '../lib/legacyPatch'
+import { loadProjectSeed, loadSummary } from '../lib/data'
+import ArchivedFrame from '../components/ArchivedFrame'
 import IpfsImage from '../components/IpfsImage'
 import LoadError from '../components/LoadError'
 import NotFoundPage from './NotFoundPage'
@@ -27,6 +29,8 @@ type Frame =
   | { view: 'fetching' }
   | { view: 'patched'; html: string }
   | { view: 'direct' }
+  /** The copy stored in this repo, run from local files. */
+  | { view: 'archived' }
 
 /**
  * gentk v1, and *only* gentk v1. Its hash is hardcoded into the artifact, so srcdoc
@@ -40,9 +44,40 @@ const GENTK_V1 = GENTK_V1_CONTRACT
 
 export default function IterationPage() {
   const { contract, tokenId } = useParams()
+  const [params] = useSearchParams()
   const [state, setState] = useState<IterationState>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
   const [frame, setFrame] = useState<Frame>({ view: 'image' })
+
+  /**
+   * The project this iteration belongs to, carried in the link that got us here.
+   *
+   * A gentk URL names a contract and a token, not a project, and archived
+   * generators are stored by project — so without this hint the page cannot tell
+   * which generator to run. Building a token-to-project index instead would cost
+   * every visitor about 592 KB, to serve cold deep links that an offline visitor
+   * does not have. When the hint is absent, the page simply behaves as it always
+   * did and streams from IPFS.
+   */
+  const projectId = Number(params.get('p'))
+  const hasProject = Number.isFinite(projectId) && params.get('p') !== null
+  const [archivedSeed, setArchivedSeed] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!hasProject) { setArchivedSeed(null); return }
+    let cancelled = false
+    setArchivedSeed(null)
+    // Both halves have to hold: the project's code must be archived here, and this
+    // token must have a seed. Either missing means there is nothing local to run.
+    Promise.all([loadSummary(), loadProjectSeed(projectId, Number(tokenId))]).then(
+      ([summary, seed]) => {
+        if (cancelled) return
+        setArchivedSeed(summary.archived.includes(projectId) ? seed : null)
+      },
+      () => { if (!cancelled) setArchivedSeed(null) },
+    )
+    return () => { cancelled = true }
+  }, [hasProject, projectId, tokenId])
 
   useEffect(() => {
     let cancelled = false
@@ -82,6 +117,28 @@ export default function IterationPage() {
     return () => { cancelled = true }
   }, [frame.view, liveSrc])
 
+  // An archived copy is enough to render the page on its own. The indexer supplies
+  // the title, the owner and the attributes, and losing those must no longer cost a
+  // visitor the artwork itself when it is sitting in this repository.
+  if (state.status !== 'ok' && archivedSeed) {
+    return (
+      <div>
+        <h2>#{tokenId}</h2>
+        <p className="muted">
+          Details are unavailable (TzKT unreachable), so this is the archived copy —
+          rebuilt from the generator and seed stored in this repository, with no
+          network of any kind.
+        </p>
+        <div className="iteration-view">
+          <ArchivedFrame projectId={projectId} seed={archivedSeed} label={`#${tokenId}`} />
+        </div>
+        <dl className="iteration-meta">
+          <dt>Hash</dt><dd><code>{archivedSeed}</code></dd>
+        </dl>
+      </div>
+    )
+  }
+
   if (state.status === 'loading') return <p>Loading…</p>
   if (state.status === 'notfound') return <NotFoundPage />
   if (state.status === 'error') {
@@ -97,7 +154,9 @@ export default function IterationPage() {
     <div>
       <h2>{it.name ?? `#${it.tokenId}`}</h2>
       <div className="iteration-view">
-        {live && liveSrc
+        {frame.view === 'archived' && archivedSeed
+          ? <ArchivedFrame projectId={projectId} seed={archivedSeed} label={title} />
+          : live && liveSrc
           ? (frame.view === 'fetching'
             ? <p>Preparing live view…</p>
             : frame.view === 'patched'
@@ -105,6 +164,14 @@ export default function IterationPage() {
               : <iframe src={liveSrc} sandbox="allow-scripts" className="live-frame" title={title} />)
           : <IpfsImage uri={it.displayUri ?? it.thumbnailUri} alt={title} className="iteration-img" />}
       </div>
+      {archivedSeed && (
+        <button
+          className="load-more"
+          onClick={() => setFrame(frame.view === 'archived' ? { view: 'image' } : { view: 'archived' })}
+        >
+          {frame.view === 'archived' ? 'Show image' : 'Run archived copy'}
+        </button>
+      )}
       {liveSrc && (
         <button
           className="load-more"

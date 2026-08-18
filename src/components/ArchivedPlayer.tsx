@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { loadProjectSeed } from '../lib/data'
+import ArchivedFrame from './ArchivedFrame'
 
 /**
  * Runs a project's archived generator entirely from this repository.
@@ -15,9 +16,6 @@ import { loadProjectSeed } from '../lib/data'
  * piece — the seed is what selects the one that was actually minted, and it exists
  * nowhere on chain.
  */
-
-/** Every archived generator unpacks with this entry point; see scripts/archive-generators.mjs. */
-const ENTRY = 'index.html'
 
 interface Props {
   projectId: number
@@ -45,9 +43,6 @@ export default function ArchivedPlayer({ projectId, iterationIds }: Props) {
 
   if (iterationIds.length === 0) return null
 
-  const src = seed
-    ? `${import.meta.env.BASE_URL}data/generators/${projectId}/${ENTRY}?fxhash=${encodeURIComponent(seed)}`
-    : null
 
   return (
     <section className="archived-player">
@@ -65,18 +60,9 @@ export default function ArchivedPlayer({ projectId, iterationIds }: Props) {
           artwork was generated for it.
         </p>
       )}
-      {src && (
+      {seed && (
         <>
-          {/* Same sandbox as the live view: scripts, but no same-origin. The generator
-              is served from our own origin here, so withholding allow-same-origin is
-              what stops archived third-party code from reading this site's storage. */}
-          <iframe
-            key={src}
-            className="archived-frame"
-            src={src}
-            title={`Archived generator for project ${projectId}, iteration ${current}`}
-            sandbox="allow-scripts"
-          />
+          <ArchivedFrame projectId={projectId} seed={seed} label={`iteration ${current}`} />
           <p className="muted">
             <code>{current}</code> · seed <code>{seed}</code>
           </p>
