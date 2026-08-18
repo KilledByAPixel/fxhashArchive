@@ -36,9 +36,11 @@ img { max-width: 100%; }
 .avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; }
 .avatar-lg { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; }
 
+.landing { display: flex; flex-direction: column; gap: 2.5rem; }
 .landing-intro { max-width: 42rem; }
 .landing-stats { display: flex; flex-wrap: wrap; gap: 1.5rem; list-style: none; padding: 0; }
 .landing-stats strong { display: block; font-size: 1.5rem; }
+.landing-coverage { max-width: 42rem; }
 .landing-note { max-width: 42rem; opacity: 0.8; }
 .bar { background: rgba(127, 127, 127, 0.25); border-radius: 3px; height: 10px; overflow: hidden; }
 /* Archived share is well under 2%, so guarantee the fill stays visible. */
