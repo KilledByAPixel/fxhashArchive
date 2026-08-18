@@ -14,6 +14,14 @@ export default function Layout() {
       </main>
       <footer className="site-footer">
         Unofficial read-only archive viewer. Data: snapshot + TzKT + IPFS.
+        {' · '}
+        <a
+          href="https://github.com/KilledByAPixel/fxhashViewer"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Source on GitHub
+        </a>
       </footer>
     </>
   )
