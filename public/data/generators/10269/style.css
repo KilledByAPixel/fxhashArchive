@@ -1,0 +1,24 @@
+body {
+  background-color: #fff;
+}
+
+canvas {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate( -50%, -50% );
+}
+
+.dg.ac {
+  z-index: 10000 !important;
+  display: none !important;
+}
+
+#wait-instructions {
+  position: absolute;
+  top: 25%;
+  left: 50%;
+  transform: translate( -50%, 0 );
+  opacity: .7;
+  text-align: center;
+}

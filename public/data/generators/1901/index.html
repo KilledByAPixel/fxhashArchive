@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>3D-SMOLSKULL</title>
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <meta name="Author" content="Mark Knol & Reinder Nijhoff">
+    <meta name="License" content="This NFT is released under the NFT License 2.0 - www.nftlicense.org">
+
+    <script id="fxhash-snippet">
+      let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+      var fxhash = new URLSearchParams(window.location.search).get('fxhash')
+      let b58dec = (str) => str.split('').reduce((p,c,i) => p + alphabet.indexOf(c) * (Math.pow(alphabet.length, str.length-i-1)), 0)
+      let fxhashTrunc = fxhash.slice(2)
+      let regex = new RegExp(".{" + ((fxhashTrunc.length/4)|0) + "}", 'g')
+      let hashes = fxhashTrunc.match(regex).map(h => b58dec(h))
+      let sfc32 = (a, b, c, d) => {
+        return () => {
+          a |= 0; b |= 0; c |= 0; d |= 0
+          var t = (a + b | 0) + d | 0
+          d = d + 1 | 0
+          a = b ^ b >>> 9
+          b = c + (c << 3) | 0
+          c = c << 21 | c >>> 11
+          c = c + t | 0
+          return (t >>> 0) / 4294967296
+        }
+      }
+      var fxrand = sfc32(...hashes)
+      // used to get features during token mint
+      window.addEventListener("message", (event) => {
+        if (event.data === "fxhash_getFeatures") {
+          parent.postMessage({
+            id: "fxhash_getFeatures",
+            data: window.$fxhashFeatures
+          }, "*")
+        }
+      })
+</script>
+
+    <style>
+        body,
+        html {
+            position: absolute;
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            width: 100vw;
+            height: 100vh;
+            margin: auto;
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+    </style>
+</head>
+
+<body>
+
+<canvas id="canvas"></canvas>
+<script>
+  'use strict';
+
+  function rand() {
+    return fxrand();
+  }
+
+  const capture = navigator.webdriver;
+
+  const WHITE = '#FCFCFC';
+  const LIGHT_GRAY = '#EEEEEE';
+  const BLACK = '#111111';
+  const GREEN = '#58cf34';
+  const GRAY = '#555555';
+  const RED = '#cd202c';
+  const BLUE = '#347fcf';
+  const YELLOW = '#e4d81a';
+
+  const colorEmojis = {
+    '#FCFCFC': '⚪',
+    '#EEEEEE': '⚪+⚪+⚫',
+    '#111111': '⚫',
+    '#58cf34': '🟢',
+    '#555555': '⚪+⚫',
+    '#cd202c': '🔴',
+    '#347fcf': '🔵',
+    '#e4d81a': '🟡'
+  }
+
+  const colors = [RED, BLUE, BLACK, GRAY, LIGHT_GRAY, GREEN, YELLOW];
+  const backgroundColors = [BLACK, BLACK, YELLOW, BLUE, RED, GREEN, WHITE];
+  const s = 11;
+
+  const props = {
+    eyeHeight: 4,
+    eyeColor: 4,
+    eyeDirection: 4,
+    mouthType: 2,
+    mouthSize: 3,
+    background: backgroundColors.length,
+  }
+
+  // create settings
+  let characterProps = [];
+  for (let eyeHeight = 0; eyeHeight < props["eyeHeight"]; eyeHeight++)
+    for (let eyeColor = 0; eyeColor < props["eyeColor"]; eyeColor++)
+      for (let eyeDirection = 0; eyeDirection < props["eyeDirection"]; eyeDirection++)
+        for (let mouthType = 0; mouthType < props["mouthType"]; mouthType++)
+          for (let mouthSize = 0; mouthSize < props["mouthSize"]; mouthSize++)
+            for (let background = 0; background < props["background"]; background++) {
+              if (eyeHeight == 3 && mouthSize == 2) continue;
+              characterProps.push({ eyeHeight, eyeColor, eyeDirection, mouthType, mouthSize, background });
+            }
+
+  const settings = pick(characterProps);
+
+  // set up face
+  let skin = WHITE;
+
+  const bgColor = backgroundColors[settings.background];
+  let bgColor1 = pick(colors);
+  while (bgColor1 == bgColor) bgColor1 = pick(backgroundColors);
+
+  if (rand() > .99) skin = BLACK;
+  if (bgColor == WHITE) skin = GRAY;
+
+  let eyeY = 1 + rand() * 3 | 0;
+  if (settings.mouthSize == 2) eyeY = 1;
+
+  if (settings.eyeHeight <= 1 && settings.eyeColor > 3) {
+    settings.eyeColor -= 2;
+  }
+
+  // eyes fill
+  let eyeColor = [GRAY, GRAY, GRAY, GRAY];
+  if (settings.eyeColor == 1) {
+    // different colors
+    let clr1 = pick(colors);
+    let clr2 = pick(colors);
+    while (clr1 == clr2) clr2 = pick(colors);
+    eyeColor[0] = eyeColor[1] = pick(colors);
+    eyeColor[2] = eyeColor[3] = pick(colors);
+  } else if (settings.eyeColor == 2) {
+    // same colors
+    let clr = pick(colors);
+    eyeColor[0] = eyeColor[1] = eyeColor[2] = eyeColor[3] = clr;
+  } else if (settings.eyeColor == 3) {
+    // same gradient
+    let clr1 = pick(colors);
+    let clr2 = pick(colors);
+    while (clr1 == clr2) clr2 = pick(colors);
+
+    eyeColor[0] = eyeColor[2] = clr1;
+    eyeColor[1] = eyeColor[3] = clr2;
+  } else if (settings.eyeColor == 4) {
+    // different gradients
+    let clr1 = pick(colors);
+    let clr2 = pick(colors);
+    let clr3 = pick(colors);
+    let clr4 = pick(colors);
+    while (clr1 == clr2) clr2 = pick(colors);
+    while (clr3 == clr1 || clr3 == clr2) clr3 = pick(colors);
+    while (clr4 == clr1 || clr4 == clr2 || clr4 == clr3) clr4 = pick(colors);
+
+    eyeColor[0] = clr1;
+    eyeColor[1] = clr2;
+    eyeColor[2] = clr3;
+    eyeColor[3] = clr4;
+  }
+
+  // small change eye options
+  if (rand() > 0.975) settings.eyeColor = 5; // plasma
+  if (rand() > 0.975) settings.eyeColor = 6; // spiral
+
+
+  // extra
+
+  let mouthY = (eyeY + 1) + settings.eyeHeight + 2 + rand() * 2 | 0;
+  if (settings.mouthSize == 2) mouthY = (eyeY + 1) + settings.eyeHeight + 2;
+  const mouthWidth = rand() > 0.5 ? 5 : 3;
+
+  // side cheeks
+  const sideCheeksHeight = 1 + rand() * 4 | 0;
+  const sideCheeksWidth = 1 + rand() * 2 | 0;
+
+  // background
+  let bgType = 0; // (Normal, Army of Skulls, Piter Plasma, Spiral)
+  if (rand() > 0.95) bgType = 4;
+  else if (rand() > 0.975) bgType = 1;
+  else if (rand() > 0.975) bgType = 2;
+  else if (rand() > 0.975) bgType = 3;
+
+  if (bgColor == BLACK) {
+    // change for black skull and army of skulls
+    if (rand() > .95 || (rand() > .5 && skin == BLACK)) {
+      bgType = 1;
+      skin = BLACK;
+    }
+  }
+
+  // animation
+
+  let animationType = 0;
+
+  if (rand() > .4) { // half of skulls have animation
+    animationType = Math.min(7, 1 + Math.floor(rand() * 7));
+    animationType *= rand() > .5 ? 1 : -1;
+  }
+
+  const features = {};
+
+  for (let key in settings) {
+    const value = settings[key];
+    if (key == 'eyeHeight') {
+      if (value == 0) features['eyes'] = 'smol';
+      else if (value == 1) features['eyes'] = 'regular';
+      else if (value == 2) features['eyes'] = 'large';
+      else features['eyes'] = 'huge';
+    } else if (key == 'eyeColor') {
+      if (value == 0) features['eye_color'] = colorEmojis[eyeColor[0]];
+      else if (value == 1) features['eye_color'] = `${colorEmojis[eyeColor[0]]} ${colorEmojis[eyeColor[2]]}`;
+      else if (value == 2) features['eye_color'] = colorEmojis[eyeColor[0]];
+      else if (value == 3) features['eye_color'] = `${colorEmojis[eyeColor[0]]} > ${colorEmojis[eyeColor[1]]}`;
+      else if (value == 4) features['eye_color'] = `${colorEmojis[eyeColor[0]]} > ${colorEmojis[eyeColor[1]]}, ${colorEmojis[eyeColor[2]]} > ${colorEmojis[eyeColor[3]]}`;
+      else if (value == 5) features['eye_color'] = `🌈`;
+      else if (value == 6) features['eye_color'] = `🌀 ${colorEmojis[eyeColor[0]]} ${colorEmojis[eyeColor[3]]}`;
+    } else if (key == 'eyeDirection') {
+      if (value == 0) features['look'] = '⬅️';
+      else if (value == 1) features['look'] = '⬆️';
+      else if (value == 2) features['look'] = '➡️';
+      else if (value == 3) features['look'] = '⬇️';
+    } else if (key == 'mouthType') {
+      if (value == 0) features['mouth'] = '⬛';
+      else if (value == 1) features['mouth'] = '|||';
+    } else if (key == 'mouthSize') {
+      if (value == 0) features['mouth_size'] = 'smol';
+      else if (value == 1) features['mouth_size'] = 'regular';
+      else if (value == 2) features['mouth_size'] = 'huge';
+    } else if (key == 'background') {
+      if (bgType == 0) features[key] = colorEmojis[bgColor];
+      else if (bgType == 1) features[key] = `💀💀💀 ${colorEmojis[bgColor]}`;
+      else if (bgType == 2) features[key] = '🌈';
+      else if (bgType == 3) features[key] = `🌀 ${colorEmojis[bgColor]}`;
+      else if (bgType == 4) features[key] = `${colorEmojis[bgColor]} > ${colorEmojis[bgColor1]}`;
+    } else {
+      // features[key] = settings[key];
+    }
+  }
+
+  if (animationType == 0) features['animation'] = '-';
+  else if (Math.abs(animationType) < 4) features['animation'] = (animationType < 0 ? '⬆' : '⬇') + ['yes', 'no', 'wobble'][Math.abs(animationType) - 1];
+  else if (Math.abs(animationType) < 7) features['animation'] = (animationType < 0 ? '↩' : '↪') + ['x', 'y', 'z'][Math.abs(animationType) - 4];
+  else {
+    animationType = 0;
+    features['animation'] = '-';
+  }
+
+  // golden skull
+  let gold = false;
+  if (rand() > 0.995) {
+    gold = true;
+    eyeColor[0] = eyeColor[1] = eyeColor[2] = eyeColor[3] = skin = '#D4AF37';
+    features['skull'] = '⭐';
+    settings.eyeColor = 0;
+    features['eye_color'] = '⭐';
+  } else {
+    features['skull'] = colorEmojis[skin];
+  }
+
+
+  window.$fxhashFeatures = features;
+  console.log(features);
+
+  function pick(arr) {
+    return arr[rand() * arr.length | 0];
+  }
+
+  function hex2rgb(hex) {
+    hex = hex.replace(/[^0-9A-F]/gi, '');
+    const bigint = parseInt(hex, 16);
+    const r = ((bigint >> 16) & 255) / 255;
+    const g = ((bigint >> 8) & 255) / 255;
+    const b = (bigint & 255) / 255;
+    return [r, g, b];
+  }
+
+  function vec3(hex) {
+    const [r, g, b] = hex2rgb(hex);
+    return `vec3(${(r * r).toFixed(4)}, ${(g * g).toFixed(4)}, ${(b * b).toFixed(4)})`;
+  }
+
+  function webglProgram(canvas, fragmentShader) {
+    const gl = canvas.getContext('webgl', { preserveDrawingBuffer: true, antialias: false });
+    const pid = gl.createProgram();
+    shader(`
+    attribute vec2 vertex;
+
+    void main() {
+        gl_Position = vec4(vertex, 0.0, 1.0);
+    }
+`, gl.VERTEX_SHADER);
+
+    shader(fragmentShader, gl.FRAGMENT_SHADER);
+    gl.linkProgram(pid);
+    gl.useProgram(pid);
+    gl.depthFunc(gl.ALWAYS);
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    gl.enable(gl.BLEND);
+    const vertex = gl.getAttribLocation(pid, 'vertex');
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, 3, -1, -1, 3, -1]), gl.STATIC_DRAW);
+    gl.vertexAttribPointer(vertex, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(vertex);
+
+    function shader(src, a) {
+      let s = gl.createShader(a);
+      gl.shaderSource(s, src);
+      gl.compileShader(s);
+      gl.attachShader(pid, s);
+    }
+
+    const uniformsLocations = {};
+
+    function uniformLocation(name) {
+      if (!uniformsLocations[name]) {
+        uniformsLocations[name] = gl.getUniformLocation(pid, name);
+      }
+      return uniformsLocations[name];
+    }
+
+    function uf3(name, a, b, c) {
+      gl.uniform3f(uniformLocation(name), a, b, c);
+    }
+
+    function uf2(name, a, b) {
+      gl.uniform2f(uniformLocation(name), a, b);
+    }
+
+    function uf1(name, a) {
+      gl.uniform1f(uniformLocation(name), a);
+    }
+
+    let w, h;
+
+    function resize() {
+      const bb = canvas.getBoundingClientRect();
+      if ((bb.width | 0) === w && (bb.height | 0) === h) {
+        return;
+      }
+      w = canvas.width = (bb.width | 0);
+      h = canvas.height = (bb.height | 0);
+      gl.viewport(0, 0, w, h);
+    }
+
+    function draw() {
+      resize();
+      uf2('iResolution', w, h);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    }
+
+    return { uf1, uf2, uf3, resize, draw };
+  }
+
+  const canvas = document.querySelector('canvas');
+  const fragmentShader = `
+precision highp float;
+
+uniform float iTime;
+uniform float iFrame;
+uniform float iZCorrection;
+uniform vec2  iResolution;
+
+uniform float rX;// value=0, min=-4, max=4, step=0.001
+uniform float rY;// value=0, min=-4, max=4, step=0.001
+uniform float rZ;// value=0, min=-4, max=4, step=0.001
+
+
+const float  eyeDirection = ${settings.eyeDirection.toFixed(4)};
+uniform float eyeY;// value=2, min=1, max=3, step=1
+uniform float eyeHeight;// value=2, min=0, max=6, step=1
+
+#define bgType ${bgType.toFixed(4)}
+
+#define skin ${vec3(skin)}
+#define background ${vec3(bgColor)}
+#define background1 ${vec3(bgColor1)}
+
+#define eyeType ${(settings.eyeColor == 0 || settings.eyeColor == 2 ? 0 : settings.eyeColor == 5 ? 2 : settings.eyeColor == 6 ? 3 : 1).toFixed(4)} // value=1, min=0, max=3, step=1  (Normal, Gradient, Piter Plasma, Spiral)
+
+#define eyeColor00 ${vec3(eyeColor[0])}
+#define eyeColor01 ${vec3(eyeColor[1])}
+#define eyeColor10 ${vec3(eyeColor[2])}
+#define eyeColor11 ${vec3(eyeColor[3])}
+
+#define mouthType ${settings.mouthType.toFixed(4)}
+#define mouthY ${(mouthY + 1).toFixed(4)}
+#define mouthSize ${settings.mouthSize.toFixed(4)}
+
+#define mouthWidth ${mouthWidth.toFixed(4)}
+#define sideCheeksWidth ${sideCheeksWidth.toFixed(4)}
+#define sideCheeksHeight ${sideCheeksHeight.toFixed(4)}
+
+#define AA 1
+#define PI 3.1415
+#define m3 mat3(-0.7373, 0.4562, 0.4980, 0, -0.7373, 0.6754, 0.6754, 0.4980, 0.5437)
+#define BLACK vec3(0.0044, 0.0044, 0.0044)
+
+#define lightCol vec3(1.3, 1., .8)
+#define skyCol   vec3( .4, .6,1.15)
+#define lightDir normalize(vec3(-0.25, 0.4, -0.6))
+
+vec2 eyeCoord;
+mat3 rot;
+
+//
+// Hash functions by Dave Hoskins:
+//
+// https://www.shadertoy.com/view/4djSRW
+//
+
+float hash12(vec2 p) {
+    vec3 p3  = fract(vec3(p.xyx) * 443.8975);
+    p3 += dot(p3, p3.yzx + 19.19);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+vec3 hash33(vec3 p3) {
+    p3 = fract(p3 * vec3(443.897, 441.423, 437.195));
+    p3 += dot(p3, p3.yxz + 19.19);
+    return fract((p3.xxy + p3.yxx)*p3.zyx);
+}
+
+float noise(in vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    vec2 u = f*f*(3. -2.*f);
+
+    return mix(mix(hash12(i + vec2(0, 0)),
+    hash12(i + vec2(1, 0)), u.x),
+    mix(hash12(i + vec2(0, 1)),
+    hash12(i + vec2(1, 1)), u.x), u.y);
+}
+
+//
+// rotation matrices
+//
+
+mat2 rot2D(float a) {
+    return mat2(cos(a), sin(a), -sin(a), cos(a));
+}
+
+mat3 rotX(float a) {
+    return mat3(
+    vec3(1, 0, 0),
+    vec3(0, cos(a), -sin(a)),
+    vec3(0, sin(a), cos(a))
+    );
+}
+
+mat3 rotY(float a) {
+    return mat3(
+    vec3(cos(a), 0, sin(a)),
+    vec3(0, 1, 0),
+    vec3(-sin(a), 0, cos(a))
+    );
+}
+
+mat3 rotZ(float a) {
+    return mat3(
+    vec3(cos(a), -sin(a), 0),
+    vec3(sin(a), cos(a), 0),
+    vec3(0, 0, 1)
+    );
+}
+
+//
+// Background types
+//
+
+vec3 plasma(vec2 pos) {
+    vec3 p = vec3(pos * 2., iTime * 0.05);
+
+    float a = 1.;
+    vec3 n = vec3(0);
+    for (int i = 0; i <7; i++){
+        p = m3 * p;
+        vec3 s = sin(p.zxy / a) * a;
+        p += s * 2.;
+        n += s;
+    }
+
+    return n * 0.25 + 0.5;
+}
+
+vec3 spiral(vec2 uv, vec3 color) {
+    float r = length(uv);
+    float theta = atan(uv.y, uv.x);
+    return fract(theta * (2.5 / PI) + 7.0 * pow(r, 0.4) - iTime) < 0.5 ? color : vec3(0);
+}
+
+vec3 bgGradient() {
+    return mix(background, background1, floor(gl_FragCoord.y / iResolution.y * 10.) / 9.);
+}
+
+//
+// SDF framework by Inigo Quilez:
+//
+// https://www.shadertoy.com/view/Xds3zN
+//
+
+
+// http://iquilezles.org/www/articles/smin/smin.htm
+float smin(float a, float b, float k) {
+    float h = max(k-abs(a-b), 0.0)/k;
+    return min(a, b) - h*h*h*k*(1.0/6.0);
+}
+
+// http://www.iquilezles.org/www/articles/distfunctions/distfunctions.htm
+float sdSphere(vec3 p, float s) {
+    return length(p)-s;
+}
+
+float sdBox(vec3 p, vec3 b) {
+    vec3 d = abs(p) - b;
+    return min(max(d.x, max(d.y, d.z)), 0.0) + length(max(d, 0.0));
+}
+
+float sdPlane(vec3 p, vec3 n, float h) {
+    return dot(p, n) + h;
+}
+
+float sdRoundBox(vec3 p, vec3 b, float r) {
+    vec3 q = abs(p) - b + r;
+    return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0) - r;
+}
+
+// http://iquilezles.org/www/articles/smin/smin.htm
+vec2 opU(vec2 d1, vec2 d2) {
+    return (d1.x<d2.x) ? d1 : d2;
+}
+
+vec2 opS(vec2 d1, vec2 d2) {
+    return (-d1.x>d2.x) ? vec2(-d1.x, d1.y) : d2;
+}
+
+vec2 opI(vec2 d1, vec2 d2) {
+    return (d1.x>d2.x) ? d1 : d2;
+}
+
+vec2 map(in vec3 pos) {
+    if (bgType == 1.) {
+        pos = mod(pos + 25., 50.) - 25.;
+    }
+
+    pos.y -= sin(iTime) * .5;
+    pos = rot * pos;
+
+    const float featureDepth = 0.5;
+    const float featureRadius = 0.25;
+
+    vec3 apos = vec3(abs(pos.x), pos.y, pos.z);
+
+    // skull
+    vec2 d = vec2(sdRoundBox(pos, vec3(5.5), 1.), 0.);
+    d = opS(vec2(sdBox(apos - vec3(5.5, -5.5, 0), vec3(sideCheeksWidth, sideCheeksHeight, 7.5)), 0.), d);
+    d = opS(vec2(sdBox(pos - vec3(0., -5.5, 5.5), vec3(10., sideCheeksHeight, 6.)), 0.), d);
+
+    // mouth
+    if (mouthType < .5) { // single block
+        d = opS(vec2(sdRoundBox(apos - vec3(0, 5.5-mouthY-mouthSize+1., -5.5), vec3(mouthWidth * .5, mouthSize+1., featureDepth), featureRadius), 1.), d);
+    } else { // three blocks
+        d = opS(vec2(sdRoundBox(apos - vec3(0, 5.5-mouthY-mouthSize+1., -5.5), vec3(0.5, mouthSize+1., featureDepth), featureRadius), 1.), d);
+        d = opS(vec2(sdRoundBox(apos - vec3(2., 5.5-mouthY-mouthSize+1., -5.5), vec3(0.5, mouthSize+1., featureDepth), featureRadius), 1.), d);
+    }
+
+    // eyes
+    d = opS(vec2(sdRoundBox(apos - vec3(2., 5.5-eyeY-eyeHeight*.5-.5, -5.5), vec3(1.5, eyeHeight*.5+.5, featureDepth), featureRadius), 2.), d);
+
+    eyeCoord.y = apos.y - (4.5-eyeY-eyeHeight);
+    eyeCoord.x = mod(pos.x - .5, 4.) * sign(pos.x);
+
+    return d;
+}
+
+float calcSoftshadow(in vec3 ro, in vec3 rd, in float mint, in float tmax) {
+    float res = 1.0;
+    float t = mint;
+    float ph = 1e10;
+
+    for (int i=0; i<16; i++) {
+        float h = map(ro + rd*t).x;
+
+        float y = h*h/(2.0*ph);
+        float d = sqrt(h*h-y*y);
+        res = min(res, 10.0*d/max(0.0, t-y));
+        ph = h;
+
+        t += h;
+
+        if (res<0.0001 || t>tmax) break;
+    }
+    res = clamp(res, 0.0, 1.0);
+    return smoothstep(0., 1., res);// res*res*(3.0-2.0*res);
+}
+
+vec3 calcNormal(in vec3 pos) {
+    vec2 e = vec2(1.0, -1.0)*0.01;
+    return normalize(e.xyy*map(pos + e.xyy).x +
+    e.yyx*map(pos + e.yyx).x +
+    e.yxy*map(pos + e.yxy).x +
+    e.xxx*map(pos + e.xxx).x);
+}
+
+float calcAO(in vec3 pos, in vec3 nor) {
+    float occ = 0.;
+    float sca = 1.;
+    for (int i=0; i<5; i++) {
+        float hr = .005 + .12*float(i)/4.;
+        vec3 aopos =  nor * hr + pos;
+        float dd = min(aopos.y, map(aopos).x);
+        occ += -(dd -hr)*sca;
+        sca *= .95;
+    }
+    return clamp(1. - 3.*occ, 0., 1.);
+}
+
+vec3 render(in vec3 ro, in vec3 rd) {
+    float t = 0.;
+    float tmax = 1000.;
+    float mat = -1.;
+
+    for (int i=0; i<128; i++) {
+
+        vec2 res = map(ro+rd*t);
+        if (abs(res.x) < max(0.001, .00025*t) || t > tmax) {
+            mat = t > tmax ? -1. : res.y;
+            break;
+        }
+
+        t += res.x;
+    }
+
+    //  shade scene
+    vec3 bgCol = background;
+    if (bgType == 2.) bgCol = plasma(rd.xy);
+    else if (bgType == 3.) bgCol = spiral(rd.xy, background);
+    else if (bgType == 4.) bgCol = bgGradient();
+
+    vec3 col = bgCol;
+
+    if (mat >= 0.) {
+        vec3 pos = ro + t*rd;
+        vec3 nor = calcNormal(pos);
+        vec3 ref = reflect(rd, nor);
+
+
+        float eyeY = max(0., floor(eyeCoord.y));
+        float eyeX = max(0., floor(3. - abs(eyeCoord.x)));
+        bool  left = eyeCoord.x > 0.;
+
+        vec3 eye = left ? eyeColor00 : eyeColor10;
+
+        if (eyeType == 0.) { // normal
+
+        }
+        else if (eyeType == 1.) { // gradient
+            if (eyeHeight > 0.) {
+                vec3 eye2 = left ? eyeColor01 : eyeColor11;
+                eye = mix(eye2, eye, (eyeY / eyeHeight));
+            }
+        }
+        else if (eyeType == 2.) { // plasma
+            eye = plasma(eyeCoord.xy * .1);
+        }
+        else if (eyeType == 3.) { // spiral
+            eye = spiral(abs(eyeCoord) - 1.5, eye);
+        }
+
+        if (eyeDirection == 0. && eyeX < .5) eye = BLACK;
+        else if (eyeDirection == 1. && eyeY > (eyeHeight - .5)) eye = BLACK;
+        else if (eyeDirection == 2. && eyeX > 1.5) eye = BLACK;
+        else if (eyeDirection == 3. && eyeY < .5) eye = BLACK;
+
+        col = (mat == 0. ? skin : mat == 1. ? BLACK : eye);
+
+        // lighting
+
+        // use three lights setup as made popular by Inigo Quilez 
+        // sun
+        vec3  hal = normalize(lightDir-rd);
+        float difSun = max(dot(nor, lightDir), 0.);
+        difSun *= calcSoftshadow(pos, lightDir, 0.02, 2.5);
+
+        float specSun = pow(clamp(dot(nor, hal), 0., 1.), 16.) * difSun;
+        specSun *= 0.04+0.96*pow(clamp(1.0-dot(hal, lightDir), 0., 1.), 5.);
+
+        vec3 diff = (difSun)*lightCol;
+        vec3 spec = (2.5*specSun)*lightCol;
+    
+        // sky 
+        float difSky  = sqrt(0.75+0.25*nor.y);
+        float specSky = smoothstep(-0.2, 0.2, ref.y) * difSky;
+        specSky *= 0.04+0.96*pow(clamp(1.0+dot(nor, rd), 0.0, 1.0), 5.0);
+
+        vec3 skyLight = bgType == 2. ? plasma(ref.xy) : skyCol;
+
+        diff += (0.3*difSky)*skyLight;
+        spec += specSky*skyLight;
+    
+        // back light / ambient    
+        float difBack = max(dot(nor, -lightDir), 0.);
+        diff += col*(0.08*difBack);
+
+    #ifdef GOLD
+        col = col * spec * 15.;
+    #else
+        col = diff * col + spec;
+    #endif
+        // fog
+        col = mix(col, bgCol, clamp(1. - exp(-0.005*t) * 1.1, 0., 1.));
+    }
+
+    // cheap gamma correction
+    return sqrt(col);
+}
+
+mat3 setCamera(in vec3 ro, in vec3 ta) {
+    vec3 cw = normalize(ta -ro);
+    vec3 cu = normalize(cross(cw, vec3(0, 1, 0)));
+    vec3 cv = normalize(cross(cu, cw));
+    return mat3(cu, cv, cw);
+}
+
+void main() {
+    rot =  rotZ(rZ) * rotX(rX + .25 * (noise(vec2(1.5, iTime * 0.5)) - .5)) * rotY(rY - .5 * (noise(vec2(2.5, iTime * 0.3)) - .5));
+
+    vec3 tot = vec3(0);
+
+    vec2 q = (gl_FragCoord.xy * 2. - iResolution.xy) / iResolution.y;
+
+    // for (int m=0; m<AA; m++) {
+    //     for (int n=0; n<AA; n++) {
+            // vec2 o = vec2(float(m), float(n))*(2./float(AA)) - .5;
+            // rotate AA offset to reduce aliasing
+            // o *= rot2D(0.463647609);
+
+            vec2 o = ${capture ? 'hash33(vec3(gl_FragCoord.xy, iFrame)).xy' : 'vec2(0)'};
+
+            vec2 p = q + o/iResolution.y;
+
+            vec3 ro = vec3(sin(iTime*.3), 0., -22.5);
+            vec3 ta = vec3(0., ro.y, 0.);
+            mat3 ca = setCamera(ro, ta);
+            vec3 rd = ca * normalize(vec3(p.xy, 2. / iZCorrection));
+
+            vec3 col = render(ro, rd);
+            tot += col;
+    //     }
+    // }
+    // tot *= (1./float(AA*AA));
+
+    // vigneting
+    q = gl_FragCoord.xy / iResolution.xy;
+    tot *= 0.25+0.75*pow(16.0*q.x*q.y*(1.0-q.x)*(1.0-q.y), 0.15);
+
+    // noise
+    tot += vec3(hash12(gl_FragCoord.xy) * 0.02);
+
+    gl_FragColor = vec4(tot, 1.) * ${capture ? .3 : .5};
+}
+
+  `;
+
+  function lerp(a, b, t) {
+    return a * t + b * (1 - t);
+  }
+
+  const program = webglProgram(canvas, (gold ? '#define GOLD\n\n' : '') + fragmentShader);
+
+  let startTime = -1;
+  let mouseX = 0, mouseY = 0;
+  let lerpMouseX = 0, lerpMouseY = 0;
+  let rotation = [0, 0, 0];
+
+  let blinkTimer = rand() * 3 + 1;
+  let animationTimer = rand() * 5 + 5;
+
+  function clamp01(a) {
+    return Math.min(1, Math.max(0, a));
+  }
+
+  function ease(t, ELASTIC_AMPLITUDE = 1, ELASTIC_PERIOD = 0.4) {
+    t = clamp01(t);
+    if (t < 0.5) return -0.5 * (Math.pow(2, 10.0 * (t -= 0.5)) * Math.sin((t - (ELASTIC_PERIOD / 4.0)) * (Math.PI * 2) / ELASTIC_PERIOD));
+    return Math.pow(2, -10 * (t -= 0.5)) * Math.sin((t - (ELASTIC_PERIOD / 4)) * (Math.PI * 2.0) / ELASTIC_PERIOD) * 0.5 + 1.0;
+  }
+
+  function smoothstep(t) {
+    t = clamp01(t);
+    return t * t * (3.0 - 2.0 * t);
+  }
+
+  function handleBlink(time) {
+    const blinkDuration = 0.16;
+
+    if (time > blinkTimer) {
+      const blink = clamp01(1 - Math.abs((time - blinkTimer) / blinkDuration - .5) * 2);
+
+      const height = (settings.eyeHeight * (1 - blink));
+      program.uf1('eyeY', eyeY + (settings.eyeHeight - height));
+      program.uf1('eyeHeight', height);
+    } else {
+      program.uf1('eyeY', eyeY);
+      program.uf1('eyeHeight', settings.eyeHeight);
+    }
+    if (time > blinkDuration + blinkTimer) {
+      blinkTimer = time + rand() * rand() * 15;
+    }
+  }
+
+  function handleAnimation(time) {
+    if (animationType == 0) {
+      return;
+    }
+
+    const animationDuration = 1.5;
+
+    if (time > animationTimer) {
+      const anim = clamp01((time - animationTimer) / animationDuration);
+
+      if (Math.abs(animationType) < 4) {
+        rotation[Math.abs(animationType) - 1] = Math.sign(animationType) * Math.sin(anim * Math.PI * 4) * (smoothstep(anim * 2) - smoothstep(anim * 2 - 1));
+      } else {
+        rotation[Math.abs(animationType) - 4] = Math.sign(animationType) * ease(anim) * Math.PI * 2;
+      }
+    } else {
+      rotation = [0, 0, 0];
+    }
+    if (time > animationDuration + animationTimer) {
+      animationTimer = time + 5 + rand() * 10;
+    }
+  }
+
+  let time = 0, frame = 0;
+
+  function draw(t) {
+    requestAnimationFrame((t) => draw(t));
+    const currentTime = performance.now();
+    if (startTime < 0) {
+      startTime = currentTime;
+    }
+
+    time = capture ? 1 : (currentTime - startTime) / 1e3;
+    handleBlink(time);
+    handleAnimation(time);
+
+    lerpMouseY = lerp(lerpMouseY, mouseY, 0.05);
+    lerpMouseX = lerp(lerpMouseX, mouseX, 0.05);
+
+    program.uf1('iTime', time);
+    program.uf1('rX', capture ? .1 : (lerpMouseY * .2 + rotation[0]));
+    program.uf1('rY', capture ? 0 : (lerpMouseX * .2 + rotation[1]));
+    program.uf1('rZ', capture ? 0 : rotation[2]);
+    program.uf1('iFrame', frame);
+    program.uf1('iZCorrection', Math.max(1, canvas.height / canvas.width));
+
+    program.draw();
+
+    frame++;
+  };
+  draw(0);
+
+  function onDocumentMouseMove(event) {
+    mouseX = Math.min(1, Math.max(-1, (event.clientX / canvas.width) * 2 - 1));
+    mouseY = Math.min(1, Math.max(-1, -(event.clientY / canvas.height) * 2 + 1));
+  }
+
+  function onDocumentMouseDown(event) {
+    if (time < animationTimer) {
+      animationTimer = time;
+    }
+  }
+
+  document.addEventListener('mousemove', (e) => onDocumentMouseMove(e));
+
+  document.addEventListener('mousedown', (e) => onDocumentMouseDown(e));
+  document.addEventListener('touchstart', (e) => onDocumentMouseDown(e));
+</script>
+
+
+</body>
+</html>

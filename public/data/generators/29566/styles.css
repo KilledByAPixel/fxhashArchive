@@ -1,0 +1,116 @@
+@font-face {
+    font-family: 'Oswald-Bold';
+    src:  url('Oswald-Bold.woff2') format('woff2');
+}
+* {font-weight: normal}
+:root {
+    --black: #1e0e0f;
+}
+body,html {
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+    font-family: 'Oswald-Bold', sans-serif;
+}
+#artwork, #artwork>svg, #artwork>img {
+    width: 100dvw;
+    height: 100dvh;
+    margin: 0 auto;
+
+}
+@media (orientation: landscape) {
+    #artwork, #artwork>svg, #artwork>img {
+        width: 100dvw;
+        height: 100dvh;
+    }
+}
+#debug {
+    position: absolute;
+    top: 5vmin;
+    left: 5vmin;
+}
+button {
+    font-size: 16px;
+    padding: 5px 20px;
+}
+#menu {
+    font-size: 2.1vmin;
+    line-height: 3vmin;
+    color:#fff;
+    background: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(5px);
+    position: absolute;
+    top:50%;
+    left:50%;
+    transform: translate(-50%, -50%);
+    padding:  40px 20px;
+    text-align: center;
+    user-select: none;
+    border:2px solid #fff;
+    border-radius: 4px;
+}
+#menu a {
+    color: #FFF;
+    text-decoration:none;
+    border-bottom: solid 1px #f2735d;
+    transition: color 0.1s ease-in-out, border-bottom 0.1s ease-in-out;
+    margin-left: 0.5vmin;
+    margin-right: 0.5vmin;
+}
+#menu a:hover {
+     color: #a6d7ec;
+     text-decoration:none;
+     border-bottom: solid 1px #FFF;
+ }
+#menu small {
+    color: rgba(255,255,255,0.75);
+    text-transform: uppercase;
+    font-size: 1.4vmin;
+}
+#menu a[data-type="clipboard"] {
+    color: #fff;
+    background: rgba(0, 0, 0, 0.35);
+    padding:1vmin 1.75vmin 1.05vmin;
+    border-radius: 4px;
+    display: inline-block;
+    border: 2px solid #fff;
+    font-size: 1.8vmin;
+    text-decoration: none;
+    font-weight: bold;
+    text-shadow: none!important;
+    transition: opacity 0.1s ease-in-out;
+}
+#menu a[data-type="clipboard"]:hover {
+    background: #4a9fcc;
+}
+
+#menu a[data-type="clipboard"].disabled {
+    opacity: 0.7;
+    pointer-events: none;
+}
+h1 {
+    font-size: 5vmin;
+    margin:0;
+    margin-bottom:1vmin;
+    line-height: 4vmin;
+}
+#menu strong {
+    text-transform: uppercase;
+}
+#illustrationsEl { 
+    display: none;
+}
+
+#debugEl {
+    margin:10px;
+    padding:10px;
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: 10;
+}
+#debugEl:empty {
+    display: none;
+}

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>SMOLSKULLs × Monster Gaze</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="styles.css" />
+    <meta name="Author" content="Mark Knol & Jordi Gandul">
+    <meta name="License" content="This NFT is released under the NFT License 2.0 - www.nftlicense.org">
+</head>
+<body>
+    <main id="artwork"></main>
+    <div id="menu" style="display: none;">
+        <h1>SMOL<wbr>SKULLs<br>×<br>MONSTER GAZE</h1>
+        <STRONG>by Mark Knol &amp; Jordi Gandul</STRONG><br/><br/>
+        DOWNLOAD:<br/>
+        <a href="#2k" data-resolution="1" data-type="svg">SVG</a>
+        <a href="#2k" data-resolution="2" data-type="jpg">JPEG 1x</a>
+        <a href="#4k" data-resolution="4" data-type="jpg">JPEG 2x</a>
+        <a href="#8k" data-resolution="9" data-type="jpg">JPEG 8x</a><br/>
+        <small>Higher resolutions take longer to render</small><br/>
+        <span id="artid"></span><br/><br/>
+        <a href="#2k" data-resolution="2" data-type="clipboard">📋 COPY IMAGE</a><br/>
+    </div>
+    <div id="illustrationsEl"></div>
+    <script src="fxhash.js"></script>
+    <script>
+    function fxrand() { return $fx.rand() }
+    function fxhash() { return $fx.hash }
+    console.log(fxhash());
+    artid.innerText = fxhash();
+    </script>
+    <script src="main.min.js"></script>
+</body>
+</html>
