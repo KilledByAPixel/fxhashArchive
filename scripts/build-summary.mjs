@@ -14,7 +14,11 @@ const DATA = 'public/data'
 const loadJson = async (path, fallback) => {
   try {
     return JSON.parse(await readFile(path, 'utf8'))
-  } catch {
+  } catch (err) {
+    // A missing file and a malformed one both fall back silently otherwise,
+    // which would let a corrupt JSON shard produce a wrong (but plausible-looking)
+    // count in committed data with no trace of why.
+    console.warn(`build-summary: could not load ${path}, using fallback: ${err.message}`)
     return fallback
   }
 }

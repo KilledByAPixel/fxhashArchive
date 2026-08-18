@@ -109,3 +109,21 @@ test('the archived filter combines with search', async () => {
   fireEvent.change(search, { target: { value: 'Tok 3' } })
   expect(names()).toEqual([])
 })
+
+test('shows a note when the summary fails to load, but still shows the grid', async () => {
+  vi.spyOn(data, 'loadSummary').mockRejectedValue(new Error('offline'))
+  renderPage()
+  await screen.findByPlaceholderText(/search projects/i)
+  expect(
+    await screen.findByText(/archive and ranking information could not be loaded/i),
+  ).toBeTruthy()
+  // The failure must not be mistaken for "nothing is archived": the grid itself
+  // still renders normally.
+  expect(names()).toHaveLength(4)
+})
+
+test('shows no summary-failure note when the summary loads fine', async () => {
+  renderPage()
+  await screen.findByPlaceholderText(/search projects/i)
+  expect(screen.queryByText(/archive and ranking information could not be loaded/i)).toBeNull()
+})

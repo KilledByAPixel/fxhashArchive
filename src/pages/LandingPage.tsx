@@ -63,6 +63,13 @@ export default function LandingPage() {
     ? (100 * summary.counts.archived) / summary.counts.projects
     : 0
 
+  // The headline argument is "the top 1% accounts for most of the spending", which
+  // is specifically the p:1 sample — not curve[0], which is the finest point on the
+  // chart's axis (currently p:0.25) and reads as a much smaller, less compelling slice.
+  const headlinePoint = summary
+    ? summary.curve.find((c) => c.p === 1) ?? summary.curve[0]
+    : undefined
+
   return (
     <div className="landing">
       <h1>An archive of fxhash on Tezos</h1>
@@ -76,7 +83,7 @@ export default function LandingPage() {
 
       {summary && (
         <ul className="landing-stats">
-          <li><strong>{n(summary.counts.projects)}</strong> projects archived</li>
+          <li><strong>{n(summary.counts.projects)}</strong> projects catalogued</li>
           <li><strong>{n(summary.counts.artists)}</strong> artists</li>
           <li><strong>{n(summary.counts.iterations)}</strong> iterations</li>
           <li><strong>{n(summary.counts.seeds)}</strong> seeds preserved</li>
@@ -112,10 +119,12 @@ export default function LandingPage() {
             concentrated enough that a small archive covers most of it:
           </p>
           <ConcentrationCurve curve={summary.curve} />
-          <p className="landing-note">
-            The top {summary.curve[0].p}% of projects account for {summary.curve[0].share}%
-            of all collector spending on the platform.
-          </p>
+          {headlinePoint && (
+            <p className="landing-note">
+              The top {headlinePoint.p}% of projects account for {headlinePoint.share}%
+              of all collector spending on the platform.
+            </p>
+          )}
         </section>
       )}
 

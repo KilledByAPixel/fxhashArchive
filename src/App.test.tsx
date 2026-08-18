@@ -31,7 +31,12 @@ test('header links to both artwork and artists', () => {
 
 test('root renders the landing page, not the grid', async () => {
   renderAt('/')
-  expect(await screen.findByRole('heading', { name: /archive/i })).toBeTruthy()
+  // level: 1 is required: a second, sibling <h2> ("Random from the archive")
+  // also matches /archive/i, so without pinning the level this passes only by
+  // accident of the fixture stubbing loadAllTokens to [] (which suppresses that
+  // h2). The moment the fixture gains a token, an unqualified match throws a
+  // confusing "found multiple elements" error.
+  expect(await screen.findByRole('heading', { level: 1, name: /archive/i })).toBeTruthy()
 })
 
 test('/artwork renders the grid', async () => {

@@ -16,7 +16,16 @@ const summary = {
   counts: { projects: 27430, artists: 5407, iterations: 1845509, seeds: 1802387, archived: 396 },
   ranked: [3, 1, 2],
   archived: [1],
-  curve: [{ p: 1, share: 67.9 }, { p: 10, share: 94.6 }, { p: 100, share: 100 }],
+  // Deliberately does NOT start at p:1 — the real curve starts at p:0.25 (see
+  // CURVE_POINTS in scripts/summary-lib.mjs). A fixture starting at p:1 would let
+  // a bug that reads curve[0] instead of the p===1 point pass by accident.
+  curve: [
+    { p: 0.25, share: 45.6 },
+    { p: 0.5, share: 56.5 },
+    { p: 1, share: 67.1 },
+    { p: 10, share: 94.6 },
+    { p: 100, share: 100 },
+  ],
 }
 
 beforeEach(() => {
@@ -65,4 +74,15 @@ test('survives the catalog failing to load', async () => {
   renderPage()
   // Statistics still render; the art strips simply do not appear.
   expect(await screen.findByText('27,430')).toBeTruthy()
+})
+
+test('headline prose quotes the p=1 point, not the first curve sample', async () => {
+  renderPage()
+  // The fixture's first curve point is p:0.25/45.6 — the finest sampled point,
+  // correct for the chart's axis but NOT the headline argument. The prose must
+  // quote the p:1/67.1 point instead.
+  expect(
+    await screen.findByText(/The top 1% of projects account for 67\.1% of all collector spending/),
+  ).toBeTruthy()
+  expect(screen.queryByText(/The top 0\.25% of projects account for 45\.6%/)).toBeNull()
 })

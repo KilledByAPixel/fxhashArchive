@@ -10,6 +10,7 @@ type SortMode = 'random' | 'collected' | 'newest'
 export default function BrowsePage() {
   const [tokens, setTokens] = useState<LeanToken[] | null>(null)
   const [summary, setSummary] = useState<Summary | null>(null)
+  const [summaryFailed, setSummaryFailed] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<SortMode>('random')
@@ -22,8 +23,11 @@ export default function BrowsePage() {
   useEffect(() => {
     loadAllTokens().then(setTokens, (e) => setError(String(e)))
     // The summary only affects ordering and badges, so a failure must not blank
-    // the grid — the catalog alone is still worth showing.
-    loadSummary().then(setSummary, () => setSummary(null))
+    // the grid — the catalog alone is still worth showing. But staying silent about
+    // it is misleading: with no summary, archivedIds is empty, so "Fully archived
+    // only" would read "0 projects" — which says "none of these are archived"
+    // rather than "we don't know" — so the failure must surface as a visible note.
+    loadSummary().then(setSummary, () => { setSummary(null); setSummaryFailed(true) })
   }, [])
 
   const rank = useMemo(() => {
@@ -83,6 +87,11 @@ export default function BrowsePage() {
         </label>
         <span className="count">{visible.length} projects</span>
       </div>
+      {summaryFailed && (
+        <p className="browse-note">
+          Archive and ranking information could not be loaded.
+        </p>
+      )}
       <div className="token-grid">
         {visible.slice(0, shown).map((t) => (
           <TokenCard key={t.id} token={t} archived={archivedIds.has(t.id)} />
