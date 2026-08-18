@@ -1,0 +1,241 @@
+body {
+  background-color: rgb(255, 255, 255);
+  padding: 0px;
+  margin: 0px;
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+#mainCanvas{
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 100%;
+  max-height: 100%;
+  margin: 0px;
+  padding: 0px;
+  width: auto;
+  height: auto;
+}
+
+#wait{
+  z-index: 997;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: white;
+}
+
+#wait img{
+  z-index: 998;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+#w01{
+  -webkit-animation: load2 3.6s infinite linear 0s;
+  animation: load2 3.6s infinite linear 0s;
+}
+
+#w02{
+  -webkit-animation: load2 3.6s infinite linear 0.2s;
+  animation: load2 3.6s infinite linear 0.2s;
+}
+
+#w03{
+  -webkit-animation: load2 3.6s infinite linear 0.4s;
+  animation: load2 3.6s infinite linear 0.4s;
+}
+
+#w04{
+  -webkit-animation: load2 3.6s infinite linear 0.6s;
+  animation: load2 3.6s infinite linear 0.6s;
+}
+
+#w05{
+  -webkit-animation: load2 3.6s infinite linear 0.8s;
+  animation: load2 3.6s infinite linear 0.8s;
+}
+
+#w06{
+  -webkit-animation: load2 3.6s infinite linear 1s;
+  animation: load2 3.6s infinite linear 1s;
+}
+
+#w07{
+  -webkit-animation: load2 3.6s infinite linear 1.2s;
+  animation: load2 3.6s infinite linear 1.2s;
+}
+
+#w08{
+  -webkit-animation: load2 3.6s infinite linear 1.4s;
+  animation: load2 3.6s infinite linear 1.4s;
+}
+
+#w09{
+  -webkit-animation: load2 3.6s infinite linear 1.6s;
+  animation: load2 3.6s infinite linear 1.6s;
+}
+
+#w10{
+  -webkit-animation: load2 3.6s infinite linear 1.8s;
+  animation: load2 3.6s infinite linear 1.8s;
+}
+
+#w11{
+  -webkit-animation: load2 3.6s infinite linear 2s;
+  animation: load2 3.6s infinite linear 2s;
+}
+
+#w12{
+  -webkit-animation: load2 3.6s infinite linear 2.2s;
+  animation: load2 3.6s infinite linear 2.2s;
+}
+
+#w13{
+  -webkit-animation: load2 3.6s infinite linear 2.4s;
+  animation: load2 3.6s infinite linear 2.4s;
+}
+
+#w14{
+  -webkit-animation: load2 3.6s infinite linear 2.6s;
+  animation: load2 3.6s infinite linear 2.6s;
+}
+
+#w15{
+  -webkit-animation: load2 3.6s infinite linear 2.8s;
+  animation: load2 3.6s infinite linear 2.8s;
+}
+
+#w16{
+  -webkit-animation: load2 3.6s infinite linear 3s;
+  animation: load2 3.6s infinite linear 3s;
+}
+
+#w17{
+  -webkit-animation: load2 3.6s infinite linear 3.2s;
+  animation: load2 3.6s infinite linear 3.2s;
+}
+
+#w18{
+  -webkit-animation: load2 3.6s infinite linear 3.4s;
+  animation: load2 3.6s infinite linear 3.4s;
+}
+
+#overlay{
+  z-index: 999;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: white;
+  mix-blend-mode: multiply;
+  border: none;
+}
+
+#rendering{
+  z-index: 9999;
+  font-family: "Arial Narrow", sans-serif;
+  color: black;
+  font-size: 20px;
+  font-weight: 100;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, 70px);
+}
+
+#menu{
+  z-index: 991;
+  
+}
+
+#background, #waitbackground{
+  z-index: 992;
+  position: absolute;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: white;
+}
+
+#buttons{
+  z-index: 993;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+button{
+  font-family: "Arial Narrow", sans-serif;
+  color: black;
+  font-size: 5vh;
+  font-weight: 100;
+  margin-top: 0.75vh;
+  padding: 0px;
+  background: none;
+  border-color: black;
+  border: none;
+  cursor: pointer;
+}
+
+button:disabled{
+  cursor: default;
+  font-style: italic;
+  border-bottom: solid 2px;
+}
+
+.break{
+  margin-bottom: 5vh;
+}
+
+
+@-webkit-keyframes load2 {
+  0% {
+    opacity: 0;
+  }
+  2% {
+    opacity: 0;
+  }
+  4% {
+    opacity: 1;
+  }
+  9% {
+    opacity: 1;
+  }
+  11% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes load2 {
+  0% {
+    opacity: 0;
+  }
+  2% {
+    opacity: 0;
+  }
+  4% {
+    opacity: 1;
+  }
+  9% {
+    opacity: 1;
+  }
+  11% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}

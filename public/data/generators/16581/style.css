@@ -1,0 +1,14 @@
+body {
+  background-color: black;
+
+  /* leave it to hide the scrollbars */
+  overflow: hidden;
+}
+
+canvas {
+  display: block;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%)
+}

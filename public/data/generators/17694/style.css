@@ -1,0 +1,28 @@
+* {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  width: 100vw;
+  min-height: 100vh;
+  background-color: #f9f9f9;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+.save-overlay {
+  position:absolute;
+  background-color: black;
+  opacity: 0;
+}
+
+.save-text {
+  position: absolute;
+  opacity: 0;
+  font-size: 10px;
+  color: white;
+  font-family: monospace;
+}

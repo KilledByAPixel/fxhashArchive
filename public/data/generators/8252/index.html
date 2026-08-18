@@ -1,0 +1,156 @@
+<!doctype html><html><head><title>de|growth:generations</title><meta name="keywords" content="generative art, generative token, clean nft, tezos, degrowth, growth"><meta name="author" content="mrkswcz"><meta charset="utf-8"><meta name="description" content="
+    Materials tend to take particular forms due to their physical properties,
+    technological necessities or natural limitations. However, what rules
+    should a simulated environment follow when no physical constraints are
+    inherent to the digital environment?
+    
+    This project continues the exploration of digital forms that I began
+    on hicetnunc in 2021. Each token creates an image of a unique sculpture
+    generated with a custom growth/degrowth algorithm.
+    
+    The image is rendered with a tailored raytracing engine. Depending on
+    the machine and the CPU usage, it may take a few seconds (on fast computers)
+    to up to a minute on mid-tier phones for the 800x800px image.
+    
+    Click on the image to open the menu.
+    You can choose the resolution from preview quality to a print of approx.
+    30x30cm. You have the option to save the rendered image in PNG format.
+    (Live mode only. There may be minor differences in tone or contrast for
+    different resolutions.)
+    
+    Click STL to download the digital model to view on your computer or 
+    3d print at home (experimental, live mode only).
+    
+    -----------------------------
+    All drawing and geometric methods written by mrkswcz using standard javascript
+    language except for:
+    
+    perlin-simplex
+    https://github.com/davidguttman/perlin-simplex
+    
+    The MIT License (MIT)
+    Copyright (c) 2013 David Guttman
+    
+    Permission is hereby granted, free of charge, to any person obtaining a copy of
+    this software and associated documentation files (the 'Software'), to deal in
+    the Software without restriction, including without limitation the rights to
+    use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+    the Software, and to permit persons to whom the Software is furnished to do so,
+    subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+    
+    THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+    FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+    COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+    IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+    CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+    -----------------------------
+    three.js
+    https://threejs.org/
+    https://github.com/mrdoob/three.js/
+    
+    The MIT License
+    Copyright © 2010-2022 three.js authors
+    
+    Permission is hereby granted, free of charge, to any person obtaining a copy of
+    this software and associated documentation files (the 'Software'), to deal in
+    the Software without restriction, including without limitation the rights to
+    use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+    the Software, and to permit persons to whom the Software is furnished to do so,
+    subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+    
+    THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+    FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+    COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+    IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+    CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+    -----------------------------
+    three-mesh-bvh
+    https://github.com/gkjohnson/three-mesh-bvh#readme
+    
+    MIT License
+    Copyright (c) 2018 Garrett Johnson
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy of
+    this software and associated documentation files (the 'Software'), to deal in
+    the Software without restriction, including without limitation the rights to
+    use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+    the Software, and to permit persons to whom the Software is furnished to do so,
+    subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+    FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+    COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+    IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+    CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+    
+    -----------------------------
+    seedrandom
+    https://github.com/davidbau/seedrandom
+
+    Copyright 2019 David Bau.
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy of
+    this software and associated documentation files (the 'Software'), to deal in
+    the Software without restriction, including without limitation the rights to
+    use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+    the Software, and to permit persons to whom the Software is furnished to do so,
+    subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+    FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+    COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+    IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+    CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.    
+    "><script id="fxhash-snippet">
+      let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+      var fxhash = new URLSearchParams(window.location.search).get('fxhash')
+      let b58dec = str=>[...str].reduce((p,c)=>p*alphabet.length+alphabet.indexOf(c)|0, 0)
+      let fxhashTrunc = fxhash.slice(2)
+      let regex = new RegExp(".{" + ((fxhashTrunc.length/4)|0) + "}", 'g')
+      let hashes = fxhashTrunc.match(regex).map(h => b58dec(h))
+      let sfc32 = (a, b, c, d) => {
+        return () => {
+          a |= 0; b |= 0; c |= 0; d |= 0
+          var t = (a + b | 0) + d | 0
+          d = d + 1 | 0
+          a = b ^ b >>> 9
+          b = c + (c << 3) | 0
+          c = c << 21 | c >>> 11
+          c = c + t | 0
+          return (t >>> 0) / 4294967296
+        }
+      }
+      var fxrand = sfc32(...hashes)
+      // used to get features during token mint
+      window.addEventListener("message", (event) => {
+        if (event.data === "fxhash_getFeatures") {
+          parent.postMessage({
+            id: "fxhash_getFeatures",
+            data: window.$fxhashFeatures
+          }, "*")
+        }
+      })
+      var isFxpreview = new URLSearchParams(window.location.search).get('preview') === "1"
+      function fxpreview() {
+        window.dispatchEvent(new Event("fxhash-preview"))
+        setTimeout(() => fxpreview(), 500)
+      }
+</script><link rel="stylesheet" href="./style.css"></head><body><div id="wait"><div id="waitbackground"></div><img src="./wait/wait-01.png" class="spinner" id="w01" style="display: block;"> <img src="./wait/wait-02.png" class="spinner" id="w02" style="display: block;"> <img src="./wait/wait-03.png" class="spinner" id="w03" style="display: block;"> <img src="./wait/wait-04.png" class="spinner" id="w04" style="display: block;"> <img src="./wait/wait-05.png" class="spinner" id="w05" style="display: block;"> <img src="./wait/wait-06.png" class="spinner" id="w06" style="display: block;"> <img src="./wait/wait-07.png" class="spinner" id="w07" style="display: block;"> <img src="./wait/wait-08.png" class="spinner" id="w08" style="display: block;"> <img src="./wait/wait-09.png" class="spinner" id="w09" style="display: block;"> <img src="./wait/wait-10.png" class="spinner" id="w10" style="display: block;"> <img src="./wait/wait-11.png" class="spinner" id="w11" style="display: block;"> <img src="./wait/wait-12.png" class="spinner" id="w12" style="display: block;"> <img src="./wait/wait-13.png" class="spinner" id="w13" style="display: block;"> <img src="./wait/wait-14.png" class="spinner" id="w14" style="display: block;"> <img src="./wait/wait-15.png" class="spinner" id="w15" style="display: block;"> <img src="./wait/wait-16.png" class="spinner" id="w16" style="display: block;"> <img src="./wait/wait-17.png" class="spinner" id="w17" style="display: block;"> <img src="./wait/wait-18.png" class="spinner" id="w18" style="display: block;"><div id="overlay"></div><span id="rendering">GROWING</span></div><div id="menu" style="display: none;"><div id="background"></div><div id="buttons"><button id="closemenu" class="break" style="display: block;">[..]</button> <button id="LQ" style="display: block;" disabled="disabled">800PX</button> <button id="MQ" style="display: block;">1600PX</button> <button id="HQ" class="break" style="display: block;">3200PX</button> <button id="PNG" style="display: block;">PNG</button> <button id="STL" style="display: block;">STL</button></div></div><script defer="defer" src="./bundle.js"></script></body></html>

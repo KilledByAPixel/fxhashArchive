@@ -1,0 +1,975 @@
+<head>
+	<title>playing.cccccards 🃏</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<meta name="Author" content="Mark Knol & John Karel">
+	<meta name="License" content="This NFT is released under the NFT License 2.0 - www.nftlicense.org">
+</head>
+<script id="fxhash-snippet">
+      let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+      var fxhash = new URLSearchParams(window.location.search).get('fxhash')
+      let b58dec = str=>[...str].reduce((p,c)=>p*alphabet.length+alphabet.indexOf(c)|0, 0)
+      let fxhashTrunc = fxhash.slice(2)
+      let regex = new RegExp(".{" + ((fxhashTrunc.length/4)|0) + "}", 'g')
+      let hashes = fxhashTrunc.match(regex).map(h => b58dec(h))
+      let sfc32 = (a, b, c, d) => {
+        return () => {
+          a |= 0; b |= 0; c |= 0; d |= 0
+          var t = (a + b | 0) + d | 0
+          d = d + 1 | 0
+          a = b ^ b >>> 9
+          b = c + (c << 3) | 0
+          c = c << 21 | c >>> 11
+          c = c + t | 0
+          return (t >>> 0) / 4294967296
+        }
+      }
+      var fxrand = sfc32(...hashes)
+      // used to get features during token mint
+      window.addEventListener("message", (event) => {
+        if (event.data === "fxhash_getFeatures") {
+          parent.postMessage({
+            id: "fxhash_getFeatures",
+            data: window.$fxhashFeatures
+          }, "*")
+        }
+      })
+      var isFxpreview = new URLSearchParams(window.location.search).get('preview') === "1"
+      function fxpreview() {
+        window.dispatchEvent(new Event("fxhash-preview"))
+        setTimeout(() => fxpreview(), 500)
+      }
+</script>
+<canvas id=canvas></canvas>
+<canvas id=cardCanvas></canvas>
+<div id="debugLog"></div>
+<style>
+body,html {
+	margin:0;
+	padding:0;
+	width:100vw;
+	height:100vh;
+	overflow:hidden;
+	background:#111;
+	color: #FFF;
+	font: 14px fffffont, monospace;
+}
+canvas {
+	display:block;
+	width: 100%;
+	height: 100%;
+	bottom: 0;
+	left: 0;
+	margin: auto;
+	overflow: auto;
+	position: fixed;
+	right: 0;
+	top: 0;
+	object-fit: contain;
+}
+#cardCanvas {
+	display:none;
+}
+#debugLog {
+	position:absolute;
+	background: rgba(0,0,0,.65);
+	padding:10px;
+	right:5px;
+	top:5px;
+	color:#fff;
+	display: none;
+}
+</style>
+<script>
+/**
+
+Generative art by Mark Knol & John Kaerl
+
+https://twitter.com/mknol
+https://twitter.com/jjjjjjjjjjohn
+
+https://www.fxhash.xyz/u/markknol
+https://linktr.ee/jjjjjohn
+
+**/
+const cardCtx = cardCanvas.getContext('2d');
+const ctx = canvas.getContext('2d');
+ctx.lineCap = 'round';
+ctx.lineJoin = 'round';
+
+const urlParams = new URLSearchParams(window.location.search);
+const sizeParam = urlParams.get('size');
+const minSize = 1024;
+if (sizeParam && parseInt(sizeParam)) {
+	let size = Math.max(minSize, parseInt(sizeParam));
+	canvas.width = parseInt(sizeParam) * window.devicePixelRatio;
+	canvas.height = parseInt(sizeParam) * window.devicePixelRatio;
+} else {
+	canvas.width = Math.max(minSize, window.innerHeight * window.devicePixelRatio);
+	canvas.height = canvas.width;
+}
+
+function getFromUrl(query, fallback) {
+	if (urlParams.get(query) && urlParams.get(query).length) {
+		return urlParams.get(query);
+	} else return fallback;
+}
+
+let baseSeed = fxrand();
+
+const settings = {
+	cardDistribution: getFromUrl("distribution", pick(["random","random","random","ordered","piles","spiral","spiral","spiral"])),
+	visibility: 1.2 - (range(0, 1) * range(0, 1.2)),
+	flies: false,
+}
+
+if (settings.visibility > 0.05 && settings.visibility < 0.8 && fxrand() > 0.992) settings.flies = true;
+
+const deckThemeIds = pick([[0,1],[0],[1],[0]]);
+
+const cardIconPositions = [
+	[32,20],[50,20],[68,20],
+			[50,30],
+	[32,40],[50,50],[68,40],
+	[32,60],[50,70],[68,60],
+	[32,80],[50,80],[68,80],
+].map(p => [p[0]/100,p[1]/100]);
+const cardIconIndices = {
+	"2": [1,11],
+	"3": [1,5,11],
+	"4": [0,2,10,12],
+	"5": [0,2,5,10,12], 
+	"6": [0,2,4,6,10,12],
+	"7": [0,2,3,4,6,10,12],
+	"8": [0,2,3,4,6,8,10,12],
+	"9": [0,2,4,5,6,7,9,10,12],
+	"10": [0,2,3,4,6,7,8,9,10,12],
+};
+
+const WHITE = "#FFFFFF";
+const BLUE = "#00aeef";
+const BLACK = "#111";
+const RED = "#cf4436";
+const YELLOW = "#FFF300";
+const GREEN = "#1EB020";
+const GRAY = "#555555";
+
+const allBackColors = [RED,"gold",BLACK,BLUE,GREEN];
+const backSideColors = [RED, pick(allBackColors), GREEN,BLUE];
+const lightTextBorderColors = [WHITE,BLACK,WHITE,WHITE];
+const lightTextColors = [RED,YELLOW,GREEN,BLUE];
+
+const lightColors = ["#ffdaf7","#fffee9","#d7ffb9","#d3ffff", "#fffee9","#fffee9"];
+
+function getColorName(color) {
+	switch (color) {
+		case RED: return "red";
+		case BLACK: return "black";
+		case lightColors[0]: return "pink";
+		case YELLOW: case lightColors[1]: return "yellow";
+		case GREEN: case lightColors[2]: return "green";
+		case BLUE: case lightColors[3]: return "blue";
+	}
+}
+const font = "fffffont";
+const deckThemes = ["single-color","single-color","single-color","single-color","single-color","single-color","single-color","single-color","single-color","single-color","single-color","pattern","sketchbook","sketchbook","monochrome","monochrome","monochrome"];
+const allSuits = "leaf,smile,knife,orange".split(",");
+const usedSuits = [];
+const player = pick(["organized","chaotic"])
+const canvasSize = [canvas.width, canvas.height];
+const cardScale = 0.275;
+const cardRatio = 6.3 / 8.8;
+const cardSize = [(canvas.width * cardRatio * cardScale) | 0, (canvas.width * cardScale) | 0];
+cardCanvas.width = cardSize[0];
+cardCanvas.height = cardSize[1];
+
+const cardAreaPadding = 30;
+const cardArea = {x:cardSize[0]/cardAreaPadding, y:cardSize[0]/cardAreaPadding, width:cardSize[0]-cardSize[0]/cardAreaPadding*2, height:cardSize[1]-cardSize[0]/cardAreaPadding*2 };
+const cardAreaCenter = [cardArea.x+ cardArea.width/2,cardArea.y+ cardArea.height/2];
+
+const jokers = ["smolskull_joker","jjjjjohn_joker"];
+const specialsCardNumbers = "A,K,Q,J,JOKER".split(",");
+
+let cardNumbers = "2,3,4,5,6,7,8,9,10,A,K,Q,J,JOKER".split(",");
+shuffle(cardNumbers);
+if (fxrand() > 0.95) {
+	cardNumbers = "A,K,Q,J,JOKER".split(",");
+}
+if (fxrand() > 0.6) {
+	cardNumbers = pick([[pick(cardNumbers)], [pick(cardNumbers), pick(cardNumbers)]]);
+}
+
+// cardNumbers= ["JOKER"]
+
+let everythingIsSmol = fxrand() > 0.95;
+function prepareCard(cardData) {
+	let {isBackSide,backSideImage,image,imageSpecial,suit,cardNumber,areaColor,backSideColor,deckTheme,isColoredPattern} = cardData;
+	let seededRand = getSeededRandom(allSuits.indexOf(suit) + (baseSeed * 1234567890));
+	let isGraphPaper = isBackSide;
+	let isSpecialCardNumber = specialsCardNumbers.includes(cardNumber);
+
+	// fill background
+	if (deckTheme == "sketchbook") cardCtx.fillStyle = isBackSide ? BLUE : WHITE;
+	else if (deckTheme == "single-color" || isBackSide) cardCtx.fillStyle = areaColor;
+	else if (deckTheme == "monochrome") cardCtx.fillStyle = isBackSide ? BLACK : WHITE;
+	else  cardCtx.fillStyle = isBackSide ? BLACK : areaColor;
+
+	cardCtx.fillRect(0, 0, cardSize[0], cardSize[1]);
+	let areaFillColor = cardCtx.fillStyle;
+
+	if (deckTheme == "sketchbook") {
+		// sketchbook lines
+		cardCtx.lineWidth = toPx(0.1);
+		let tileColor = isBackSide ? WHITE : BLUE;
+		let total = 10;
+		for(let x=0.74;x<total;x++)
+		for(let y=0.74;y<total;y+=cardSize[0]/cardSize[1]) {
+			drawLine(cardCtx, [0, (y / total) * cardSize[1]], [cardSize[0], (y / total) * cardSize[1]], tileColor);
+			if (isGraphPaper || x == 0.75) drawLine(cardCtx, [((0.275+x) / total) * cardSize[0], 0], [((0.275+x) / total) * cardSize[0], cardSize[1]], !isGraphPaper && x == 0.75 ? "#ef8c70" : tileColor);
+		}
+	}
+
+	let isJoker = cardNumber == "JOKER";
+	// draw image
+	let isPattern = deckTheme == "pattern" && !isBackSide;
+	if (image && !isBackSide) {
+		if (isPattern) {
+			if (!isColoredPattern || !isJoker) {
+				// pattern background colors 
+				cardCtx.fillStyle = getSuitColor(image, suit);
+				cardCtx.fillRect(0, 0, cardSize[0], cardSize[1]);
+			}
+
+			if (isColoredPattern || !isJoker) {
+				// draw pattern
+				let totalX = range(8,15,seededRand)|0;
+				let totalY = range(8,15,seededRand)|0;
+				let randomOffset = range(0,0.1,seededRand);
+				let total = totalX*totalY;
+				let rotation = suit != "knife" ? 2.5 : 0.1;
+				for(let i=0;i<total;i++) {
+					let x = i%totalX;
+					let y = i/totalX|0;
+					let pos = [0.5+lerp(-0.6,0.6,x/(totalX-1) + range(-randomOffset,randomOffset,seededRand)),0.5+lerp(-0.6,0.6,y/(totalY-1)+ range(-randomOffset,randomOffset,seededRand))];
+					drawRotated(cardCtx, isSpecialCardNumber && !isJoker ? imageSpecial : image, pos, range(-rotation, rotation,seededRand), toPx(0.05));
+				}
+			}
+		
+			if (isColoredPattern) {
+				// colorize pattern
+				cardCtx.fillStyle = "#ccc";
+				cardCtx.globalCompositeOperation = 'screen';
+				cardCtx.fillRect(0, 0, cardSize[0], cardSize[1]);
+
+				cardCtx.fillStyle = areaColor;
+				cardCtx.globalCompositeOperation = 'color';
+				cardCtx.fillRect(0, 0, cardSize[0], cardSize[1]);
+
+				cardCtx.globalCompositeOperation = 'source-over';
+			}
+		}
+		if (!isJoker) {
+			if (everythingIsSmol) {
+				if (isSpecialCardNumber) {
+					drawSmolskull(cardCtx, cardData, cardSize[0] * 0.4, cardSize[1] *1/3, toPx(19), 0);
+					drawSmolskull(cardCtx, cardData, cardSize[0] * 0.6, cardSize[1] *2/3, toPx(19), Math.PI);
+				} else {
+					for(let idx of cardIconIndices[cardNumber]) {
+						let position = cardIconPositions[idx];
+						let rotation = position[1] > 0.5 ? Math.PI : 0;
+						// small corrections on rotation
+						if ((suit != "smile") && (idx == 3 || idx == 8 || idx == 5)) rotation -= Math.PI/2;
+						// small corrections on positions
+						if ((cardNumber == "6" || cardNumber == "7" || cardNumber == "8") && (idx == 4 || idx == 6)) {
+							position = [position[0], position[1] + 0.1];
+						}
+						if ((cardNumber == "7") && (idx == 3)) {
+							position = [position[0], position[1] + 0.05];
+						}
+						if (position) drawSmolskull(cardCtx, cardData, cardSize[0] * position[0], cardSize[1] * position[1], toPx(8), rotation);
+					}
+				}
+				if (!isBackSide) {
+					// TOP LEFT ICONS
+					drawSmolskull(cardCtx, cardData, cardSize[0] *0.12, cardSize[1] *0.2, toPx(5), 0);
+					drawSmolskull(cardCtx, cardData, cardSize[0] *0.88, cardSize[1] *0.8, toPx(5), Math.PI);
+				}
+			} else {
+				if (isSpecialCardNumber) {
+					cardCtx.drawImage(imageSpecial, cardArea.x, cardArea.y, cardArea.width, cardArea.height);
+				} else {
+					if (!cardIconIndices[cardNumber]) console.log("invalid", cardNumber, isSpecialCardNumber);
+					for(let idx of cardIconIndices[cardNumber]) {
+						let position = cardIconPositions[idx];
+						let rotation = position[1] > 0.5 ? Math.PI : 0;
+						// small corrections on rotation
+						if ((suit != "smile") && (idx == 3 || idx == 8 || idx == 5)) rotation -= Math.PI/2;
+						// small corrections on positions
+						if ((cardNumber == "6" || cardNumber == "7" || cardNumber == "8") && (idx == 4 || idx == 6)) {
+							position = [position[0], position[1] + 0.1];
+						}
+						if ((cardNumber == "7") && (idx == 3)) {
+							position = [position[0], position[1] + 0.05];
+						}
+						if (position) drawRotated(cardCtx, image, position, rotation, toPx(0.0325));
+					}
+				}
+				if (!isBackSide) {
+					// TOP LEFT ICONS
+					drawRotated(cardCtx, image, [0.13,0.22], 0, toPx(0.02));
+					drawRotated(cardCtx, image, [0.87,0.78], Math.PI, toPx(0.02));
+				}
+			}
+		} else {
+			// draw joker
+			cardCtx.drawImage(imageSpecial, cardArea.x, cardArea.y, cardArea.width, cardArea.height);
+		}
+	}
+	
+	if (isBackSide) {
+		cardCtx.fillStyle = getHatched("transparent", "#fff", 0.1);
+		
+		if (deckTheme == "sketchbook") cardCtx.fillRect(0, 0, cardSize[0], cardSize[1]);
+		else cardCtx.drawImage(backSideImage, 0, 0, cardSize[0], cardSize[1]);
+	}
+	
+	// card border
+	let cardColor = WHITE;
+
+	cardCtx.fillStyle = cardColor;
+	cardCtx.fillRect(0,0,cardArea.x,cardSize[1]);
+	cardCtx.fillRect(cardSize[0]-cardArea.x,0,cardArea.x,cardSize[1]);
+	cardCtx.fillRect(0,0,cardSize[0],cardArea.y);
+	cardCtx.fillRect(0,cardSize[1]-cardArea.y,cardSize[0],cardArea.y);
+
+	if (!isBackSide && !isJoker) {
+		// text 
+		let textColor =  !isPattern ? "#000" : "#eee";
+		if (deckTheme == "sketchbook") textColor = BLUE;
+		//if (deckTheme == "monochrome") cardColor = !backSide ? BLACK : WHITE;
+		cardCtx.strokeStyle = "transparent";
+
+		if (deckTheme == "monochrome" ) {
+			textColor = backSideColor;
+			cardCtx.strokeStyle = WHITE;
+		} else if(deckTheme == "sketchbook") {
+			textColor = BLUE;
+			cardCtx.strokeStyle = WHITE;
+		} else if (deckTheme == "pattern" && !isColoredPattern) {
+			textColor = WHITE;
+			cardCtx.strokeStyle = BLACK;
+		} else {
+			textColor = getSuitColor(image, suit);
+			cardCtx.strokeStyle = BLACK;
+		}
+		cardCtx.fillStyle = textColor;
+		cardCtx.font = `${toPx(6)}px ${font}`;
+		cardCtx.lineWidth = toPx(0.5);
+		cardCtx.textAlign = "left";
+		cardCtx.strokeText(cardNumber, cardArea.x + cardSize[0]/cardAreaPadding, cardArea.y+cardSize[0]/cardAreaPadding + toPx(4.9));
+		cardCtx.fillText(cardNumber, cardArea.x + cardSize[0]/cardAreaPadding, cardArea.y+cardSize[0]/cardAreaPadding + toPx(4.9));
+		
+		cardCtx.save();
+		cardCtx.translate(cardSize[0],cardSize[1])
+		cardCtx.rotate(Math.PI)
+		cardCtx.textAlign = "left";
+		cardCtx.strokeText(cardNumber, cardArea.x + cardSize[0]/cardAreaPadding, cardArea.y+cardSize[0]/cardAreaPadding + toPx(4.9));
+		cardCtx.fillText(cardNumber, cardArea.x + cardSize[0]/cardAreaPadding, cardArea.y+cardSize[0]/cardAreaPadding + toPx(4.9));
+		
+		cardCtx.restore();
+	}
+
+	if (!usedSuits.includes(suit)) usedSuits.push(suit);
+
+	if (isBackSide && deckTheme == "sketchbook") {
+		drawSmolskull(cardCtx, cardData, cardSize[0] / 2, cardSize[1] / 2, toPx(20.0));
+	}
+
+	cardCtx.globalCompositeOperation = "destination-in"
+	drawRoundedRect(cardCtx, 0, 0, cardSize[0],cardSize[1], toPx(1.5));
+	cardCtx.globalCompositeOperation = "source-over"
+}
+
+function getSuitColor(image, suit) {
+	if (image?.dataset.suit == "smile" || suit == "smile") return "#fde62d";
+	else if (image?.dataset.suit == "knife" || suit == "knife") return everythingIsSmol ? BLUE : "#eee";
+	else if (image?.dataset.suit == "orange" || suit == "orange") return "#f3922e";
+	else if (image?.dataset.suit == "leaf" || suit == "leaf") return "#1eb020";
+}
+
+window.onload = async () => {
+	await loadFonts();
+	
+	let deckTheme1 = getFromUrl("theme1", pick(deckThemes));
+	let deckTheme2 = getFromUrl("theme2", pick(deckThemes));
+	if (deckTheme1 == "pattern" || deckTheme2 == "pattern") everythingIsSmol = false;
+
+	let altColors = [RED, BLACK];
+	let altColor1 = pick(altColors, fxrand, true);
+	let altColor2 = pick(altColors, fxrand, true);
+
+	let imagesDeckTheme1 = await Promise.all(allSuits.map(file => [
+		loadSVG(`${file}.svg`, file, "number", deckTheme1, altColor1),
+		loadSVG(`${file}_a.svg`, file, "A", deckTheme1, altColor1),
+		loadSVG(`${file}_k.svg`, file, "K", deckTheme1, altColor1),
+		loadSVG(`${file}_j.svg`, file, "J", deckTheme1, altColor1),
+		loadSVG(`${file}_q.svg`, file, "Q", deckTheme1, altColor1),
+	]).flat());
+
+	let imagesDeckTheme2 = await Promise.all(allSuits.map(file => [
+		loadSVG(`${file}.svg`, file, "number", deckTheme2, altColor2),
+		loadSVG(`${file}_a.svg`, file, "A", deckTheme2, altColor2),
+		loadSVG(`${file}_k.svg`, file, "K", deckTheme2, altColor2),
+		loadSVG(`${file}_j.svg`, file, "J", deckTheme2, altColor2),
+		loadSVG(`${file}_q.svg`, file, "Q", deckTheme2, altColor2),
+	]).flat());
+
+	
+	let jokerImagesTheme1 = await Promise.all(jokers.map(file => loadSVG(`${file}.svg`, file, "JOKER", deckTheme1, altColor1)));
+	let jokerImagesTheme2 = await Promise.all(jokers.map(file => loadSVG(`${file}.svg`, file, "JOKER", deckTheme2, altColor2)));
+
+	let deckTheme1AreaColor = pick(lightColors);
+	let deckTheme2AreaColor = pick(lightColors);
+
+	let deck1JokerImage = pick(jokerImagesTheme1);
+	let deck2JokerImage = pick(jokerImagesTheme2);
+
+	let deckTheme1isColoredPattern = fxrand() > 0.5;
+	let deckTheme2isColoredPattern = fxrand() > 0.5;
+	
+	let deckTheme1BackColor = backSideColors[lightColors.indexOf(deckTheme1AreaColor)];
+	let deckTheme2BackColor = backSideColors[lightColors.indexOf(deckTheme2AreaColor)];
+
+	if (deckTheme1 == "sketchbook") deckTheme1BackColor = BLUE;
+	else if (deckTheme1 == "monochrome") deckTheme1BackColor = altColor1;
+
+	if (deckTheme2 == "sketchbook") deckTheme2BackColor = BLUE;
+	else if (deckTheme2 == "monochrome") deckTheme2BackColor = altColor2;
+	
+	let backSideImageTheme1; 
+	let backSideImageTheme2; 
+	if (settings.visibility < 1) {
+		let backSuits = [...allSuits];
+		backSideImageTheme1 = await loadSVG(`${pick(backSuits, fxrand, true)}_back.svg`, "0", "heart", "back", deckTheme1BackColor);
+		backSideImageTheme2 = await loadSVG(`${pick(backSuits, fxrand, true)}_back.svg`, "0", "heart", "back", deckTheme2BackColor);
+	}
+	let totalX = 11;
+	let totalY = 8;
+	let total = totalX*totalY;
+
+
+	console.log(deckTheme1BackColor)
+	ctx.fillStyle = getHatched(deckThemeIds[0] == 0 || deckThemeIds.length > 1 ? deckTheme1BackColor : deckTheme2BackColor, "#fff", 0.3);
+	ctx.fillRect(0, 0, canvasSize[0], canvasSize[1]);
+
+	let backSideDistribution = new Array(total).fill(0).map((_,idx,a)=>idx>a.length*settings.visibility);
+	if (fxrand() > 0.1) shuffle(backSideDistribution);
+	else {
+		backSideDistribution = backSideDistribution.map((_,idx,a)=>idx % 2==0 ? a[idx] : a[a.length-idx]);
+	}
+	if (fxrand() > 0.5) backSideDistribution.reverse();
+	
+	let order = new Array(total).fill(0).map((_,idx)=>idx);
+	if (settings.cardDistribution != "piles") {
+		if (settings.cardDistribution == "aligned") {
+			for(let ii=0,ll=range(1,6)|0;ii<ll;ii++) {
+				let idx1 = range(0,order.length)|0;
+				let idx2 = range(0,order.length)|0;
+				[order[idx1], order[idx2]] = [order[idx2], order[idx1]];
+			}
+		} else {
+			shuffle(order);
+			if (fxrand() > 0.5) order.reverse();
+		}
+	}
+
+	if (settings.visibility == 0.5 && fxrand() > 0.5) {
+		backSideDistribution = backSideDistribution.map((_,idx,a)=>idx%2==0);
+		if (fxrand() > 0.5) {
+			backSideDistribution = backSideDistribution.map((_,idx,a)=>a.length-idx);
+		} else {
+			backSideDistribution = backSideDistribution.map((_,idx,a)=>idx);
+		}
+	}
+	
+
+	ctx.shadowColor = 'rgba(0,0,0,0.325)';
+	ctx.shadowBlur = toPx(2);
+
+	let pairs = Array.from({length: Math.ceil(total/4)}, (_,idx) => ([
+		{ suit: 0, cardNumber: cardNumbers[idx%cardNumbers.length] },
+		{ suit: 1, cardNumber: cardNumbers[idx%cardNumbers.length] },
+		{ suit: 2, cardNumber: cardNumbers[idx%cardNumbers.length] },
+		{ suit: 3, cardNumber: cardNumbers[idx%cardNumbers.length] },
+	])).flat();
+	if (fxrand() > 0.5) pairs.reverse();
+
+	if (fxrand() > 0.75) {
+		let selectedSuit1 = pick([0,1,2,3]);
+		let selectedSuit2 = pick([0,1,2,3]);
+		pairs.forEach(pair => { if (pair.suit!=selectedSuit1 && pair.suit != selectedSuit2) pair.suit = pick([selectedSuit1, selectedSuit2])});
+	}
+
+	function findCardImage(images, suit, cardNumber) {
+		return images.find(image => image.dataset.suit === suit && image.dataset.cardNumber === cardNumber);
+	}
+
+	let spiralEndCardsDir = pick([-1,1], getSeededRandom(baseSeed * 777));
+	let flyPositions = [];
+	for(let i=0;i<total;i++) {
+		let ii = order[i];
+		let isBackSide = backSideDistribution[i];
+		
+		let { cardNumber, suit } = player == "chaotic" ? pick(pairs, fxrand, true) : pairs.shift();
+		if (!cardNumber) break;
+
+
+		let deckThemeId = pick(deckThemeIds);
+		let deckTheme = [deckTheme1,deckTheme2][deckThemeId];
+
+		if (cardNumbers.length == 2 && deckThemeIds.length > 1) {
+			// when showing 2 cards, one per theme
+			cardNumber = cardNumbers[deckThemeId];
+		}
+		
+		let isSpecialCardNumber = specialsCardNumbers.includes(cardNumber);
+		
+		let image = findCardImage(deckThemeId === 0 ? imagesDeckTheme1 : imagesDeckTheme2, allSuits[suit], "number");
+		let imageSpecial = findCardImage(deckThemeId === 0 ? imagesDeckTheme1 : imagesDeckTheme2, allSuits[suit], isSpecialCardNumber ? cardNumber : "number");
+
+		if (cardNumber == "JOKER") {
+			imageSpecial = deckThemeId === 0 ? deck1JokerImage : deck2JokerImage;
+		}
+		suit = imageSpecial.dataset.suit;
+	
+		let cardData = {
+			isBackSide,
+			backSideImage: (deckThemeId === 0 ? backSideImageTheme1 : backSideImageTheme2),
+			suit: suit,
+			cardNumber,
+			image,
+			imageSpecial,
+			isColoredPattern: (deckThemeId === 0 ? deckTheme1isColoredPattern : deckTheme2isColoredPattern),
+			deckTheme,
+			areaColor: (deckThemeId === 0 ? deckTheme1AreaColor : deckTheme2AreaColor),
+			backSideColor: (deckThemeId === 0 ? deckTheme1BackColor : deckTheme2BackColor),
+		};
+		
+		prepareCard(cardData);
+		
+		let pos;
+		if (settings.cardDistribution == "spiral") {
+			let rotation = 2.5 + lerp(0.25, 0.2, 1-ii/total) * (total-ii);
+			let x = 0.5 + (.0375 * rotation) * Math.cos(rotation);
+			let y = 0.5 + (.0375 * rotation) * Math.sin(rotation);
+			pos = [x+ range(-0.05, 0.05),y+ range(-0.05,0.05)];
+			rotation += Math.PI/2;
+			rotation += range(-0.1,0.1);
+			if (i == total - 1) { 
+				rotation = range(0.2, 0.5) * spiralEndCardsDir;
+				pos = [0.45, 0.51];
+			} else if (i == total - 2) { 
+				rotation = range(-0.5, -0.2) * spiralEndCardsDir;
+				pos = [0.55, 0.49];
+			}
+			drawRotated(ctx, cardCanvas, pos, rotation);
+		} else {
+			let rotation = settings.cardDistribution == "random" ? range(0, 3) : range(-0.1, 0.1);
+			let x = ii%totalX;
+			let y = ii/totalX|0;
+			if (settings.cardDistribution == "piles") {
+				x = (x/2|0)*2;
+				y = (y/2|0)*2;
+			}
+			pos = [x/(totalX-1) + range(-0.05,0.05),y/(totalY-1)+ range(-0.05,0.05)];
+			if (settings.cardDistribution != "piles" && settings.cardDistribution != "ordered") {
+				if (i == total - 1) { 
+					pos = [0.45, 0.51];
+				} else if (i == total - 2) { 
+					pos = [0.55, 0.49];
+				}
+			}
+			drawRotated(ctx, cardCanvas, pos, range(-rotation, rotation));
+		}
+		if (!isBackSide && suit == "orange") flyPositions.push(pos);
+	}
+
+	ctx.shadowBlur = null;
+	if (settings.flies && flyPositions.length) {
+		let flyImage = await loadSVG("fly.svg", 'fly');
+		for(let i=0;i<flyPositions.length*9;i++) {
+			let pos = fxrand() > 0.05 ? [...pick(flyPositions)] : [range(0,1),range(0,1)];
+			pos[0] += range(-0.08,0.08);
+			pos[1] += range(-0.08,0.08);
+			let rotation = range(-3.5, 3.5);
+			drawRotated(ctx, flyImage, pos, rotation, toPx(range(0.85,0.7)/9));
+		}
+	}
+	window.$fxhashFeatures = {
+		deck1: deckThemeIds[0] == 0 || deckThemeIds.length > 1 ? getThemeName(deckTheme1,deckTheme1AreaColor,deckTheme1BackColor,deckTheme1isColoredPattern) : getThemeName(deckTheme2,deckTheme2AreaColor,deckTheme2BackColor,deckTheme2isColoredPattern),
+		deck2: deckThemeIds.length > 1 ? getThemeName(deckTheme2,deckTheme2AreaColor,deckTheme2BackColor,deckTheme2isColoredPattern) : "-",
+		cards: getCardNames(cardNumbers),
+		suits: getSuitNames(usedSuits),
+		jokers: getJokerNames(usedSuits),
+		distribution: settings.cardDistribution,
+		visible: Math.round(clamp01(backSideDistribution.filter(a=>a==false).length / backSideDistribution.length) * 100) + "%",
+	}
+
+	let features = JSON.stringify(window.$fxhashFeatures);
+	console.log(features);
+
+	if (urlParams.get("debug") === "true") {
+		for (let feature in window.$fxhashFeatures) {
+			debugLog.innerHTML += feature + ": " + window.$fxhashFeatures[feature] + "<br/>";
+		}
+		debugLog.style.display = "block";
+	}
+}
+
+function getCardNames(cards) {
+	if (cards.length == 1 || cards[0] == cards[1]) {
+		return cards[0].replaceAll("JOKER","joker");;
+	} else if (cards.length == 2) {
+		return cards.join(" and ").replaceAll("JOKER","joker");
+	} else if (cards.length < 7) {
+		return "specials";
+	} else {
+		return "all";
+	}
+}
+
+function getSuitNames(suits) {
+	let name = "";
+	if (everythingIsSmol) {
+		name = "💀"
+		if (suits.includes("knife")) name += "🔵";
+		if (suits.includes("orange")) name += "🟠";
+		if (suits.includes("smile")) name += "🟡";
+		if (suits.includes("leaf")) name += "🟢";
+	} else {
+		if (suits.includes("knife")) name += "🔪";
+		if (suits.includes("orange")) name += "🍊";
+		if (suits.includes("smile")) name += "😐";
+		if (suits.includes("leaf")) name += "🍀";
+	}
+	return !!name ? name : "-";
+}
+
+function getJokerNames(suits) {
+	let names = [];
+	if (suits.includes("jjjjjohn_joker")) names.push("🃏jjjjjohn");
+	if (suits.includes("smolskull_joker")) names.push("🃏smolskull");
+	return names.length ? names.join(" ") : "-";
+}
+
+function getThemeName(theme, themeColor, backColor,multipleIsMonochrome) {
+	let name = "";
+	switch(theme) {
+		case "single-color": return getColorName(themeColor);
+		case "pattern": return multipleIsMonochrome ? getColorName(themeColor) + " pattern" : "full pattern";
+		case "sketchbook": return "sketchbook";
+		case "monochrome": return "basic " + getColorName(backColor);
+	}
+}
+
+async function loadSVG(src, suit, cardNumber, deckTheme, altColor) {
+	let lineScale = cardNumber == "number" ? 2 : 0.8;
+	let svgString = await fetch(src).then(v => v.text());
+	if (suit !== "fly") {
+		if (deckTheme == "sketchbook") {
+			svgString = svgString.replace(/(fill=\")\#(.+?)(\")/ig,  `$1none$3`);
+			svgString = svgString.replace(/(stroke=\")\#(.+?)(\")/ig,`$1${BLACK}$3`);
+			svgString = svgString.replace(/(stroke-width=\")(.+?)(\")/ig, `$1${4*lineScale}$3`);
+		} else if (deckTheme == "monochrome") {
+			svgString = svgString.replace(/(fill=\")[a-z0-9\#]{7,}(\")/ig,`$1none$2`);
+			svgString = svgString.replace(/(stroke=\")[a-z0-9\#]{7,}(\")/ig, `$1${altColor}$2`);
+			svgString = svgString.replace(/(stroke-width=\")(.+?)(\")/ig, `$1${4*lineScale}$3`);
+		} else if (deckTheme == "back")  {
+			svgString = svgString.replace(/(fill=\")[a-z0-9\#]{7,}(\")/ig,`$1${altColor}$2`);
+			svgString = svgString.replace(/(fill:)[a-z0-9\#]{7,}(;)/ig,`$1${altColor}$2`);
+		} else {
+			svgString = svgString.replace(/(stroke-width=\")(.+?)(\")/ig, `$1${2*lineScale}$3`);
+		}
+
+	}
+	return await loadImage("data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgString), suit, cardNumber);
+}
+
+function loadImage(src, suit, cardNumber) {
+	return new Promise((resolve, reject) => {
+		let img = new Image()
+		img.onload = () => resolve(img)
+		img.onerror = reject;
+		img.dataset.suit = suit;
+		img.dataset.cardNumber = cardNumber;
+		img.src = src;
+	});
+}
+
+function timeout(delay) {
+    return new Promise(resolve => setTimeout(resolve, delay));
+}
+
+async function loadFonts() {
+    const ff = new FontFace(font, `url('${font}.woff') format("woff")`);
+    document.fonts.add(await ff.load());
+}
+
+function drawRotated(ctx, inputCanvas, pos = [0.5, 0.5], rotation = 0, scale = 1) {
+	ctx.save();
+	ctx.translate(ctx.canvas.width*pos[0], ctx.canvas.height*pos[1]); 
+	ctx.rotate(rotation); 
+	ctx.scale(scale,scale); 
+	ctx.drawImage(inputCanvas, -inputCanvas.width * 0.5, -inputCanvas.height * 0.5); 
+	ctx.restore();
+}
+
+function drawLine(ctx, from, to, color = "#000") {
+	ctx.strokeStyle = color;
+	ctx.beginPath();
+	ctx.moveTo(from[0], from[1]);
+	ctx.lineTo(to[0], to[1]);
+	ctx.stroke();
+}
+
+function drawRoundedRect(ctx, x, y, width, height, radius) {
+	ctx.beginPath();
+	ctx.moveTo(x, y + radius);
+	ctx.lineTo(x, y + height - radius);
+	ctx.arcTo(x, y + height, x + radius, y + height, radius);
+	ctx.lineTo(x + width - radius, y + height);
+	ctx.arcTo(x + width, y + height, x + width, y + height-radius, radius);
+	ctx.lineTo(x + width, y + radius);
+	ctx.arcTo(x + width, y, x + width - radius, y, radius);
+	ctx.lineTo(x + radius, y);
+	ctx.arcTo(x, y, x, y + radius, radius);
+	ctx.fill();
+}
+
+function getHatched(color1, color2, opacity = 0.5, rotation = 0) {
+	let canvas = document.createElement('canvas');
+	canvas.width = toPx(1.5);
+	canvas.height = toPx(1.5);
+	let ctx = canvas.getContext('2d');
+	ctx.lineJoin = 'miter';
+	ctx.lineCap = 'square';
+	ctx.lineWidth = toPx(0.5);
+	ctx.fillStyle = color1;
+	ctx.fillRect(0,0,canvas.width,canvas.height);
+	ctx.globalAlpha = opacity;
+	ctx.strokeStyle = color2;
+	ctx.beginPath();
+	ctx.moveTo(0,0);
+	ctx.lineTo(canvas.width,canvas.height);
+	ctx.moveTo(canvas.width, 0);
+	ctx.lineTo(canvas.width * 2,canvas.height);
+	ctx.moveTo(0,canvas.height);
+	ctx.lineTo(canvas.width,canvas.height * 2);
+	ctx.stroke();
+	
+	ctx.save();
+	ctx.globalAlpha = 1;
+	ctx.translate(canvas.width*0.5,canvas.height*0.5);
+	ctx.rotate(rotation);
+	ctx.drawImage(canvas, -canvas.width*0.5, -canvas.height*0.5);
+	ctx.restore();
+	return ctx.createPattern(ctx.canvas, 'repeat');
+}
+
+function toPx(unit) { return Array.isArray(unit) ? unit.map(v => toPx(v)) : unit / 200 * canvas.width }
+
+function scl2(a, b) { return [a[0] * b, a[1] * b]; }
+function add2(a, b) { return [a[0] + b[0], a[1] + b[1]]; }
+function sub2(a, b) { return [a[0] - b[0], a[1] - b[1]]; }
+function rotate(p, a) { return [p[0] * Math.cos(a) + p[1] * Math.sin(a), p[1] * Math.cos(a) - p[0] * Math.sin(a)]; }
+function lerp(a,b,f) { return a + (b-a) * f }
+function pingpong(t) { return (t > 0.5 ? 1 - t : t) * 2; }
+function range(a,b, random=fxrand) { return a + (b-a) * random(); }
+function clamp01(v) { return v < 0 ? 0 : (v > 1 ? 1 : v); }
+function pick(arr, random=fxrand, remove = false) {
+	let item = arr[random() * arr.length | 0];
+	if (remove) {
+		let index;
+		while ((index = arr.indexOf(item)) !== -1) arr.splice(index, 1);
+	}
+	return item;;
+}
+
+function shuffle(array) {
+	for (let i = array.length - 1; i > 0; i--) {
+		const j = Math.floor(fxrand() * (i + 1));
+		[array[i], array[j]] = [array[j], array[i]];
+	}
+}
+
+function getSeededRandom(seed) {
+	let  rseed = Math.round(seed);
+	return () => {
+		let r = 1103515245 * (((rseed) >> 1) ^ (rseed++));
+		r = 1103515245 * (r ^ (r>>3));
+		r = r ^ (r >> 16);
+		return r / 1103515245 % 1;	
+	}
+}
+
+let useDefaultFaceProps = fxrand() > 0.5;
+let defaultFaceProps = {
+	eyeHeight: pick([0, 1, 2, 3]),
+	mouthType: pick([0, 1, 2]),
+	mouthSize: pick([0, 1, 2, 3]),
+	eyeDirection: pick([0, 1, 2, 3]),
+}
+
+function drawSmolskull(ctx, cardData, x, y, scale = 1, rotation = 0) {
+	let {isBackSide,backSideImage,image,imageSpecial,suit,cardNumber,areaColor,backSideColor,deckTheme,isColoredPattern} = cardData;
+	ctx.save();
+
+	let seededRand = getSeededRandom(allSuits.indexOf(suit) + (baseSeed * 1234567890));
+
+	ctx.lineWidth = ctx.canvas.width / 200;
+	let paths = getSmolSkull(seededRand, x, y, scale, rotation);
+	paths.forEach((path,idx) => {
+		let path2d = new Path2D();
+		path.forEach((pt, idx) => {
+			if (idx == 0) path2d.moveTo(pt[0], pt[1]);
+			else path2d.lineTo(pt[0], pt[1]);
+		});
+		path2d.closePath();
+		if (idx == 0) {
+			// face
+			ctx.fillStyle = "#FFF";
+		} else if (idx == 1 || idx == 2) {
+			// eyes
+			ctx.fillStyle = getSuitColor(null, suit);
+		} else if (idx == 3 || idx == 4) {
+			// mouth + eye fill
+			ctx.fillStyle = BLACK;
+		}
+		
+		if (deckTheme == "sketchbook") {
+			if (isBackSide) {
+				ctx.lineWidth = ctx.canvas.width / 100;
+				ctx.strokeStyle = WHITE;
+				ctx.fillStyle = BLUE;
+				ctx.fill(path2d);
+				ctx.fillStyle = getHatched("transparent", WHITE, 0.1);
+				ctx.fill(path2d);
+				ctx.stroke(path2d);
+			} else {
+				ctx.strokeStyle = BLACK;
+				ctx.stroke(path2d);
+			}
+		} else if (deckTheme == "monochrome") {
+			ctx.strokeStyle = backSideColor;
+			ctx.stroke(path2d);
+		} else if (deckTheme == "single-color") {
+			ctx.strokeStyle = BLACK;
+			ctx.fill(path2d);
+			if (idx < 3) ctx.stroke(path2d);
+		} else if (deckTheme == "pattern") {
+			ctx.fill(path2d);
+			if (idx < 3) ctx.stroke(path2d);
+		} else {
+			if (idx == 0) ctx.fillStyle = GRAY;
+			//ctx.strokeStyle = BLACK;
+			ctx.fill(path2d);
+		}
+	});
+	ctx.restore();
+}
+
+function getSmolSkull(seededRand, x, y, scale = 1, rotation = 0) {
+	let s = 11;
+	let px1 = 1 / s;
+	let px2 = 2 / s;
+	let px3 = 3 / s;
+	let px4 = 4 / s;
+	let chinX = pick([px2, px1], seededRand);
+	let chinY = pick([px1, px2, px3, px4], seededRand);
+	const faceProps =
+		useDefaultFaceProps ? defaultFaceProps
+			: {
+					eyeHeight: pick([0, 1, 2, 3], seededRand),
+					mouthType: pick([0, 1, 2], seededRand),
+					mouthSize: pick([0, 1, 2, 3], seededRand),
+					eyeDirection: pick([0, 1, 2, 3], seededRand),
+			  };
+
+	function rect(x, y, w, h) {
+		[x, y, w, h] = [x * px1, y * px1, w * px1, h * px1];
+		return [
+			[x, y],
+			[x + w, y],
+			[x + w, y + h],
+			[x, y + h],
+		];
+	}
+
+	function arc(x, y, r, a1, a2, quality = 0.05) {
+		[x, y, r] = [x * px1, y * px1, r * px1];
+		a1 += Math.PI / 2;
+		a2 += Math.PI / 2;
+		let pts = [];
+		for (let a = a2; a >= a1; a -= quality) {
+			pts.push([x + Math.sin(a) * r, y + Math.cos(a) * r]);
+		}
+		return pts;
+	}
+	let eyeY = pick([1, 2, 3], seededRand);
+	if (faceProps.mouthSize == 2) eyeY = 1;
+	let mouthY = eyeY + 1 + faceProps.eyeHeight + pick([2, 3], seededRand);
+
+	let smolskull = [];
+	smolskull.push([
+		// head
+		...arc(1, 1, 1, -Math.PI - Math.PI / 2, -Math.PI),
+		[px1, 0],
+		...arc(s - 1, 1, 1, 0, Math.PI / 2),
+		[1, 1 - chinY],
+		[1 - chinX, 1 - chinY],
+		[1 - chinX, 1],
+		[chinX, 1],
+		[chinX, 1 - chinY],
+		[0, 1 - chinY],
+	]);
+	// eyes
+	smolskull.push(rect(2, eyeY, 3, faceProps.eyeHeight + 2));
+	smolskull.push(rect(6, eyeY, 3, faceProps.eyeHeight + 2));
+	if (faceProps.eyeDirection == 0) {
+		smolskull.push(rect(2, eyeY, 1, faceProps.eyeHeight + 2));
+		smolskull.push(rect(6, eyeY, 1, faceProps.eyeHeight + 2));
+	} else if (faceProps.eyeDirection == 1) {
+		smolskull.push(rect(2 + 2, eyeY, 1, faceProps.eyeHeight + 2));
+		smolskull.push(rect(6 + 2, eyeY, 1, faceProps.eyeHeight + 2));
+	} else if (faceProps.eyeDirection == 2) {
+		smolskull.push(rect(2, faceProps.eyeHeight + eyeY + 1, 3, 1));
+		smolskull.push(rect(6, faceProps.eyeHeight + eyeY + 1, 3, 1));
+	} else if (faceProps.eyeDirection == 3) {
+		smolskull.push(rect(2, eyeY, 3, 1));
+		smolskull.push(rect(6, eyeY, 3, 1));
+	}
+	//mouth
+	let mouthHack = 0.0375;
+	if (faceProps.mouthType == 0) {
+		// mouth []
+		smolskull.push(rect(3, mouthY, 5, Math.min(s - mouthY + mouthHack, (faceProps.mouthSize + 1 + mouthHack) * 2)));
+	} else if (faceProps.mouthType == 1) {
+		// mouth []
+		smolskull.push(rect(4, mouthY, 3, Math.min(s - mouthY + mouthHack, (faceProps.mouthSize + 1 + mouthHack) * 2)));
+	} else {
+		// mouth  |||
+		smolskull.push(rect(3, mouthY, 1, Math.min(s - mouthY + mouthHack, (faceProps.mouthSize + 1 + mouthHack) * 2)));
+		smolskull.push(rect(5, mouthY, 1, Math.min(s - mouthY + mouthHack, (faceProps.mouthSize + 1 + mouthHack) * 2)));
+		smolskull.push(rect(7, mouthY, 1, Math.min(s - mouthY + mouthHack, (faceProps.mouthSize + 1 + mouthHack) * 2)));
+	}
+	// scale and position
+	let newSize = 14;
+	let newOffset = 1.5;
+	// scale / translate
+	smolskull = smolskull.map((arr) => arr.map((p) => add2(scl2(add2([-0.5 + newOffset / newSize, -0.5 + newOffset / newSize], [(p[0] / newSize) * s, (p[1] / newSize) * s]), scale), [x, y])));
+	// rotate
+	smolskull = smolskull.map((arr) => arr.map((p) => add2(rotate(sub2(p, [x, y]), rotation), [x, y])));
+	return smolskull;
+}
+
+</script>

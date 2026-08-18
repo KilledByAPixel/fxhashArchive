@@ -1,0 +1,1 @@
+function pushpop(p){push(),p(),pop()}function mapN(p){return map(p,0,1,-1,1)}

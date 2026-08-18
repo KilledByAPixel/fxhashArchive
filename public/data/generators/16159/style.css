@@ -1,0 +1,18 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  height: 100vh;
+  display: grid;
+  place-items: center;
+  background: hsl(0, 0%, 5%);
+}
+
+.canvas {
+  width: 100vmin;
+  height: 100vmin;
+  background: hsl(0, 0%, 0%);
+}

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf8">  
+    <script id="fxhash-snippet">
+      let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+      var fxhash = new URLSearchParams(window.location.search).get('fxhash')
+      let b58dec = str=>[...str].reduce((p,c)=>p*alphabet.length+alphabet.indexOf(c)|0, 0)
+      let fxhashTrunc = fxhash.slice(2)
+      let regex = new RegExp(".{" + ((fxhashTrunc.length/4)|0) + "}", 'g')
+      let hashes = fxhashTrunc.match(regex).map(h => b58dec(h))
+      let sfc32 = (a, b, c, d) => {
+        return () => {
+          a |= 0; b |= 0; c |= 0; d |= 0
+          var t = (a + b | 0) + d | 0
+          d = d + 1 | 0
+          a = b ^ b >>> 9
+          b = c + (c << 3) | 0
+          c = c << 21 | c >>> 11
+          c = c + t | 0
+          return (t >>> 0) / 4294967296
+        }
+      }
+      var fxrand = sfc32(...hashes)
+      // used to get features during token mint
+      window.addEventListener("message", (event) => {
+        if (event.data === "fxhash_getFeatures") {
+          parent.postMessage({
+            id: "fxhash_getFeatures",
+            data: window.$fxhashFeatures
+          }, "*")
+        }
+      })
+      var isFxpreview = new URLSearchParams(window.location.search).get('preview') === "1"
+      function fxpreview() {
+        window.dispatchEvent(new Event("fxhash-preview"))
+        setTimeout(() => fxpreview(), 500)
+      }
+</script>
+
+    <style>
+
+      body {
+          margin: 0;
+          font-family: monospace;
+          background-color: rgb(17, 17, 17);
+      }
+
+      #canvas_all {
+        display: flex;
+        justify-content: center;  
+        align-items: center; 
+        position: fixed;
+      }    
+
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        position: fixed;              
+      }       
+
+      #canvas_final {
+        z-index: 1;
+        box-shadow: 0px 0px 10px 5px #000000; 
+      }      
+
+      #canvas_final, #canvas_main {
+        opacity: 0;
+        transition: opacity 2s; 
+      }
+
+      #canvas_final.fade, #canvas_main.fade {
+        opacity: 1;
+      }
+
+      #canvas_origional {
+        opacity: 0;
+      }
+
+      #canvas_main, #canvas_origional {
+        z-index: -1;
+      }
+           
+      @font-face {
+          font-family: 'MajorMonoDisplay';
+          src: url('./fonts/MajorMonoDisplay.ttf');
+      }      
+
+    html,
+    body { 
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;     
+    }
+
+    .title_screen {
+      font-family: 'MajorMonoDisplay';
+      color: #d7d7d7;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-size: 1.5em;
+      padding: 20px;
+      z-index: 99999;
+      transition: opacity 10s;    
+    }
+    .title_text_cont {
+      background-color: transparent;
+      width: 100%;
+    }
+    .title_text{
+      padding: 5px;
+    }
+    .opacity_fade_out {
+        opacity: 0;
+    }
+    .opacity_fade_in {
+        opacity: 1;
+    }
+    ::-webkit-scrollbar {
+        display: none;
+    }
+    
+    </style>
+
+      <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+      <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+      <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+      <link rel="manifest" href="/site.webmanifest">
+      
+     <meta charset="utf-8">
+     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+     <title>Lost Memories</title>
+  </head>
+
+  <body id="body">    
+    <div id='title_screen' class="title_screen">      
+      <div class="title_text_cont">
+        <div class="title_text" >lost memories</div>
+      </div>    
+    </div> 
+
+
+    <div id="canvas_all">
+    </div>
+  </body>
+
+  <script src="./twgl.min.js"></script>  
+  <script src="./perlin_noise.min.js"></script>  
+  <script src="./maths.min.js"></script>  
+  <script src="./global_variables.js"></script>   
+  <script src="./colors.min.js"></script>   
+  <script src="./e_random_walker.min.js"></script>  
+  <script src="./e_organic_walker.min.js"></script>  
+  <script src="./e_background_ground.min.js"></script>    
+
+  <script src="./t_tech_detail.min.js"></script>  
+  <script src="./t_base_cube.min.js"></script>  
+  <script src="./t_tech_cube.min.js"></script>  
+  <script src="./t_stone_block_cube.min.js"></script>  
+  <script src="./t_tech_draw_func.min.js"></script>  
+
+  <script src="./h_diver.min.js"></script>  
+  <script src="./e_fish.min.js"></script>  
+  <script src="./t_bridge.min.js"></script>  
+  <script src="./t_bio_dome.min.js"></script>  
+
+  <script src="./t_building_from_parts.min.js"></script> 
+
+  <script src="./webgl_to_canvas.min.js"></script> 
+  <script src="./draw_functions.min.js"></script> 
+  
+  
+
+  <script src="./webgl_functions.min.js"></script>  
+  <script src="./main.min.js"></script>  
+  
+
+</html>
+
+
+
+
