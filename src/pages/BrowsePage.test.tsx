@@ -62,6 +62,23 @@ test('most collected follows the ranking from summary.json', async () => {
   expect(names()).toEqual(['Tok 3', 'Tok 1', 'Tok 4', 'Tok 2'])
 })
 
+test('unranked projects sort last while keeping their relative order', async () => {
+  // Fixture where ranked deliberately omits some tokens, simulating projects with no trades
+  const summaryWithUnranked = {
+    generatedAt: '2026-08-18T00:00:00.000Z',
+    counts: { projects: 4, artists: 1, iterations: 0, seeds: 0, archived: 0 },
+    ranked: [3, 1], // Only tokens 3 and 1 have recorded trades; 2 and 4 are unranked
+    archived: [],
+    curve: [{ p: 1, share: 50 }],
+  }
+  vi.spyOn(data, 'loadSummary').mockResolvedValue(summaryWithUnranked)
+  renderPage()
+  await screen.findByPlaceholderText(/search projects/i)
+  fireEvent.change(screen.getByRole('combobox'), { target: { value: 'collected' } })
+  // Ranked tokens (3, 1) first in rank order, then unranked tokens (2, 4) in catalog order
+  expect(names()).toEqual(['Tok 3', 'Tok 1', 'Tok 2', 'Tok 4'])
+})
+
 test('random order is stable while typing in the search box', async () => {
   renderPage()
   const search = await screen.findByPlaceholderText(/search projects/i)
