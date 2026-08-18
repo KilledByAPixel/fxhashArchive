@@ -1,0 +1,42 @@
+html, body {
+	margin: 0;
+	padding: 0;
+	background-color: #0000;
+}
+
+body {
+	height: 100vh !important;
+  	width: 100vw !important;
+  	overflow: hidden;
+  	position: fixed;
+}
+
+* {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+}
+
+main {
+	display: block;
+	margin: 0 !important;
+	padding: 0 !important;
+	width: 100% !important;
+	height: 100% !important;
+}
+
+canvas {
+	display: block;
+	margin: 0 !important;
+	padding: 0 !important;
+	width: 100% !important;
+	height: 100% !important;
+}
+
+p {
+	font-size: 12px !important;
+	font-family: monospace !important;
+	background-color: #000000 !important;
+	border-radius: 0 !important;
+	padding: 5px !important;
+}
