@@ -197,7 +197,11 @@ test('a TzKT failure on the mapping path reports unavailable, without a silent f
 
   renderAt('/token/tok-5')
 
-  expect(await screen.findByText(/iterations unavailable/i)).toBeTruthy()
+  // The ids are held locally, so an unreachable indexer costs titles and previews,
+  // not the list. The iterations still appear, identified by token id.
+  expect(await screen.findByText(/titles and preview images are unavailable/i)).toBeTruthy()
+  expect(screen.getByText('#955')).toBeTruthy()
+  expect(screen.getByText('#960')).toBeTruthy()
   // Knowing the ids exist, an unreachable indexer must never read as "never minted".
   expect(screen.queryByText(/have been minted/i)).toBeNull()
   expect(byIds).toHaveBeenCalled()
@@ -431,4 +435,36 @@ test('clears stale trading figures when navigating to a project with none of its
   // been cleared synchronously alongside the rest of the per-slug reset, they would
   // still be visible right now, under B's name.
   expect(screen.queryByText(/tez/i)).toBeNull()
+})
+
+test('with TzKT entirely unreachable, the whole edition is still listed from local ids', async () => {
+  // The offline case: no indexer at all. Every id, and therefore the size of the
+  // edition and each piece's identity, is known from the captured mapping — only
+  // the titles and thumbnails ever needed the network.
+  vi.spyOn(data, 'loadIterationIds').mockClear().mockResolvedValue(['FX0-955', 'FX0-960', 'FX0-961'])
+  vi.spyOn(tzkt, 'fetchIterationsByIds').mockClear().mockRejectedValue(new Error('offline'))
+  const join = vi.spyOn(tzkt, 'fetchIterations').mockClear()
+
+  renderAt('/token/tok-5')
+
+  expect(await screen.findByText('#955')).toBeTruthy()
+  expect(screen.getByText('#960')).toBeTruthy()
+  expect(screen.getByText('#961')).toBeTruthy()
+  // The count comes from the local ids, so a visitor can see how large the edition is.
+  expect(screen.getByRole('heading', { name: /iterations \(3\)/i })).toBeTruthy()
+  // The lossy join must not be attempted just because the id path failed.
+  expect(join).not.toHaveBeenCalled()
+})
+
+test('missing thumbnails say why rather than leaving a blank tile', async () => {
+  vi.spyOn(data, 'loadIterationIds').mockClear().mockResolvedValue(['FX0-955'])
+  vi.spyOn(tzkt, 'fetchIterationsByIds').mockClear().mockRejectedValue(new Error('offline'))
+
+  renderAt('/token/tok-5')
+
+  await screen.findByText('#955')
+  // Three different statements, and a visitor should be able to tell them apart:
+  // "no image recorded" is about the artwork, "IPFS unreachable" is about the
+  // gateways, and this one is about not having reached the indexer at all.
+  expect(screen.getAllByTitle(/preview unavailable/i).length).toBeGreaterThan(0)
 })

@@ -16,7 +16,19 @@ export default function IpfsImage({ uri, alt, className }: Props) {
 
   const src = ipfsToHttp(uri, gateway)
   if (!src || gateway >= GATEWAYS.length) {
-    return <div className={`img-fallback ${className ?? ''}`} title={alt} />
+    // Say which of the two it is. "No image recorded" is a fact about the artwork;
+    // "every gateway failed" is a fact about the network, and a blank tile that
+    // could mean either leaves a visitor unable to tell a missing piece from an
+    // unreachable one — which matters most when IPFS is exactly what has gone away.
+    const reason = uri ? 'Image unavailable — IPFS unreachable' : 'No image recorded'
+    // Deliberately not role="img": the tests use the absence of an img role to prove
+    // that a rejected uri (a javascript: one, say) never reaches an <img> tag at all,
+    // and that check is worth more than the label. The visible text is read anyway.
+    return (
+      <div className={`img-fallback ${className ?? ''}`} title={`${alt}: ${reason}`}>
+        <span>{reason}</span>
+      </div>
+    )
   }
   return (
     <img

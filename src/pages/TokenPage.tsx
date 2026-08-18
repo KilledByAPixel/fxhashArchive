@@ -164,6 +164,28 @@ export default function TokenPage() {
 
   const project = state.token
   const neverMinted = Array.isArray(objktIds) && objktIds.length === 0
+
+  /**
+   * The iteration list is built from the captured ids and merely *decorated* with
+   * whatever TzKT returns, rather than being TzKT's to provide.
+   *
+   * It used to be the other way round, which meant the whole list vanished the
+   * moment the indexer was unreachable — including for projects whose generator
+   * and seeds are sitting in this repository. Every id, and therefore the size of
+   * the edition and each piece's identity, is known locally; only the names and
+   * thumbnails ever needed the network.
+   */
+  const enrichment = new Map((iterations ?? []).map((it) => [it.tokenId, it]))
+  const localCells =
+    Array.isArray(objktIds) && objktIds.length > 0 && iterContract
+      ? objktIds.slice(0, offset + PAGE).map((id) => {
+          const tokenId = id.split('-')[1]
+          return { id, tokenId, contract: iterContract, row: enrichment.get(tokenId) }
+        })
+      : null
+  const localDone = localCells !== null && Array.isArray(objktIds)
+    ? offset + PAGE >= objktIds.length
+    : done
   // The id path is only usable with both halves: the ids and their contract.
   const byIdsUsable = Array.isArray(objktIds) && objktIds.length > 0 && iterContract !== null
   // Nothing left to try: no usable id path, and no generatorUri to join on.
@@ -203,18 +225,56 @@ export default function TokenPage() {
         <ArchivedPlayer projectId={project.id} iterationIds={objktIds} />
       )}
 
-      <h3>Iterations</h3>
-      {iterError && <p>Iterations unavailable right now (TzKT unreachable). Try again later.</p>}
-      {!iterError && !neverMinted && noSource && <p>No iterations available for this project.</p>}
-      {!iterError && !neverMinted && !noSource && (objktIds === undefined || iterations === null) && (
+      <h3>Iterations{Array.isArray(objktIds) && objktIds.length > 0 && ` (${objktIds.length})`}</h3>
+
+      {/* With the ids held locally, an unreachable indexer costs names and thumbnails,
+          not the list itself — so say what is actually missing. */}
+      {iterError && localCells && (
+        <p className="muted">
+          Titles and preview images are unavailable (TzKT unreachable). The iterations
+          themselves are listed from this repository.
+        </p>
+      )}
+      {iterError && !localCells && <p>Iterations unavailable right now (TzKT unreachable). Try again later.</p>}
+      {!localCells && !iterError && !neverMinted && noSource && <p>No iterations available for this project.</p>}
+      {!localCells && !iterError && !neverMinted && !noSource && (objktIds === undefined || iterations === null) && (
         <p>Loading iterations…</p>
       )}
       {!iterError && neverMinted && <p>No iterations have been minted for this project.</p>}
       {/* We looked but came up empty — say so without asserting the art never existed. */}
-      {!iterError && !neverMinted && !noSource && iterations !== null && iterations.length === 0 && (
+      {!localCells && !iterError && !neverMinted && !noSource && iterations !== null && iterations.length === 0 && (
         <p>Could not load iterations for this project.</p>
       )}
-      {iterations && iterations.length > 0 && (
+
+      {localCells && (
+        <div className="token-grid">
+          {localCells.map((cell) => (
+            <Link
+              key={cell.id}
+              to={`/gentk/${cell.contract}/${cell.tokenId}`}
+              className="token-card"
+            >
+              {/* No row means the indexer never answered for this id, so we do not
+                  know whether a preview exists — which is a different statement from
+                  "this artwork has no image", and from "IPFS would not serve it". */}
+              {cell.row ? (
+                <IpfsImage
+                  uri={cell.row.thumbnailUri ?? cell.row.displayUri}
+                  alt={cell.row.name ?? `#${cell.tokenId}`}
+                  className="token-thumb"
+                />
+              ) : (
+                <div className="img-fallback token-thumb" title={`#${cell.tokenId}: preview unavailable — TzKT unreachable`}>
+                  <span>Preview unavailable</span>
+                </div>
+              )}
+              <div className="token-name">{cell.row?.name ?? `#${cell.tokenId}`}</div>
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {!localCells && iterations && iterations.length > 0 && (
         <div className="token-grid">
           {iterations.map((it) => (
             <Link key={`${it.contract}-${it.tokenId}`} to={`/gentk/${it.contract}/${it.tokenId}`} className="token-card">
@@ -226,7 +286,7 @@ export default function TokenPage() {
       )}
       {/* Outside the grid on purpose: a page that returned no rows (TzKT can do that
           while ids remain) used to hide this button and strand the rest of the list. */}
-      {!done && iterations !== null && (
+      {!localDone && (localCells !== null || iterations !== null) && (
         <button className="load-more" onClick={() => setOffset((o) => o + PAGE)}>Load more</button>
       )}
     </div>
