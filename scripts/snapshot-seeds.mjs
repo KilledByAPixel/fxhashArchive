@@ -248,8 +248,15 @@ async function main() {
       const chunk = await fetchChunk(c, from, size)
       budget--
 
-      if (VERIFY && existing) {
-        if (JSON.stringify(existing.seeds) !== JSON.stringify(chunk.cols.seeds)) {
+      if (VERIFY) {
+        // Never write in verify mode, even when the chunk is absent. Writing
+        // here would turn a read-only audit into a silent repair, and would
+        // race destructively with anything else touching the tree (a git
+        // checkout mid-audit would see files reappear under it).
+        if (!existing) {
+          mismatches++
+          console.error(`MISSING contract ${ci} chunk ${from}: no file on disk (re-run without --verify)`)
+        } else if (JSON.stringify(existing.seeds) !== JSON.stringify(chunk.cols.seeds)) {
           mismatches++
           console.error(`MISMATCH contract ${ci} chunk ${from}: on-disk seeds differ from TzKT`)
         }
@@ -308,7 +315,8 @@ async function main() {
     seedsMissing: missingSeeds,
     seedsMissingReason: 'unsigned mints ([WAITING TO BE SIGNED]) — no seed ever existed',
   }
-  await atomicWrite(join(OUT, 'meta.json'), JSON.stringify(meta, null, 2))
+  // Verify is strictly read-only; not even meta.json is touched.
+  if (!VERIFY) await atomicWrite(join(OUT, 'meta.json'), JSON.stringify(meta, null, 2))
 
   console.log(
     `\n[FINAL] ${done}/${work.length} chunks (${fetched} fetched, ${skipped} resumed, ${failed} failed) | ` +
