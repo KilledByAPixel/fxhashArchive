@@ -154,6 +154,7 @@ const archivedSummary = {
   counts: { projects: 1, artists: 1, iterations: 1, seeds: 1, archived: 1, archivedShareOfVolume: 100 },
   ranked: [42], archived: [42],
   featured: { top: [], sample: [] },
+  thumbs: {},
 }
 
 test('with the indexer dead, an archived iteration still renders from local files', async () => {

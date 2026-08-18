@@ -17,6 +17,7 @@ const summary = {
   },
   ranked: [1], archived: [1],
   featured: { top: [], sample: [] },
+  thumbs: {},
 }
 
 function renderAt(path: string) {

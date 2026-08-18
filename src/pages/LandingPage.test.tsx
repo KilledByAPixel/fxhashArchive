@@ -24,6 +24,7 @@ const summary = {
     top: [card(3), card(1), card(2)],
     sample: [card(1), card(2), card(3)],
   },
+  thumbs: {},
 }
 
 beforeEach(() => {

@@ -30,14 +30,30 @@ export function leanCard(t) {
 }
 
 /**
- * Cards for the landing page: the highest-ranked projects, plus a spread across
- * the whole catalog. The spread is taken at even intervals rather than at
- * random so the file is byte-identical between runs, and so the sample covers
- * every era of the platform instead of clustering wherever a PRNG landed.
+ * Cards for the landing page: the highest-ranked projects, plus a spread to
+ * shuffle for the random strip.
  *
- * `tokens` must already be filtered to visible projects.
+ * `sampleFrom` is deliberately a different set from `tokens`. The random strip
+ * draws only from fully-archived projects, because those are the ones whose
+ * preview images are stored here — sampling the whole catalog gave a row of
+ * empty tiles the moment IPFS was unreachable, on a page whose entire purpose
+ * is to show that the archive survives without it. The breadth lost is real:
+ * the strip can no longer surface any of the 27,430, only the archived few
+ * hundred.
+ *
+ * The spread is taken at even intervals rather than at random so the file is
+ * byte-identical between runs, and so it covers every era of the platform
+ * instead of clustering wherever a PRNG landed.
+ *
+ * Both sets must already be filtered to visible projects.
  */
-export function buildFeatured(tokens, ranked, topCount = FEATURED_TOP, sampleCount = FEATURED_SAMPLE) {
+export function buildFeatured(
+  tokens,
+  ranked,
+  sampleFrom = tokens,
+  topCount = FEATURED_TOP,
+  sampleCount = FEATURED_SAMPLE,
+) {
   const byId = new Map(tokens.map((t) => [t.id, t]))
   const top = []
   for (const id of ranked) {
@@ -47,10 +63,9 @@ export function buildFeatured(tokens, ranked, topCount = FEATURED_TOP, sampleCou
   }
 
   const sample = []
-  const n = Math.min(sampleCount, tokens.length)
+  const n = Math.min(sampleCount, sampleFrom.length)
   for (let i = 0; i < n; i++) {
-    // Even spacing across the catalog, which is ordered by mint date.
-    sample.push(leanCard(tokens[Math.floor((i * (tokens.length - 1)) / Math.max(1, n - 1))]))
+    sample.push(leanCard(sampleFrom[Math.floor((i * (sampleFrom.length - 1)) / Math.max(1, n - 1))]))
   }
   return { top, sample }
 }
@@ -83,10 +98,12 @@ export function buildArchivedVolumeShare(volumes, archivedIds) {
 
 export function buildSummary({
   projectCount, artistCount, iterationCount, seedCount, volumes, archivedIds, generatedAt,
-  visibleTokens = [],
+  visibleTokens = [], thumbs = {},
 }) {
   const archived = [...archivedIds].sort((a, b) => a - b)
   const ranked = buildRanking(volumes)
+  const archivedSet = new Set(archived)
+  const archivedTokens = visibleTokens.filter((t) => archivedSet.has(t.id))
   return {
     generatedAt,
     counts: {
@@ -99,6 +116,12 @@ export function buildSummary({
     },
     ranked,
     archived,
-    featured: buildFeatured(visibleTokens, ranked),
+    featured: buildFeatured(visibleTokens, ranked, archivedTokens),
+    /**
+     * Project id -> the preview image saved under public/data/thumbs.
+     * Present only for archived projects; everything else still streams its
+     * preview from IPFS.
+     */
+    thumbs,
   }
 }

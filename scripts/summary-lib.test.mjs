@@ -72,26 +72,26 @@ test('leanCard tolerates a missing author and thumbnail', () => {
 
 test('buildFeatured takes the top ranked projects in rank order', () => {
   const tokens = [tok(1), tok(2), tok(3), tok(4)]
-  const { top } = buildFeatured(tokens, [3, 1, 4], 2, 2)
+  const { top } = buildFeatured(tokens, [3, 1, 4], tokens, 2, 2)
   expect(top.map((c) => c.id)).toEqual([3, 1])
 })
 
 test('buildFeatured skips ranked ids with no visible project', () => {
   // id 9 was ranked but is hidden or absent, so it must not appear as a hole.
   const tokens = [tok(1), tok(2)]
-  const { top } = buildFeatured(tokens, [9, 2, 1], 2, 2)
+  const { top } = buildFeatured(tokens, [9, 2, 1], tokens, 2, 2)
   expect(top.map((c) => c.id)).toEqual([2, 1])
 })
 
 test('buildFeatured spreads its sample across the whole catalog, not just the start', () => {
   const tokens = Array.from({ length: 100 }, (_, i) => tok(i))
-  const { sample } = buildFeatured(tokens, [], 0, 5)
+  const { sample } = buildFeatured(tokens, [], tokens, 0, 5)
   // Evenly spaced endpoints included, so every era of the platform is represented.
   expect(sample.map((c) => c.id)).toEqual([0, 24, 49, 74, 99])
 })
 
 test('buildFeatured asks for no more than the catalog holds', () => {
-  const { sample } = buildFeatured([tok(1), tok(2)], [], 0, 50)
+  const { sample } = buildFeatured([tok(1), tok(2)], [], [tok(1), tok(2)], 0, 50)
   expect(sample).toHaveLength(2)
 })
 
@@ -103,6 +103,18 @@ test('buildSummary includes featured cards and no longer emits a curve', () => {
     visibleTokens: [tok(1), tok(2), tok(3)],
   })
   expect(s.featured.top.map((c) => c.id)).toEqual([1, 2])
-  expect(s.featured.sample.length).toBe(3)
+  // The random strip draws only from archived projects, and only id 1 is archived.
+  expect(s.featured.sample.map((c) => c.id)).toEqual([1])
   expect(s.curve).toBeUndefined()
+})
+
+test('buildFeatured draws its sample from the archived set, not the whole catalog', () => {
+  const tokens = [tok(1), tok(2), tok(3), tok(4)]
+  const archivedOnly = [tok(2), tok(4)]
+  const { top, sample } = buildFeatured(tokens, [3, 1], archivedOnly, 2, 2)
+  // top still ranges over everything that was ranked...
+  expect(top.map((c) => c.id)).toEqual([3, 1])
+  // ...while the random strip is confined to projects whose preview images are
+  // stored here, so it is not a row of empty tiles once IPFS is unreachable.
+  expect(sample.map((c) => c.id)).toEqual([2, 4])
 })

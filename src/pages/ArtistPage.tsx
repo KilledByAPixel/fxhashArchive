@@ -23,6 +23,7 @@ export default function ArtistPage() {
   // their works are fully archived — it is what the preservation request form
   // asks them to check. A failed summary just means no badges, never a broken page.
   const [archivedIds, setArchivedIds] = useState<Set<number>>(new Set())
+  const [thumbs, setThumbs] = useState<Record<string, string>>({})
 
   useEffect(() => {
     let cancelled = false
@@ -32,8 +33,8 @@ export default function ArtistPage() {
     setState({ status: 'loading' })
     setTokens([])
     loadSummary().then(
-      (s) => { if (!cancelled) setArchivedIds(new Set(s.archived)) },
-      () => { if (!cancelled) setArchivedIds(new Set()) },
+      (s) => { if (!cancelled) { setArchivedIds(new Set(s.archived)); setThumbs(s.thumbs) } },
+      () => { if (!cancelled) { setArchivedIds(new Set()); setThumbs({}) } },
     )
     ;(async () => {
       try {
@@ -74,7 +75,12 @@ export default function ArtistPage() {
         : (
           <div className="token-grid">
             {tokens.map((t) => (
-              <TokenCard key={t.id} token={t} archived={archivedIds.has(t.id)} />
+              <TokenCard
+                key={t.id}
+                token={t}
+                archived={archivedIds.has(t.id)}
+                localThumb={thumbs[String(t.id)]}
+              />
             ))}
           </div>
         )}

@@ -94,7 +94,12 @@ export default function BrowsePage() {
       )}
       <div className="token-grid">
         {visible.slice(0, shown).map((t) => (
-          <TokenCard key={t.id} token={t} archived={archivedIds.has(t.id)} />
+          <TokenCard
+            key={t.id}
+            token={t}
+            archived={archivedIds.has(t.id)}
+            localThumb={summary?.thumbs[String(t.id)]}
+          />
         ))}
       </div>
       {shown < visible.length && (

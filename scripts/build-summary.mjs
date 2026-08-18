@@ -66,6 +66,15 @@ async function main() {
 
   const manifest = await loadJson(join(DATA, 'generators', 'manifest.json'), {})
 
+  // Preview images saved for archived projects, keyed by project id. Read from
+  // disk rather than assumed, so a project whose thumbnail failed to download
+  // keeps streaming from IPFS instead of pointing at a file that is not there.
+  const thumbs = {}
+  for (const f of await readdir(join(DATA, 'thumbs')).catch(() => [])) {
+    const m = f.match(/^(\d+)\.\w+$/)
+    if (m) thumbs[m[1]] = f
+  }
+
   const summary = buildSummary({
     projectCount,
     artistCount: artists.length,
@@ -74,6 +83,7 @@ async function main() {
     volumes,
     archivedIds: Object.keys(manifest).map(Number),
     visibleTokens,
+    thumbs,
     generatedAt: new Date().toISOString(),
   })
 

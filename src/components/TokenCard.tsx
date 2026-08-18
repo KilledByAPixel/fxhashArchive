@@ -5,13 +5,28 @@ import type { CardToken } from '../lib/types'
 export default function TokenCard({
   token,
   archived = false,
+  localThumb,
 }: {
   token: CardToken
   archived?: boolean
+  /** Filename under `data/thumbs/`, when this project's preview is stored here. */
+  localThumb?: string
 }) {
   return (
     <Link to={`/token/${token.slug}`} className="token-card">
-      <IpfsImage uri={token.thumbnailUri} alt={token.name} className="token-thumb" />
+      {/* A stored preview is preferred over the IPFS one wherever we have it: it
+          is the same image, but it loads from this origin, which is faster while
+          IPFS is up and the only option once it is not. */}
+      {localThumb ? (
+        <img
+          src={`${import.meta.env.BASE_URL}data/thumbs/${localThumb}`}
+          alt={token.name}
+          className="token-thumb"
+          loading="lazy"
+        />
+      ) : (
+        <IpfsImage uri={token.thumbnailUri} alt={token.name} className="token-thumb" />
+      )}
       {/* "Fully archived", not "Offline" — the bare word is what a server says when
           it is down, so it read as a warning about the artwork rather than a
           guarantee about it. "Fully" is also the honest qualifier: every project here

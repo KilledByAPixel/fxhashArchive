@@ -20,6 +20,7 @@ const summary = {
   ranked: [3, 1, 4, 2],
   archived: [2],
   featured: { top: [], sample: [] },
+  thumbs: {},
 }
 
 beforeEach(() => {
@@ -70,6 +71,7 @@ test('unranked projects sort last while keeping their relative order', async () 
     ranked: [3, 1], // Only tokens 3 and 1 have recorded trades; 2 and 4 are unranked
     archived: [],
     featured: { top: [], sample: [] },
+    thumbs: {},
   }
   vi.spyOn(data, 'loadSummary').mockResolvedValue(summaryWithUnranked)
   renderPage()

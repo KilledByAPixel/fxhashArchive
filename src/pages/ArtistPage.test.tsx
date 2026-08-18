@@ -65,6 +65,7 @@ test('badges the artist works whose code is fully archived', async () => {
     },
     ranked: [1], archived: [1],
     featured: { top: [], sample: [] },
+    thumbs: {},
   })
   renderAt('tz1a')
   // An artist checking their own page is who the preservation request form is

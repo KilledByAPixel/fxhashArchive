@@ -76,6 +76,11 @@ export interface Summary {
     top: CardToken[]
     sample: CardToken[]
   }
+  /**
+   * Project id -> filename under `data/thumbs/`, for archived projects whose
+   * preview image is stored here. Everything else streams its preview from IPFS.
+   */
+  thumbs: Record<string, string>
 }
 
 /**

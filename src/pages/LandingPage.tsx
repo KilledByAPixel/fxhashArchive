@@ -102,7 +102,12 @@ export default function LandingPage() {
           <h2>Random from the archive</h2>
           <div className="token-grid" data-testid="landing-random">
             {random.map((t) => (
-              <TokenCard key={t.id} token={t} archived={archivedIds.has(t.id)} />
+              <TokenCard
+                key={t.id}
+                token={t}
+                archived={archivedIds.has(t.id)}
+                localThumb={summary?.thumbs[String(t.id)]}
+              />
             ))}
           </div>
         </section>
@@ -147,7 +152,12 @@ export default function LandingPage() {
           <h2>Most collected</h2>
           <div className="token-grid" data-testid="landing-collected">
             {collected.map((t) => (
-              <TokenCard key={t.id} token={t} archived={archivedIds.has(t.id)} />
+              <TokenCard
+                key={t.id}
+                token={t}
+                archived={archivedIds.has(t.id)}
+                localThumb={summary?.thumbs[String(t.id)]}
+              />
             ))}
           </div>
           <Link to="/artwork">Browse all {n(summary?.counts.projects ?? 0)} projects →</Link>
