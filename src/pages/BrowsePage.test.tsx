@@ -92,7 +92,7 @@ test('archived projects are badged', async () => {
   renderPage()
   await screen.findByPlaceholderText(/search projects/i)
   // summary.archived = [2], so exactly one badge for four projects.
-  expect(screen.getAllByTitle(/playable offline/i)).toHaveLength(1)
+  expect(screen.getAllByTitle(/fully archived/i)).toHaveLength(1)
 })
 
 test('the archived filter narrows the grid to archived projects', async () => {

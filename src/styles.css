@@ -63,7 +63,7 @@ img { max-width: 100%; }
 .token-badge {
   position: absolute; top: 6px; right: 6px;
   background: rgba(0, 0, 0, 0.7); color: #fff;
-  border-radius: 3px; font-size: 0.7rem; padding: 2px 6px;
+  border-radius: 3px; font-size: 0.7rem; padding: 2px 6px; white-space: nowrap;
 }
 .archived-filter { display: inline-flex; align-items: center; gap: 0.35rem; }
 .browse-note { opacity: 0.8; font-size: 0.9rem; margin: 0.5rem 0 0; }

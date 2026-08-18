@@ -80,7 +80,7 @@ export default function LandingPage() {
           <li><strong>{n(summary.counts.artists)}</strong> artists</li>
           <li><strong>{n(summary.counts.iterations)}</strong> iterations</li>
           <li><strong>{n(summary.counts.seeds)}</strong> seeds preserved</li>
-          <li><strong>{n(summary.counts.archived)}</strong> playable offline</li>
+          <li><strong>{n(summary.counts.archived)}</strong> fully archived</li>
         </ul>
       )}
 
@@ -108,7 +108,7 @@ export default function LandingPage() {
           </p>
           <div className="share-bars">
             <ShareBar
-              label="of projects archived"
+              label="of projects fully archived"
               percent={archivedPct}
               testId="share-projects"
             />
