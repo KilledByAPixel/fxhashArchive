@@ -1,0 +1,34 @@
+body {
+  background-color: #555;
+  font-family: sans-serif;
+  overflow: hidden;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  --bodymargin : 10px;
+  --wContent: calc(100vw - 2*var(--bodymargin));
+  --hContent: calc(100vh - 2*var(--bodymargin));
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+}
+  
+#ow
+{ padding: var(--bodymargin);
+  display: inline-block;
+}
+
+#cw
+{
+  display : inline-block;
+}
+
+#cw canvas
+{
+  max-width: var(--wContent);
+  max-height: var(--hContent);
+  box-shadow: 1px 1px 2px 2px rgba(33, 33, 33, .2);
+
+}

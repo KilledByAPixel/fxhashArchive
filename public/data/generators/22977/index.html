@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Circumscript</title>
+
+    <link rel="stylesheet" href="./css/style.css">
+
+    <script id="fxhash-snippet">
+      let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+      var fxhash = new URLSearchParams(window.location.search).get('fxhash')
+      let b58dec = str=>[...str].reduce((p,c)=>p*alphabet.length+alphabet.indexOf(c)|0, 0)
+      let fxhashTrunc = fxhash.slice(2)
+      let regex = new RegExp(".{" + ((fxhashTrunc.length/4)|0) + "}", 'g')
+      let hashes = fxhashTrunc.match(regex).map(h => b58dec(h))
+      let sfc32 = (a, b, c, d) => {
+        return () => {
+          a |= 0; b |= 0; c |= 0; d |= 0
+          var t = (a + b | 0) + d | 0
+          d = d + 1 | 0
+          a = b ^ b >>> 9
+          b = c + (c << 3) | 0
+          c = c << 21 | c >>> 11
+          c = c + t | 0
+          return (t >>> 0) / 4294967296
+        }
+      }
+      var fxrand = sfc32(...hashes)
+      // used to get features during token mint
+      window.addEventListener("message", (event) => {
+        if (event.data === "fxhash_getFeatures") {
+          parent.postMessage({
+            id: "fxhash_getFeatures",
+            data: window.$fxhashFeatures
+          }, "*")
+        }
+      })
+      var isFxpreview = new URLSearchParams(window.location.search).get('preview') === "1"
+      function fxpreview() {
+        window.dispatchEvent(new Event("fxhash-preview"))
+        setTimeout(() => fxpreview(), 500)
+      }
+</script>
+
+    
+    <script src="./js/lib/p5.min.js"></script>
+
+    
+    
+
+    
+    
+</head>
+
+<body>
+    <main>
+        <button class="overlay-toggle"
+            onclick="document.getElementsByClassName('overlay')[0].classList.toggle('hidden')">M</button>
+        <div class="overlay hidden">
+            <h1>Circumscript</h1>
+            <h2>by WootScoot</h2>
+            <hr>
+            <h2>Resolution:</h2>
+            <select name="densityOptions" id="densityOptions">
+                <option value="1">1500x2000</option>
+                <option value="2">3000x4000</option>
+                <option value="3">4500x6000</option>
+            </select>
+            <button onclick="changeDensity()">Reload</button>
+            <button onclick="exportCurrent()">Save</button>
+            <p style="max-width: 200px">(press -spacebar- or button above to export current canvas)</p>
+
+            <svg width="109" height="164" viewBox="0 0 109 164" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path 
+                    d="M59.0349 73.5024C58.8691 72.9091 58.8693 72.2806 59.0358 71.6873L70.5391 30.6799C71.4419 27.4611 75.9391 27.4657 76.8359 30.6862L97.9794 106.617C98.4981 108.48 100.173 109.766 102.081 109.766C104.908 109.766 106.952 107.023 106.181 104.262L78.8543 6.3954C78.1914 4.02198 76.0562 2.38379 73.6251 2.38379C71.194 2.38379 69.0587 4.02184 68.3959 6.39511L57.4993 45.4122C56.5998 48.6326 52.1015 48.6326 51.2021 45.4122L40.3053 6.39511C39.6426 4.02182 37.5072 2.38379 35.0763 2.38379C32.6452 2.38379 30.5098 4.02196 29.8471 6.39538L3.18017 101.9C2.07844 105.845 4.99949 109.766 9.041 109.766H61.11C65.152 109.766 68.0732 105.844 66.9704 101.898L59.0349 73.5024ZM23.3768 101.349C21.3137 101.349 19.7654 99.4354 20.1668 97.3819L32.6016 33.7833C33.2703 30.3629 38.0184 30.1665 38.9591 33.5203L50.0292 72.9839L50.0298 72.9856L56.769 97.123C57.3608 99.2428 55.7914 101.349 53.6202 101.349H23.3768Z"
+                    fill="var(--color)" stroke="var(--bg-color)" stroke-width="3" ></path>
+                <path 
+                    d="M41.7228 62.5121L49.6584 90.908C49.8242 91.5012 49.824 92.1298 49.6575 92.723L38.1542 133.73C37.2514 136.949 32.7542 136.945 31.8574 133.724L10.7138 57.7931C10.1951 55.9306 8.52004 54.6445 6.61265 54.6445C3.78517 54.6445 1.74157 57.3873 2.51236 60.1479L29.839 158.015C30.5019 160.388 32.6371 162.027 35.0682 162.027C37.4993 162.027 39.6346 160.388 40.2974 158.015L51.194 118.998C52.0934 115.778 56.5918 115.778 57.4912 118.998L68.3878 158.015C69.0507 160.388 71.1861 162.027 73.617 162.027C76.0481 162.027 78.1833 160.388 78.8462 158.015L105.513 62.5108C106.615 58.5651 103.694 54.6445 99.6522 54.6445H47.5833C43.5413 54.6445 40.6201 58.566 41.7228 62.5121ZM55.0731 63.0614H85.3165C87.3796 63.0614 88.9279 64.975 88.5265 67.0284L76.0917 130.627C75.423 134.047 70.6749 134.244 69.7342 130.89L58.6641 91.4265L58.6635 91.4248L51.9243 67.2874C51.3325 65.1676 52.9017 63.0614 55.0731 63.0614Z"
+                    fill="var(--color)" stroke="var(--bg-color)" stroke-width="3" ></path>
+                <path 
+                    d="M16.0638 108.723L16.3542 109.764H17.42H23.3188H25.1818L24.6751 107.945L14.4444 71.2134L13.0881 66.3438L11.7317 71.2134L8.77496 81.8288L8.6665 82.2182L8.77517 82.6076L16.0638 108.723Z"
+                    fill="var(--color)" stroke="var(--bg-color)" stroke-width="3" ></path>
+                <path 
+                    d="M92.6085 55.6852L92.3182 54.6445H91.2524H85.3536H83.4905L83.9973 56.4638L94.2279 93.195L95.5842 98.0649L96.9405 93.1952L99.8974 82.5796L100.006 82.1902L99.8972 81.801L92.6085 55.6852Z"
+                    fill="var(--color)" stroke="var(--bg-color)" stroke-width="3" ></path>
+            </svg>
+
+        </div>
+    </main>
+
+    <script src="./js/colors.js"></script>
+    <script src="./js/app.js"></script>
+</body>
+
+</html>

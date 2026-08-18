@@ -1,0 +1,1 @@
+const canvasSize=6e3;let contentInset,piece,seed,numTiles=5,totalTiles=numTiles*numTiles;function setup(){console.log("Hash: "+fxhash),seed=int(999999*fxrand()),createCanvas(6e3,6e3),rectMode(CORNER),pixelDensity(1),noLoop()}function draw(){randomSeed(seed),noiseSeed(seed),piece=generatePiece(),window.$fxhashFeatures=piece.metadata(),drawCanvas()}

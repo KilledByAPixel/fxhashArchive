@@ -1,0 +1,24 @@
+body {
+  height: 100vh; /* Fallback for browsers that do not support Custom Properties */
+}
+body,
+html {
+  margin: 0;
+  overflow: hidden;
+  padding: 0;
+}
+main {
+  align-items: center;
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  justify-content: center;
+}
+canvas {
+  max-width: 100%;
+  max-height: 100%;
+  display: inline-block; /* Instead of display: block; */
+  margin: 0 auto;
+  vertical-align: middle;
+  touch-action: none;
+}

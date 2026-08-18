@@ -1,0 +1,44 @@
+body {
+  /* leave it to hide the scrollbars */
+  overflow: hidden;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}
+.loading {
+  position: absolute;
+  z-index: 100;
+  top: 2%;
+  left: 50%;
+  transform: translate(-50%, 0);
+  width: 15%;
+  height: 2%;
+  background: rgba(100, 100, 100, 0.2);
+  padding: 0.6%;
+}
+
+.loadingBar {
+  height: 100%;
+  background: white;
+  width: 0%;
+}
+
+#fullscreen {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background-color: black;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#fullscreen canvas {
+  object-fit: contain;
+  max-height: 100%;
+  max-width: 100%;
+}

@@ -1,0 +1,1 @@
+window.$fxhashFeatures={"Growth Curve":function(e){return e<.9?"slightly bended":e<1.1?"bended":e<1.4?"coiled":void 0}(branchCurve),Forest:function(e){return e<35?"sparse":e<56?"wooded":e<81?"densly wooded":e<101?"old growth":void 0}(dauer),Snow:function(e){return e<3?"heavy":e<5?"soft":e<7?"flurries":void 0}(grainAmount)};

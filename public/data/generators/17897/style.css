@@ -1,0 +1,15 @@
+body {
+  background-color: gray;
+
+  /* leave it to hide the scrollbars */
+  overflow: hidden;
+  border:0;
+  margin:0;
+}
+
+canvas {
+
+
+	border:0;
+	margin:0;
+}

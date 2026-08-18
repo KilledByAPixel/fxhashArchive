@@ -1,0 +1,272 @@
+$head-font: monospace
+
+$sliderBg: #000
+
+*
+    margin: 0
+    padding: 0
+    box-sizing: border-box
+
+body
+    margin: 0
+    padding: 0
+    overflow: hidden
+    display: grid
+    place-items: center
+    background-color: black
+    min-height: 100vh
+    background: black
+
+canvas
+    margin: 0
+    width: 100vw !important
+    height: 100vh !important
+    object-fit: contain
+    // box-shadow: rgba(17, 17, 26, 0.05) 0px 4px 16px, rgba(17, 17, 26, 0.05) 0px 8px 32px
+    background-color: black
+
+main
+    display: grid
+    place-items: center
+    width: 100vw
+    height: 100vh
+    position: relative
+
+    .overlay-toggle
+        position: absolute
+        top: 1rem
+        left: 1rem
+        width: 2rem
+        height: 2rem
+        background-color: rgba(255,255,255,.4)
+        border-radius: 10px
+        color: black
+        z-index: 1
+        cursor: pointer
+        user-select: none
+
+    .overlay
+        --color: white
+        --bg-color: black
+        color: var(--color)
+        background-color: var(--bg-color)
+        font-family: $head-font
+        position: absolute
+        top: 0
+        left: 50%
+        transform: translateX(-50%)
+        width: 75vh
+        height: 100vh
+        z-index: 1
+        display: flex
+        place-items: center
+        justify-content: center
+        flex-direction: column
+        transition: opacity 0.2s ease-out
+        user-select: none
+
+        &.hidden
+            opacity: 0
+            pointer-events: none
+
+        svg
+            opacity: 0.5
+            width: 35px
+            position: absolute
+            bottom: 2rem
+
+        h1
+            margin-bottom: 1rem
+            font-size: 2rem
+
+        h2
+            font-weight: 400
+            font-style: italic
+
+        hr
+            margin: 3rem 0
+            width: 10%
+            border: 1px solid var(--color)
+
+        select
+            width: 10vh
+            margin: 1rem 0 0 0
+            padding: 0.25rem 0.5rem
+            border: 1px solid var(--color)
+            background-color: transparent
+            color: var(--color)
+            font-family: $head-font
+            font-size: 1rem
+            font-weight: 400
+            font-style: italic
+            border-radius: 0.25rem
+            cursor: pointer
+
+            option
+                background-color: var(--bg-color)
+                color: var(--color)
+                font-family: $head-font
+                font-size: 1rem
+                font-weight: 400
+                font-style: italic
+
+        button
+            width: 10vh
+            margin: 0.5rem 0 1rem 0
+            padding: 0.25rem 0.5rem
+            border: 1px solid var(--color)
+            background-color: var(--color)
+            color: var(--bg-color)
+            font-family: $head-font
+            font-size: 1rem
+            font-weight: 400
+            font-style: italic
+            border-radius: 0.25rem
+            cursor: pointer
+            transition: all 0.2s ease-in-out
+
+            &:hover
+                background-color: transparent
+                color: var(--color)
+
+.loader
+    position: absolute
+    top: 50%
+    left: 50%
+    transform: translate(-50%,-50%)
+    color: white
+    font-family: $head-font
+    font-size: 2vmin
+    transition: opacity 0.5s ease-out
+
+    &.hidden
+        opacity: 0
+
+    .bar
+        --bar-width: 50%
+        position: absolute
+        top: 50%
+        left: 50%
+        transform: translate(-50%,calc(-50% + 2vmin + 1em))
+        width: 16vmin
+        height: 3px
+        border-radius: 10px
+        background-color: rgba(255,255,255,.1)
+        margin-top: 10px
+        transition: --bar-width 0.2s ease-out
+
+        &::after
+            content: ""
+            position: absolute
+            top: 0
+            left: 0
+            width: var(--bar-width)
+            height: 100%
+            background-color: white
+            border-radius: 10px
+
+.frameSlider
+    position: absolute
+    bottom: 20px
+    left: 50%
+    transform: translateX(-50%)
+
+[type=range]
+    -webkit-appearance: none
+    background: transparent
+    margin: 12px 0
+    width: 200px
+
+[type=range]::-moz-focus-outer
+    border: 0
+
+[type=range]:focus
+    outline: 0
+
+[type=range]:focus::-webkit-slider-runnable-track
+    background: #fbfbfc
+
+[type=range]:focus::-ms-fill-lower
+    background: #eceff1
+
+[type=range]:focus::-ms-fill-upper
+    background: #fbfbfc
+
+[type=range]::-webkit-slider-runnable-track
+    cursor: default
+    height: 8px
+    transition: all 0.2s ease
+    width: 200px
+    box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.2), 0 0 1px rgba(13, 13, 13, 0.2)
+    background: #eceff1
+    border: 2px solid #cfd8dc
+    border-radius: 5px
+
+[type=range]::-webkit-slider-thumb
+    box-shadow: 4px 4px 4px rgba(0, 0, 0, 0.2), 0 0 4px rgba(13, 13, 13, 0.2)
+    background: $sliderBg
+    border: 2px solid #eceff1
+    border-radius: 12px
+    box-sizing: border-box
+    cursor: default
+    height: 24px
+    width: 24px
+    -webkit-appearance: none
+    margin-top: -10px
+
+[type=range]::-moz-range-track
+    box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.2), 0 0 1px rgba(13, 13, 13, 0.2)
+    cursor: default
+    height: 8px
+    transition: all 0.2s ease
+    width: 200px
+    background: #eceff1
+    border: 2px solid #cfd8dc
+    border-radius: 5px
+    height: 4px
+
+[type=range]::-moz-range-thumb
+    box-shadow: 4px 4px 4px rgba(0, 0, 0, 0.2), 0 0 4px rgba(13, 13, 13, 0.2)
+    background: $sliderBg
+    border: 2px solid #eceff1
+    border-radius: 12px
+    box-sizing: border-box
+    cursor: default
+    height: 24px
+    width: 24px
+
+[type=range]::-ms-track
+    cursor: default
+    height: 8px
+    transition: all 0.2s ease
+    width: 200px
+    background: transparent
+    border-color: transparent
+    border-width: 12px 0
+    color: transparent
+
+[type=range]::-ms-fill-lower
+    box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.2), 0 0 1px rgba(13, 13, 13, 0.2)
+    background: #dde3e6
+    border: 2px solid #cfd8dc
+    border-radius: 10px
+
+[type=range]::-ms-fill-upper
+    box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.2), 0 0 1px rgba(13, 13, 13, 0.2)
+    background: #eceff1
+    border: 2px solid #cfd8dc
+    border-radius: 10px
+
+[type=range]::-ms-thumb
+    box-shadow: 4px 4px 4px rgba(0, 0, 0, 0.2), 0 0 4px rgba(13, 13, 13, 0.2)
+    background: $sliderBg
+    border: 2px solid #eceff1
+    border-radius: 12px
+    box-sizing: border-box
+    cursor: default
+    height: 24px
+    width: 24px
+    margin-top: 2px
+
+[type=range]:disabled::-webkit-slider-thumb, [type=range]:disabled::-moz-range-thumb, [type=range]:disabled::-ms-thumb, [type=range]:disabled::-webkit-slider-runnable-track, [type=range]:disabled::-ms-fill-lower, [type=range]:disabled::-ms-fill-upper
+    cursor: not-allowed

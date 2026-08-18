@@ -1,0 +1,107 @@
+<html>
+    <head>
+        <style>
+            .row {
+                display: flex;
+            }
+
+            .column {
+                flex: 50%;
+                padding: 20px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="row">
+            <div class="column">
+                <iframe  id="fr" onload="frameDidLoad()" frameborder="0" style="border:0; width: 800px; height: 800px; margin-left: auto; margin-right: auto;"></iframe>
+            </div>
+            <div class="column">
+                <div id="metadata">
+
+                </div>
+                <div>
+                    <button onclick="goBack()">Back</button>
+                    <button onclick="next()">Next</button>
+                </div>
+            </div>
+          </div>
+          <script>
+            const fr = document.getElementById('fr');
+            const iframeWindow = fr.contentWindow;
+            const hashes = []
+            var currentHash = undefined;
+            
+            
+            function loadFrame() {
+                let search = new URLSearchParams(window.location.search)
+                const fxhash = search.get('fxhash');
+                if (!!fxhash) {
+                    currentHash = fxhash;
+                    fr.src = "index.html?fxhash=" + search.get("fxhash")
+                }
+                else {
+                    fr.src = "index.html"
+                }
+            }
+            
+
+            function frameDidLoad() {
+                getMetadata();
+            }
+
+            function getMetadata() {
+                // Get the FXMetadata from the iframe window object and display it in the metadata div
+                const metadata = iframeWindow.$fxhashFeatures;
+                const hash = iframeWindow.$fxhash;
+                if (!!hash) {
+                    setHash(hash);
+                    const metadataDiv = document.getElementById('metadata');
+                    metadataDiv.innerHTML = `<h3>FXHash: ${hash}</h3>`;
+                    metadataDiv.innerHTML += Object.keys(metadata).map(key => `<p>${key}: ${metadata[key]}</p>`).join('');
+                }
+            }
+
+            function setHash(hash) {
+                currentHash = hash;
+                var newurl = window.location.protocol + "//" + window.location.host + window.location.pathname + `?fxhash=${hash}`;
+                window.history.pushState({path:newurl},'',newurl);
+            }
+
+            function next() {
+                fr.src = "index.html";
+                if (!hashes.includes(currentHash)) {
+                    hashes.push(currentHash);
+                }
+            }
+
+            function goBack() {
+                const hash = hashes.pop();
+                if (!!hash) {
+                    setHash(hash);
+                    fr.src = "index.html?fxhash=" + hash;
+                }
+            }
+
+            loadFrame();
+
+            document.onkeydown = checkKey;
+
+            function checkKey(e) {
+                e = e || window.event;
+                if (e.keyCode == '37') {
+                    goBack();
+                }
+                else if (e.keyCode == '39') {
+                    next();
+                }
+
+            }
+
+
+            // run doItNow when the iframe after 1 second
+           // setTimeout(doItNow, 1000);
+
+        </script>
+    </body>
+</html>
