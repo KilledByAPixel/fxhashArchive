@@ -1,0 +1,29 @@
+body {
+  overflow: hidden;
+  margin: 0;
+  background-color: white;
+}
+#canvas {
+  display:block;
+  margin: 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-50%);
+  box-shadow: rgba(0, 0, 0, 0.25) 0px 14px 28px, rgba(0, 0, 0, 0.22) 0px 10px 10px;
+}
+
+#loading {
+display:none;
+margin: 0;
+position: absolute;
+top: 50%;
+left: 50%;
+transform: translateX(-50%) translateY(-50%);
+z-index: 99;
+width: 100%;
+text-align: center;
+font-size:1.5em;
+font-family: Arial, Helvetica, sans-serif;
+color: #5b7314;
+}

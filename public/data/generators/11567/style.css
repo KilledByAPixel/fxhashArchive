@@ -1,0 +1,16 @@
+html, body {
+  background-color: #181818;
+}
+canvas {
+  padding: 0;
+  margin: auto;
+  display: block;
+  width: 800px;
+  height: 600px;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 12px;
+}

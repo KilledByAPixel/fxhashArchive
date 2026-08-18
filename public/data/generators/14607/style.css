@@ -1,0 +1,42 @@
+
+
+:root {
+  /* --bg-clr01: hsl(0,0%,0%); */
+  /* --bg-clr02: hsl(0,0%,12%); */
+  /* --bg-clr03: hsl(0,0%,10%); */
+  /* --image-height: 70vh; */
+  /* --navBarsBackgroundColor: hsla(0,0%,8%,0.97); */
+}
+
+
+/* html {
+  margin: 0;
+} */
+
+
+body {
+  /* background-color: lightblue; */
+  background-color: black;
+  margin:0;
+
+  /* leave it to hide the scrollbars */
+  overflow: hidden;
+}
+
+
+* {
+  box-sizing: border-box;
+}
+
+
+.pageContainer {
+  width:100vw;
+  height:100vh;
+  display:flex;
+  flex-direction: column;
+  align-items: center;
+  align-content: center;
+  justify-content: center;
+  background-color: black;
+}
+

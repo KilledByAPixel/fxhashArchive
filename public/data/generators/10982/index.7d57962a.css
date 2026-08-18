@@ -1,0 +1,2 @@
+body{color:#fff;height:100vh;height:calc(var(--vh,1vh)*100);background:#333;justify-content:center;align-items:center;font-family:sans-serif;display:flex}body,html{margin:0;padding:0;overflow:hidden}canvas{max-width:100%;max-height:100%;vertical-align:middle;aspect-ratio:var(--ratio);touch-action:none;margin:0 auto;display:inline-block}
+/*# sourceMappingURL=index.7d57962a.css.map */

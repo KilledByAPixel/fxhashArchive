@@ -1,0 +1,19 @@
+body {
+  background-color: white;
+
+  /* leave it to hide the scrollbars */
+  overflow: hidden;
+}
+
+canvas {
+    max-width: 100%;
+    max-height: 100%;
+    margin: auto;
+    overflow: auto;
+    position: fixed;
+    object-fit: contain;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+}

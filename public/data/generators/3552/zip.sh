@@ -1,0 +1,1 @@
+zip -r index.zip . -x '*.git*' -x '.DS_Store' 

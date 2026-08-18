@@ -1,0 +1,20 @@
+{
+  "name": "projecttree",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.html",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "sh zip.sh"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/frank890417/Gaiastree.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/frank890417/Gaiastree/issues"
+  },
+  "homepage": "https://github.com/frank890417/Gaiastree#readme"
+}
