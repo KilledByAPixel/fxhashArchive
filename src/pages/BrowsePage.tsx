@@ -1,21 +1,35 @@
 import { useEffect, useMemo, useState } from 'react'
-import { loadAllTokens, isVisible } from '../lib/data'
-import type { LeanToken } from '../lib/types'
+import { loadAllTokens, loadSummary, isVisible } from '../lib/data'
+import { seededShuffle } from '../lib/shuffle'
+import type { LeanToken, Summary } from '../lib/types'
 import TokenCard from '../components/TokenCard'
 
 const PAGE = 60
-type SortMode = 'newest' | 'edition'
+type SortMode = 'random' | 'collected' | 'newest'
 
 export default function BrowsePage() {
   const [tokens, setTokens] = useState<LeanToken[] | null>(null)
+  const [summary, setSummary] = useState<Summary | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
-  const [sort, setSort] = useState<SortMode>('newest')
+  const [sort, setSort] = useState<SortMode>('random')
   const [shown, setShown] = useState(PAGE)
+  // One seed per visit, chosen on mount. Re-rolling it during render would
+  // reshuffle the grid on every keystroke and every "load more".
+  const [seed] = useState(() => Math.floor(Math.random() * 0xffffffff))
 
   useEffect(() => {
     loadAllTokens().then(setTokens, (e) => setError(String(e)))
+    // The summary only affects ordering and badges, so a failure must not blank
+    // the grid — the catalog alone is still worth showing.
+    loadSummary().then(setSummary, () => setSummary(null))
   }, [])
+
+  const rank = useMemo(() => {
+    const map = new Map<number, number>()
+    summary?.ranked.forEach((id, i) => map.set(id, i))
+    return map
+  }, [summary])
 
   const visible = useMemo(() => {
     if (!tokens) return []
@@ -26,10 +40,14 @@ export default function BrowsePage() {
         t.tags.some((tag) => tag.toLowerCase().includes(q)) ||
         (t.author?.name ?? '').toLowerCase().includes(q)),
     )
-    return sort === 'edition'
-      ? [...filtered].sort((a, b) => b.supply - a.supply)
-      : [...filtered].reverse() // snapshot is mint-date ASC, so reverse = newest first
-  }, [tokens, query, sort])
+    if (sort === 'random') return seededShuffle(filtered, seed)
+    if (sort === 'collected') {
+      // Unranked projects (no recorded trades) sort last, keeping their own order.
+      const last = Number.MAX_SAFE_INTEGER
+      return [...filtered].sort((a, b) => (rank.get(a.id) ?? last) - (rank.get(b.id) ?? last))
+    }
+    return [...filtered].reverse() // snapshot is mint-date ASC, so reverse = newest first
+  }, [tokens, query, sort, seed, rank])
 
   if (error) return <p>Failed to load catalog: {error}</p>
   if (!tokens) return <p>Loading catalog…</p>
@@ -42,9 +60,13 @@ export default function BrowsePage() {
           value={query}
           onChange={(e) => { setQuery(e.target.value); setShown(PAGE) }}
         />
-        <select value={sort} onChange={(e) => setSort(e.target.value as SortMode)}>
+        <select
+          value={sort}
+          onChange={(e) => { setSort(e.target.value as SortMode); setShown(PAGE) }}
+        >
+          <option value="random">Random</option>
+          <option value="collected">Most collected</option>
           <option value="newest">Newest</option>
-          <option value="edition">Largest edition</option>
         </select>
         <span className="count">{visible.length} projects</span>
       </div>
