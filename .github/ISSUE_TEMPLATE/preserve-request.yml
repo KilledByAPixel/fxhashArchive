@@ -1,0 +1,73 @@
+name: Request artwork preservation
+description: Ask for a project's generator code to be archived so it keeps working offline
+title: "[preserve] "
+labels: ["preservation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        fxhash has shut down. Project metadata and all 1.8 million iteration
+        **seeds** are already archived in this repo — those were the pieces that
+        existed in only one place.
+
+        What is *not* archived is the **generator code**, which lives on IPFS
+        (~80–150 GB for the whole catalog, too much for one repo). A generator
+        plus its seed is everything needed to regenerate an artwork, so once a
+        project is archived here it keeps working with no IPFS, no Tezos, and no
+        internet at all.
+
+        This form is how a project gets added to that list.
+
+        **Scope:** Tezos projects only. fxhash's Ethereum and Base projects
+        (~2.5% of the catalog) are not covered by this viewer yet.
+
+  - type: textarea
+    id: projects
+    attributes:
+      label: Which project(s)?
+      description: One per line. A link to the project on this viewer is ideal, but a name works.
+      placeholder: |
+        https://killedbyapixel.github.io/fxhashViewer/#/token/your-project-slug
+        Another Project Name
+    validations:
+      required: true
+
+  - type: dropdown
+    id: relationship
+    attributes:
+      label: Your connection to the work
+      description: Used only to prioritise — every request is welcome.
+      options:
+        - I made it
+        - I collect it
+        - Neither, but I think it matters
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why should this be preserved?
+      description: |
+        Optional, but it genuinely helps. Historical firsts, technically unusual
+        work, and pieces meaningful to a community are easy to miss when ranking
+        by sales volume alone.
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ### What happens next
+
+        Accepted projects are added to `data/preserve.json` and their generator
+        code is archived into the repo.
+
+        Some projects are included automatically and need no request:
+
+        - the most-traded projects on the platform
+        - every `onchfs://` project — 372 of them are already stored fully
+          on-chain and can never be lost
+
+        A request being declined usually just means limited space, not a
+        judgement about the work.

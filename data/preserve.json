@@ -1,0 +1,31 @@
+{
+  "_readme": [
+    "Which projects get their generator code archived into this repo.",
+    "",
+    "Project metadata and all 1,802,387 iteration seeds are already committed under",
+    "public/data. Generator code is not: it lives on IPFS and runs 80-150 GB for the",
+    "full catalog. A generator plus a seed regenerates an artwork, so any project",
+    "listed here keeps working with no IPFS, no Tezos and no internet.",
+    "",
+    "'rules' selects projects automatically. 'projects' holds individual entries,",
+    "normally added from a preservation request issue.",
+    "",
+    "Scope is Tezos only; fxhash's Ethereum and Base projects are not supported yet."
+  ],
+
+  "rules": {
+    "_topProjectsByVolume": "Rank by primary + secondary volume in tez. Measured across a 600-project sample: the top 1% of projects account for 73.2% of all money that moved on the platform, so a small list covers most of what people actually engaged with. Mints are a poor substitute (top 1% = only 17.4%) because a large free edition is not the same as interest.",
+    "topProjectsByVolume": 274,
+
+    "_includeOnchfs": "372 projects store their code on-chain via onchfs://. They cost nothing to archive and can never be lost, so they are always included.",
+    "includeOnchfs": true,
+
+    "_artists": "Every project by these artists, regardless of volume.",
+    "artists": ["KilledByAPixel"],
+
+    "_maxProjectSizeMB": "Skip generators larger than this and leave them to IPFS. The size distribution has a long tail (median 837 KB among top-volume projects, but individual generators reach 30 MB), and a handful of outliers would otherwise consume the entire budget. Set to 0 to disable the cap.",
+    "maxProjectSizeMB": 10
+  },
+
+  "projects": []
+}
