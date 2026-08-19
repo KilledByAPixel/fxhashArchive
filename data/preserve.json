@@ -24,5 +24,11 @@
     "_maxProjectSizeMB": "Skip generators larger than this and leave them to IPFS. The size distribution has a long tail (median 837 KB among top-volume projects, but individual generators reach 30 MB), and a handful of outliers would otherwise consume the entire budget. Set to 0 to disable the cap.",
     "maxProjectSizeMB": 10
   },
-  "projects": []
+  "projects": [
+    {
+      "id": 26300,
+      "slug": "brutal-nature",
+      "reason": "artist request; 28 MB, over the automatic size cap"
+    }
+  ]
 }

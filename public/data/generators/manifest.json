@@ -3087,6 +3087,14 @@
     "bytes": 104260,
     "reason": "top volume (42,194 tez)"
   },
+  "26300": {
+    "slug": "brutal-nature",
+    "name": "Brutal Nature",
+    "cid": "QmVGoJwd1HNW3nQ5h6ad1A5UqjhqhHesrGSvPGhBaVuxxY",
+    "entry": "index.html",
+    "bytes": 29709119,
+    "reason": "request (artist request; 28 MB, over the automatic size cap)"
+  },
   "26592": {
     "slug": "orbit-of-influence",
     "name": "Orbit of Influence",

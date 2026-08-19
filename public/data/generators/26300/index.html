@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Brutal Nature</title>
+    <meta charset="utf-8">
+    <script id="fxhash-snippet">
+      //---- do not edit the following code (you can indent as you wish)
+      let search = new URLSearchParams(window.location.search)
+      let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+      var fxhash = search.get('fxhash') || "oo" + Array(49).fill(0).map(_=>alphabet[(Math.random()*alphabet.length)|0]).join('')
+      let b58dec = str=>[...str].reduce((p,c)=>p*alphabet.length+alphabet.indexOf(c)|0, 0)
+      let fxhashTrunc = fxhash.slice(2)
+      let regex = new RegExp(".{" + ((fxhash.length/4)|0) + "}", 'g')
+      let hashes = fxhashTrunc.match(regex).map(h => b58dec(h))
+      let sfc32 = (a, b, c, d) => {
+        return () => {
+          a |= 0; b |= 0; c |= 0; d |= 0
+          var t = (a + b | 0) + d | 0
+          d = d + 1 | 0
+          a = b ^ b >>> 9
+          b = c + (c << 3) | 0
+          c = c << 21 | c >>> 11
+          c = c + t | 0
+          return (t >>> 0) / 4294967296
+        }
+      }
+      var fxrand = sfc32(...hashes)
+      // true if preview mode active, false otherwise
+      // you can append preview=1 to the URL to simulate preview active
+      var isFxpreview = search.get('preview') === "1"
+      // call this method to trigger the preview
+      function fxpreview() {
+        window.dispatchEvent(new Event("fxhash-preview"))
+        setTimeout(() => fxpreview(), 500)
+      }
+      //
+      // NEW: v2 of the fxhash SDK
+      //
+      // get the byte params from the URL
+      let fxparams = search.get('fxparams')
+      fxparams = fxparams ? fxparams.replace("0x", "") : fxparams
+
+      // the parameter processor, used to parse fxparams
+      const processors = {
+        number: {
+          deserialize: (input) => {
+            const view = new DataView(new ArrayBuffer(8))
+            for (let i = 0; i < 8; i++) {
+              view.setUint8(i, parseInt(input.substring(i * 2, i * 2 + 2), 16))
+            }
+            return view.getFloat64(0)
+          },
+          bytesLength: () => 8,
+          constrain: (value, definition) =>  {
+            let min = Number.MIN_SAFE_INTEGER
+            if (typeof definition.options?.min !== "undefined")
+              min = Number(definition.options.min)
+            let max = Number.MAX_SAFE_INTEGER
+            if (typeof definition.options?.max !== "undefined")
+              max = Number(definition.options.max)
+            max = Math.min(max, Number.MAX_SAFE_INTEGER)
+            min = Math.max(min, Number.MIN_SAFE_INTEGER)
+            const v = Math.min(Math.max(value, min), max)
+            return v;
+          },
+          random: (definition) => {
+            let min = Number.MIN_SAFE_INTEGER
+            if (typeof definition.options?.min !== "undefined")
+              min = Number(definition.options.min)
+            let max = Number.MAX_SAFE_INTEGER
+            if (typeof definition.options?.max !== "undefined")
+              max = Number(definition.options.max)
+            max = Math.min(max, Number.MAX_SAFE_INTEGER)
+            min = Math.max(min, Number.MIN_SAFE_INTEGER)
+            const v = Math.random() * (max - min) + min
+            if (definition?.options?.step) {
+              const t = 1.0 / definition?.options?.step
+              return Math.round(v * t) / t
+            }
+            return v; 
+          },
+        },
+        bigint: {
+          deserialize: (input) => {
+            const view = new DataView(new ArrayBuffer(8))
+            for (let i = 0; i < 8; i++) {
+              view.setUint8(i, parseInt(input.substring(i * 2, i * 2 + 2), 16))
+            }
+            return view.getBigInt64(0)
+          },
+          bytesLength: () => 8,
+          random: (definition) => {
+            const MIN_SAFE_INT64 = -9223372036854775808n
+            const MAX_SAFE_INT64 = 9223372036854775807n
+            let min = MIN_SAFE_INT64
+            let max = MAX_SAFE_INT64
+            if (typeof definition.options?.min !== "undefined")
+              min = BigInt(definition.options.min)
+            if (typeof definition.options?.max !== "undefined")
+              max = BigInt(definition.options.max)
+            const range = max - min
+            const bits = range.toString(2).length
+            let random
+            do {
+              random = BigInt(
+                "0b" +
+                  Array.from(
+                    crypto.getRandomValues(new Uint8Array(Math.ceil(bits / 8)))
+                  )
+                    .map((b) => b.toString(2).padStart(8, "0"))
+                    .join("")
+              )
+            } while (random > range)
+            return random + min
+          },
+        },
+        boolean: {
+          // if value is "00" -> 0 -> false, otherwise we consider it's 1
+          deserialize: (input) => {
+            return input === "00" ? false : true
+          },
+          bytesLength: () => 1,
+          random: () => Math.random() < 0.5,
+        },
+        color: {
+          deserialize: (input) => input,
+          bytesLength: () => 4,
+          transform: (input) => {
+            const r = parseInt(input.slice(0,2), 16)
+            const g = parseInt(input.slice(2,4), 16)
+            const b = parseInt(input.slice(4,6), 16)
+            const a = parseInt(input.slice(6,8), 16)
+            return {
+              hex: {
+                rgb: '#' + input.slice(0,6),
+                rgba: '#' + input,
+              },
+              obj: {
+                rgb: { r, g, b},
+                rgba: { r, g, b, a},
+              },
+              arr: {
+                rgb: [r,g,b],
+                rgba: [r,g,b,a],
+              }
+            }
+          },
+          constrain: (value, definition) => {
+            return value.slice(0, 8).padEnd(8, "f")
+          },
+          random: () =>
+            `${[...Array(8)]
+              .map(() => Math.floor(Math.random() * 16).toString(16))
+              .join("")}`,
+          },
+        string: {
+          deserialize: (input) => {
+            const hx = input.match(/.{1,4}/g) || []
+            let rtn = ""
+            for (let i = 0; i < hx.length; i++) {
+              const int = parseInt(hx[i], 16)
+              if (int === 0) break
+              rtn += String.fromCharCode(int)
+            }
+            return rtn
+          },
+          bytesLength: () => 64 * 2,
+          constrain: (value, definition) => {
+            let min = 0
+            if (typeof definition.options?.minLength !== "undefined")
+              min = definition.options.minLength
+            let max = 64
+            if (typeof definition.options?.maxLength !== "undefined")
+              max = definition.options.maxLength
+            max = Math.min(max, 64)
+            let v = value.slice(0, max);
+            if (v.length < min) {
+              return v.padEnd(min)
+            }
+            return v;
+          },
+          random: (definition) => {
+            let min = 0
+            if (typeof definition.options?.minLength !== "undefined")
+              min = definition.options.minLength
+            let max = 64
+            if (typeof definition.options?.maxLength !== "undefined")
+              max = definition.options.maxLength
+            max = Math.min(max, 64)
+            const length = Math.round(Math.random() * (max - min) + min)
+            return [...Array(length)]
+              .map((i) => (~~(Math.random() * 36)).toString(36))
+              .join("")
+          },
+        },
+        select: {
+          deserialize: (input, definition) => {
+            return definition.options.options[parseInt(input, 16)] || definition.default
+          },
+          bytesLength: () => 1,
+          constrain: (value, definition) => {
+            if(definition.options.options.includes(value)) {
+              return value;
+            }
+            return definition.options.options[0]
+          },
+          random: (definition) => {
+            const index = Math.round(
+              Math.random() * (definition?.options?.options?.length - 1) + 0
+            )
+            return definition?.options?.options[index]
+          },
+        }
+      }
+
+      // takes the parameters as bytes and outputs an object with the
+      // deserialized parameters, identified by their id in an object
+      const deserializeParams = (bytes, definition) => {
+        const params = {}
+        for (const def of definition) {
+          const processor = processors[def.type]
+          // if we don't have any parameters defined in the URL, set the 
+          // default value and move on
+          if (!bytes) {
+            let v
+            if (typeof def.default === "undefined") v = processor.random(def)
+            else v = def.default
+            params[def.id] = processor.constrain?.(v, def) || v;
+            continue
+          }
+          // extract the length from the bytes & shift the initial bytes string
+          const valueBytes = bytes.substring(0, processor.bytesLength() * 2)
+          bytes = bytes.substring(processor.bytesLength() * 2)
+          // deserialize the bytes into the params
+          const value =  processor.deserialize(valueBytes, def)
+          params[def.id] = processor.constrain?.(value, def) || value;
+        }
+        return params
+      }
+
+      const transformParamValues = (values, definitions) => {
+        const paramValues = {}
+        for (const def of definitions) {
+          const processor = processors[def.type]
+          const value = values[def.id]
+          // deserialize the bytes into the params
+          paramValues[def.id] = processor.transform ? processor.transform(value) : value;
+        }
+        return paramValues; 
+      }
+
+      window.$fx = {
+        _processors: processors,
+        // where params def & features will be stored
+        _params: undefined,
+        _features: undefined,
+        // where the parameter values are stored
+        _paramValues: {},
+
+        hash: fxhash,
+        rand: fxrand,
+        preview: fxpreview,
+        isPreview: isFxpreview,
+        params: function(definition) {
+          // todo: maybe do some validation on the dev side ?
+          // or maybe not ?
+          this._params = definition
+          this._rawValues = deserializeParams(fxparams, definition)
+          this._paramValues = transformParamValues(this._rawValues, definition)
+        },
+        features: function(features) {
+          this._features = features
+        },
+        getFeature: function(id) {
+          return this._features[id]
+        },
+        getFeatures: function() {
+          return this._features
+        },
+        getParam: function(id) {
+          return this._paramValues[id]
+        },
+        getParams: function() {
+          return this._paramValues
+        },
+        getRawParam: function(id) {
+          return this._rawValues[id]
+        },
+        getRawParams: function() {
+          return this._rawValues
+        },
+        getDefinitions: function() {
+          return this._params;
+        },
+        stringifyParams: function(params) {
+          return JSON.stringify(
+            params,
+            (key, value) => {
+              if (typeof value === "bigint") return value.toString()
+              return value
+            }, 
+            2,
+          )
+        }
+        
+      }
+      window.addEventListener("message", (event) => {
+        if (event.data === "fxhash_getHash") {
+          parent.postMessage({
+            id: "fxhash_getHash",
+            data: window.$fx.hash
+          }, "*")
+        }
+        
+        if (event.data === "fxhash_getFeatures") {
+          parent.postMessage({
+            id: "fxhash_getFeatures",
+            data: window.$fx.getFeatures()
+          }, "*")
+        }
+
+        if (event.data === "fxhash_getParams") {
+          parent.postMessage({
+            id: "fxhash_getParams",
+            data: {
+              definitions: window.$fx.getDefinitions(),
+              values: window.$fx.getRawParams(),
+            }
+          }, "*")
+        }
+      })
+      // END NEW
+
+      //---- /do not edit the following code
+</script>
+
+    
+<style>
+html, body
+{
+    height: 100%;
+    margin: 0;
+    background:#222;
+	display: flex; 
+	justify-content: center;
+	align-items: center;
+}
+canvas
+{ 
+    box-shadow: 0px 0px 40px 10px #000;
+    max-height: 100%;
+    max-width: 100%;
+}
+</style>
+  </head>
+<body>
+<canvas id=mainCanvas width=2000 height=2000></canvas>
+<script>
+"use strict";new URLSearchParams(window.location.search).get("hd")&&(mainCanvas.width=8192,mainCanvas.height=8192);let e=0,t=0,o=o=>{e=t++/60,function(){const t=v,o=h.width,n=h.height;t.viewport(0,0,o,n);{let o=h;t.useProgram(f),t.uniform3f(t.getUniformLocation(f,"iResolution"),o.width,o.height,1),t.uniform1f(t.getUniformLocation(f,"iTime"),e),t.uniform1i(t.getUniformLocation(f,"iChannel0"),0),t.uniform1i(t.getUniformLocation(f,"iChannel1"),1),t.drawArrays(t.TRIANGLE_FAN,0,3)}}(),$fx.preview()};const n=Math.PI,r=(e,t=1)=>(e%t+t)%t,i=(e,t=0,o=1)=>e<t?t:e>o?o:e;const a=(e,t=3)=>(e=e.toFixed(t))==(0|e)?(0|e)+".":e,s=(e,t,o,n=1)=>(new c).setHSL(e,t,o,n);class c{constructor(e=0,t=0,o=0,n=0){this.r=e,this.g=t,this.b=o,this.a=n}setR(e){return new c(e,this.g,this.b,this.a)}setG(e){return new c(this.r,e,this.b,this.a)}setB(e){return new c(this.r,this.g,e,this.a)}setA(e){return new c(this.r,this.g,this.b,e)}setVec3(e){return new c(e.x,e.y,e.z,1)}copy(){return new c(this.r,this.g,this.b,this.a)}add(e){return new c(this.r+e.r,this.g+e.g,this.b+e.b,this.a+e.a)}subtract(e){return new c(this.r-e.r,this.g-e.g,this.b-e.b,this.a-e.a)}multiply(e){return new c(this.r*e.r,this.g*e.g,this.b*e.b,this.a*e.a)}divide(e){return new c(this.r/e.r,this.g/e.g,this.b/e.b,this.a/e.a)}scale(e,t=e){return new c(this.r*e,this.g*e,this.b*e,this.a*t)}pow(e){return new c(this.r**e,this.g**e,this.b**e,this.a)}clamp(){return new c(i(this.r),i(this.g),i(this.b),i(this.a))}mix(e,t){return this.add(e.subtract(this).scale(i(t)))}toString(){return`rgb(${256*this.r},${256*this.g},${256*this.b},${this.a})`}getRGB(){return`rgb(${256*this.r},${256*this.g},${256*this.b})`}setHSL(e=0,t=0,o=0,n=1){e=r(e),t=i(t);const a=(o=i(o))<.5?o*(1+t):o+t-o*t,s=2*o-a,c=(e,t,o)=>(o=(o%1+1)%1)<1/6?e+6*(t-e)*o:o<.5?t:o<2/3?e+(t-e)*(2/3-o)*6:e;return this.r=c(s,a,e+1/3),this.g=c(s,a,e),this.b=c(s,a,e-1/3),this.a=n,this}getJSON(){return JSON.stringify(this)}setJSON(e){const t=JSON.parse(e);return[this.r,this.g,this.b,this.a]=[t.r,t.g,t.b,t.a],this}getShaderCode(){return this.r==this.g&&this.g==this.b?this.r==(0|this.r)?`vec3(${0|this.r})`:`vec3(${a(this.r)})`:`vec3(${a(this.r)}, ${a(this.g)}, ${a(this.b)})`}}const l=new class{constructor(e){this.setSeed(e)}setSeed(e){this.startSeed=this.seed=0|e}resetSeed(){this.seed=this.startSeed}saveSeed(){this.startSeed=this.seed}float(e=1,t=0){return this.seed^=this.seed<<13,this.seed^=this.seed>>>17,this.seed^=this.seed<<5,t+(e-t)*Math.abs(this.seed%1e7)/1e7}floatSign(e,t){return this.float(e,t)*this.sign()}int(e=1,t=0){return 0|this.float(e,t)}bool(e=.5){return this.float()<e}sign(){return this.bool()?-1:1}angle(e=1){return this.float(2*n*e)}circle(e,t=.5){const o=this.float()**t*e,r=this.float(2*n);return vec2(o*Math.cos(r),o*Math.sin(r))}color(){return new c(this.float(),this.float(),this.float())}}(1e9*fxrand());let f,h=mainCanvas,v=h.getContext("webgl2",{preserveDrawingBuffer:!0});function u(e){const t=v,o=t.createTexture();return t.bindTexture(t.TEXTURE_2D,o),t.pixelStorei(t.UNPACK_FLIP_Y_WEBGL,!0),t.texImage2D(t.TEXTURE_2D,0,t.RGBA,t.RGBA,t.UNSIGNED_BYTE,e),o}const d="\n\nvec3 hash(vec3 p)\n{return fract((p=dot(p=fract(vec3(.0993,.1011,.1003)*p),33.333+p.yxz)+p).zyx*(p.yxx+p.xxy));}\n\nvec3 noise3(vec3 p)\n{\n    const vec2 o = vec2(1, 0);\n    vec3 i = floor(p);\n    vec3 f = smoothstep(0., 1., fract(p));\n    return mix(\n        mix\n        (\n            mix(hash(i),       hash(i+o.xyy), f.x), \n            mix(hash(i+o.yyx), hash(i+o.xyx), f.x), \n            f.z\n        ),\n        mix\n        (\n            mix(hash(i+o.yxy), hash(i+o.xxy), f.x), \n            mix(hash(i+o.yxx), hash(i+o.xxx), f.x),\n            f.z\n        ),\n        f.y\n    );\n}\n\nvec3 fractalNoise3(vec3 p, int octaves)\n{\n    const float H = 1., G = exp2(-H);\n    float f = 1., a = 1., ta = a;\n    vec3 t = vec3(0);\n    for (int i = octaves; --i >= 0;)\n    {\n        t += a*noise3(f*p+float(i)*1e3);\n        ta += a *= G;\n        f *= 2.;\n    }\n    return t/ta;\n}\n\nvec2 rotate(vec2 v, float angle)\n{ return v*cos(angle) + vec2(-v.y,v)*sin(angle); }\n\nvec2 getGradient(vec2 uv)\n{\n    vec2 f = vec2(.002,0);\n    float x = texture(iChannel0,uv+f.xy).x - texture(iChannel0,uv-f.xy).x;\n    float y = texture(iChannel0,uv+f.yx).x - texture(iChannel0,uv-f.yx).x;\n    return vec2(x,y);\n}\n\nvoid mainImage(out vec4 c, in vec2 p)\n{\n    vec3 total = vec3(0.0);\n    for(int m=0; m<AA; m++)\n    for(int n=0; n<AA; n++)\n    {\n        // get uv\n        vec2 offset = vec2(float(m), float(n)) / float(AA) - 0.5;\n        vec2 uv = p + offset;\n        uv = uv/iResolution.xy;\n    \n        // get brightness\n        vec2 uv0 = vec2(flip0?-1:1,1)*effectRepeat*(uv*(1.-2.*effectZoom)+effectZoom);\n\n        if (effectMirror)\n        {\n            if (mod(uv0.x,2.)>1.)\n                uv0.x = 0.-uv0.x;\n            if (mod(uv0.y,2.)<1.)\n                uv0.y = 1.-uv0.y;\n        }\n        \n        vec3 c0 = texture(iChannel0,uv0).xyz;\n        float l = (c0.x+c0.y+c0.z)/3.;\n\n        float li = effectInvertInput ? (1. - l) - .5 : l - .5;\n        vec2 uvOffset = 1.*rotate(vec2(li,0),randomSeed/1e5);  // mirror effect\n\n        if (effectEmboss) \n        {\n            vec2 g = getGradient(uv0);\n            uvOffset = 2.*g; // emboss\n        }\n        if (effectNoise) \n            uvOffset = 8.*(l*l*l*l*l+.01)*(fractalNoise3(vec3(uv*9.+l*29.,randomSeed),2).xy-.5); \n\n        vec2 uv2 = uv + uvOffset;\n\n        // make color linear\n        //uv2 = vec2(rotate(uv2,randomSeed).y,randomSeed/1e4);\n\n        uv2 = uv2*.6+.2; // rescale\n        vec3 color = texture(iChannel1, vec2(flip1?-1:1,1)*uv2).xyz;\n\n        float chromaShift = .005;\n        if (effectChroma)\n        {\n            /*c0 = texture(iChannel0,vec2(flip0?-1:1,1)*effectRepeat*uv+vec2(chromaShift,0)).xyz;\n            l = (c0.x+c0.y+c0.z)/3.;\n            \n            uvOffset = 1.*rotate(vec2(l - .5,0),randomSeed/1e5);  // mirror effect\n            vec2 uv3 = uv + uvOffset;\n            uv3 = uv3*.6+.2; // rescale\n            color.g = texture(iChannel1, vec2(flip1?-1:1,1)*uv3).y;\n\n            c0 = texture(iChannel0,vec2(flip0?-1:1,1)*effectRepeat*uv+vec2(chromaShift*2.,0)).xyz;\n            l = (c0.x+c0.y+c0.z)/3.;\n            \n            uvOffset = 1.*rotate(vec2(l - .5,0),randomSeed/1e5);  // mirror effect\n             uv3 = uv + uvOffset;\n            uv3 = uv3*.8+.1; // rescale\n            color.b = texture(iChannel1, vec2(flip1?-1:1,1)*uv3).y;\n            */\n\n            color = vec3(\n                texture(iChannel1, vec2(flip1?-1:1,1)*uv2+vec2(-chromaShift,0)).x,\n                texture(iChannel1, vec2(flip1?-1:1,1)*uv2+vec2(0,0)).y,\n                texture(iChannel1, vec2(flip1?-1:1,1)*uv2+vec2(chromaShift,0)).z);\n        }\n\n        bool useColor0 = false;\n        if (effectStrips)\n            useColor0 = fractalNoise3(vec3(uv.xx*vec2(effectScale*40.,1.),randomSeed),3).x>.5;// strips of color\n           // useColor0 = fractalNoise3(vec3(uv.xy*vec2(99.,1.,1.),randomSeed),3).x>.5;// strips with noise\n        if (effectPixelate)\n            useColor0 = fractalNoise3(floor(vec3(uv.xy*vec2(effectScale*20.),randomSeed)),3).x>.5; // pixels\n\n        float waterColorOffset = fractalNoise3(vec3((uv.xy*effectScale*vec2(19.,19.)+noise3(vec3(uv.xy*9.,3.*randomSeed)).xy),randomSeed),5).x;\n        if (effectWatercolor)\n            useColor0 = waterColorOffset>.5;\n        \n        // replace color0\n        color = useColor0 ? c0 : color;\n\n        //color = waterColorOffset>.5 ? color*vec3(1.-(waterColorOffset*2.-1.)): color;// burnt\n        //color = noise3(color+randomSeed); // warp color\n\n        if (effectWatercolor)\n            color = mix(c0,color,waterColorOffset);\n\n        if (effectDarken||effectLighten)\n            color = mix(c0,color,effectDarken?l:1.-l);\n\n        if (effectInvert)\n            color = 1.-color;\n        \n        // apply border\n        vec3 b = borderColor;\n        b += .1*vec3(fractalNoise3(uv.xyy*4e3+randomSeed,2)*2.-1.); // border noise\n\n        // border effects\n        //b=vec3(l*2.);  // show brutal through border\n        //b = vec3(1.-l*2.); // brutal inverted\n        if (invertBorder)\n            b = 1.-color; // inverted border\n\n        // border size\n        float borderLimit = .5 - borderSize - borderNoise*fractalNoise3(color*4.+randomSeed, 2).x;\n\n        color = abs(uv.x-.5) < borderLimit &&  abs(uv.y-.5) < borderLimit ? color : b;\n        //if (uv2.x < 0. || uv2.y < 0. || uv2.x > 1. || uv2.y > 1.)\n        //    color = b; // clamp color at border\n\n        total += color;\n    }\n    c = vec4(total / float(AA*AA),1);\n}\n";let m,b,x,g;x=l.int(15),g=l.int(10),m=`./brutalist/image${x}.jpg`,b=`./landscape/image${g}.jpg`;document.createElement("a");let p=2;const S=()=>{p--,0==p&&(!function(){let e=l.bool(.02),t=!e&&l.bool(.3),o=!e&&!t&&l.bool(.05),n=l.bool(.1),r=!n&&l.bool(.1),i=l.bool(.05),c=!o&&l.bool(.04)?l.bool(.4)?6:8:l.bool(.06)?l.bool(.6)?2:3:1,h=l.bool(.05),m=c>4||2==c,b="No",p=0;c<=1&&l.bool(.1)&&(l.bool(.2)?(b="Small",p=.05):l.bool(.6)?(b="Medium",p=.1):(b="Large",p=.2));let S=l.bool(.08),E=!S&&l.bool(.04),R=!S&&!E&&!n&&!r&&l.bool(.04),T="None";S&&(T="Strips"),E&&(T="Blocks"),R&&(T="Splatter");let w=l.bool(.1),N=1;l.bool(.01)&&(N=0),l.bool(.3)&&(N=2),l.bool(.05)&&(N=3);let $=["None","Thin","Thick","Clean"][N],A=0,I=0;1==N&&(I=.05),2==N&&(I=.1),3==N&&(A=.02);let L=s(0,0,.95),_="White";l.bool(.6)&&(_="Tan",L=s(.1,.9,.9)),l.bool(i?.95:.2)&&(_="Dark",L=s(.6,.1,.1)),l.bool(.01)&&(_="Black",L=s(0,0,0)),l.bool(.02)&&(_="Color",L=s(l.float(),.5,l.bool()?.4:.8)),w&&(_="Inverted"),0==N&&(_="None");const D={"Image Front":["Citadel","Bunker","Blockhouse","Prism","Ziggurat","Facade","Rampart","Fortress","Mansion","Tower","Obelisk","Stronghold","Keep","Spire","Castle"][x],"Image Back":["Beach","Flower","Mountain","Lava","Tree","Valley","Swamp","Ocean","Cliff","Fire"][g],"Boder Color":_,"Boder Style":$,Distort:e?"Emboss":o?"Noise":t?"Inverse Warp":"Warp",Effect:T,Emphasis:n?"Dark":r?"Light":"Normal",Invert:i?"Yes":"No","Chroma Separate":h?"Yes":"No",Repeat:1==c?"No":c,Zoom:b};$fx.features(D);const O=v;let B=u(y);O.activeTexture(O.TEXTURE0),O.bindTexture(O.TEXTURE_2D,B),O.texParameteri(O.TEXTURE_2D,O.TEXTURE_MIN_FILTER,O.LINEAR),O.activeTexture(O.TEXTURE1);let P=u(C);O.bindTexture(O.TEXTURE_2D,P),O.texParameteri(O.TEXTURE_2D,O.TEXTURE_MIN_FILTER,O.LINEAR);const U=O.createShader(O.VERTEX_SHADER);O.shaderSource(U,"#version 300 es\nin vec4 p;void main(){gl_Position=p;}"),O.compileShader(U);const F=O.ARRAY_BUFFER;O.bindBuffer(F,O.createBuffer()),O.bufferData(F,new Int8Array([-3,1,1,-3,1,1]),O.STATIC_DRAW),O.enableVertexAttribArray(0),O.vertexAttribPointer(0,2,O.BYTE,0,0,0);{f=O.createProgram(),O.attachShader(f,U);const s=O.createShader(O.FRAGMENT_SHADER),v=`#version 300 es\n#define HW_PERFORMANCE 0\nprecision mediump float;uniform vec3 iResolution;uniform float iTime;uniform float iTimeDelta;uniform int iFrame;uniform int iFrameRate;uniform sampler2D iChannel0;uniform sampler2D iChannel1;out vec4 outColor;\nconst int AA=4;\nconst float randomSeed=${a(l.int(1e6))};\nconst vec3 borderColor = ${L.getShaderCode()};\nconst bool invertBorder = ${w};\nconst bool effectMirror = ${m};\nconst float effectZoom = ${a(p)};\nconst bool effectEmboss = ${e};\nconst bool effectStrips = ${S};\nconst bool effectChroma = ${h};\nconst bool effectInvertInput = ${t};\nconst bool effectPixelate = ${E};\nconst bool effectNoise = ${o};\nconst bool effectWatercolor = ${R};\nconst bool effectDarken = ${n};\nconst bool effectLighten = ${r};\nconst bool effectInvert = ${i};\nconst bool flip0 = ${l.bool()};\nconst bool flip1 = ${l.bool()};\nconst float effectScale = ${a(l.float(1,2))};\nconst float effectRepeat = ${a(c)};\nconst float borderSize = ${a(A)};\nconst float borderNoise = ${a(I)};\n`+d+"\nvoid main(){mainImage(outColor,gl_FragCoord.xy);outColor.a=1.;}";if(O.shaderSource(s,v),O.compileShader(s),!O.getShaderParameter(s,O.COMPILE_STATUS))throw new Error("SHADER ERROR!\n"+O.getShaderInfoLog(s));if(O.attachShader(f,s),O.linkProgram(f),!O.getProgramParameter(f,O.LINK_STATUS))throw new Error("LINK ERROR!\n"+O.getProgramInfoLog(f))}}(),o())},y=new Image,C=new Image;y.onload=S,C.onload=S,y.src=m,C.src=b
+</script>
+</body>
+</html>

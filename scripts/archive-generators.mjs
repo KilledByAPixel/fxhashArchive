@@ -29,6 +29,10 @@
 //                  GitHub Pages caps a published site at 1 GB and the rest of
 //                  public/ already uses ~370 MB.
 //   --limit N     archive at most N projects this run
+//
+//   Entries in preserve.json's "projects" list are exempt from maxProjectSizeMB:
+//   the cap is there to keep automatic selection away from a few large outliers,
+//   not to quietly refuse work somebody asked us to keep.
 //   --dry-run     print the priority list and stop; downloads nothing
 //   --commit      git commit every COMMIT_EVERY projects
 //
@@ -125,6 +129,17 @@ async function loadVolumes() {
 function buildPriorityList(projects, volumes, rules, explicit, collaborations = {}) {
   const byId = new Map(projects.map((p) => [p.id, p]))
   const picked = new Map() // id -> reason, insertion order = priority
+  /**
+   * Projects somebody actually asked for, which the per-project size cap does not
+   * apply to.
+   *
+   * The cap exists so that a handful of 30 MB outliers cannot eat the budget while
+   * nobody has asked for them — it is a tie-breaker for automatic selection. Letting
+   * it also veto an accepted request turns "we will preserve your work" into "we will
+   * preserve your work if it is small", silently, which is the wrong promise to make
+   * quietly. A request that is too big to accept should be declined out loud.
+   */
+  const uncapped = new Set()
 
   const add = (id, reason) => {
     if (id == null || picked.has(id) || !byId.has(id)) return
@@ -135,6 +150,7 @@ function buildPriorityList(projects, volumes, rules, explicit, collaborations = 
   for (const entry of explicit) {
     const id = entry.id ?? projects.find((p) => p.slug === entry.slug)?.id
     add(id, `request${entry.reason ? ` (${entry.reason})` : ''}`)
+    if (id != null && byId.has(id)) uncapped.add(id)
   }
 
   // 2. named artists, whole body of work
@@ -167,7 +183,12 @@ function buildPriorityList(projects, volumes, rules, explicit, collaborations = 
   const topN = rules.topProjectsByVolume ?? 0
   for (const r of ranked.slice(0, topN)) add(r.p.id, `top volume (${Math.round(r.v / 1e6).toLocaleString()} tez)`)
 
-  return [...picked].map(([id, reason]) => ({ project: byId.get(id), reason, volume: volumes.get(id) ?? 0 }))
+  return [...picked].map(([id, reason]) => ({
+    project: byId.get(id),
+    reason,
+    volume: volumes.get(id) ?? 0,
+    uncapped: uncapped.has(id),
+  }))
 }
 
 // ------------------------------------------------------------------- fetch
@@ -460,7 +481,7 @@ async function main() {
   let sinceCommit = 0
   let budgetHit = false
 
-  for (const { project, reason } of list) {
+  for (const { project, reason, uncapped } of list) {
     if (archived >= LIMIT) break
     if (Object.prototype.hasOwnProperty.call(manifest, String(project.id))) continue
     if (used >= BUDGET_BYTES) {
@@ -469,7 +490,7 @@ async function main() {
     }
 
     try {
-      const result = await archiveProject(project, tmpRoot, maxProjectBytes)
+      const result = await archiveProject(project, tmpRoot, uncapped ? Infinity : maxProjectBytes)
       if (result.skipped) {
         skipped++
         console.log(`  skip  ${String(project.name).slice(0, 38).padEnd(38)} ${result.skipped}`)
