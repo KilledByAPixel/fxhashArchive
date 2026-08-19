@@ -109,9 +109,10 @@ async function dirSize(dir) {
  */
 const HIDDEN_FLAGS = new Set(['MALICIOUS', 'HIDDEN', 'REPORTED', 'AUTO_DETECT_COPY'])
 
-async function loadCatalog() {
+async function loadCatalog(excluded = new Set()) {
   const projects = []
   let moderated = 0
+  let withdrawn = 0
   for (const f of (await readdir(TOKENS_DIR)).filter((f) => /^index-\d+\.json$/.test(f)).sort()) {
     for (const p of await loadJson(join(TOKENS_DIR, f), [])) {
       // Filtered here rather than inside the selection rules, so that no rule —
@@ -119,10 +120,15 @@ async function loadCatalog() {
       // reach one. "Moderation is honored" has to mean we do not store and serve
       // the code either, or it is only honored where it is easy to look.
       if (HIDDEN_FLAGS.has(p.flag)) { moderated++; continue }
+      // Withdrawn by hand — an artist asking to be left out, or a project cut
+      // for space. Deleting the files is not enough on its own: the rules would
+      // pick it straight back up on the next run.
+      if (excluded.has(p.id)) { withdrawn++; continue }
       projects.push(p)
     }
   }
   if (moderated) console.log(`skipping ${moderated} projects flagged by fxhash moderation`)
+  if (withdrawn) console.log(`skipping ${withdrawn} projects withdrawn in ${PRESERVE_FILE}`)
   return projects
 }
 
@@ -454,7 +460,7 @@ async function main() {
   const rules = preserve.rules ?? {}
   const maxProjectBytes = (rules.maxProjectSizeMB || 0) > 0 ? rules.maxProjectSizeMB * 1024 * 1024 : Infinity
 
-  const projects = await loadCatalog()
+  const projects = await loadCatalog(new Set((preserve.exclude ?? []).map((e) => e.id)))
   const volumes = await loadVolumes()
   if (volumes.size === 0) {
     console.warn('WARNING: no market data found — run snapshot-market.mjs first, or only requests and artists will be archived.')

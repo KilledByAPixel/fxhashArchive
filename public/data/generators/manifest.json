@@ -809,15 +809,6 @@
     "bytes": 842254,
     "reason": "top volume (32,993 tez)"
   },
-  "7385": {
-    "slug": "study-of-atom-in-analog-digital-and-a.i.",
-    "name": "Study of atom in analog, digital and A.I.",
-    "cid": "QmeYK5nnRJV8T6L6QM5uA2bogTBtbaFgVtKrekXjHsyyYk",
-    "entry": "index.html",
-    "bytes": 13981097,
-    "reason": "request (artist request; 13 MB, over the automatic size cap)",
-    "runner": "_run.html"
-  },
   "7519": {
     "slug": "growth-v02",
     "name": "Growth v02",
@@ -2411,14 +2402,6 @@
     "entry": "index.html",
     "bytes": 471769,
     "reason": "top volume (25,907 tez)"
-  },
-  "20364": {
-    "slug": "gen-xyz-das-occult",
-    "name": "GEN XYZ Das Occult",
-    "cid": "QmSsrd7mtLYdD377wu6Mn5ZBNuoFq7wZA74PavxjD7WQpc",
-    "entry": "index.html",
-    "bytes": 4678663,
-    "reason": "top volume (18,815 tez)"
   },
   "20386": {
     "slug": "ephemera",

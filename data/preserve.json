@@ -41,14 +41,22 @@
       "reason": "artist request; 11 MB, over the automatic size cap"
     },
     {
-      "id": 7385,
-      "slug": "study-of-atom-in-analog-digital-and-ai",
-      "reason": "artist request; 13 MB, over the automatic size cap"
-    },
-    {
       "id": 11173,
       "slug": "agglo",
       "reason": "artist request (Leander Herzog)"
+    }
+  ],
+  "_excludeReadme": "Never archive these, whatever the rules say. This is what makes a removal permanent: without it the selection rules simply pick the project up again on the next run, which would quietly undo an artist's request to be left out.",
+  "exclude": [
+    {
+      "id": 7385,
+      "slug": "study-of-atom-in-analog-digital-and-a.i.",
+      "reason": "removed to keep the archive within the Pages size budget"
+    },
+    {
+      "id": 20364,
+      "slug": "gen-xyz-das-occult",
+      "reason": "removed to keep the archive within the Pages size budget"
     }
   ]
 }
