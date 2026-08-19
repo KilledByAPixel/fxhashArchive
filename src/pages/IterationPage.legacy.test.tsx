@@ -5,6 +5,9 @@ import IterationPage from './IterationPage'
 import * as tzkt from '../lib/tzkt'
 import { GENTK_CONTRACTS } from '../lib/tzkt'
 import type { Iteration } from '../lib/tzkt'
+// Asserted against the configured primary rather than a literal host: which gateway
+// is usable changes (ipfs.io now serves a Cloudflare challenge), the contract does not.
+import { GATEWAYS } from '../lib/ipfs'
 
 const V1 = GENTK_CONTRACTS[0]
 /** The middle gentk contract: v2-style pieces, seeded from `?fxhash=` in the URL. */
@@ -59,11 +62,11 @@ test('a v1 iteration fetches the artifact and renders it via srcdoc with the pat
     return f
   })
 
-  expect(fetchMock).toHaveBeenCalledWith('https://ipfs.io/ipfs/QmGen')
+  expect(fetchMock).toHaveBeenCalledWith(`${GATEWAYS[0]}QmGen`)
 
   const doc = frame.getAttribute('srcdoc')!
   expect(doc).toContain('fxhash-legacy-patch')
-  expect(doc).toContain('<base href="https://ipfs.io/ipfs/QmGen/">')
+  expect(doc).toContain(`<base href="${GATEWAYS[0]}QmGen/">`)
   expect(doc.indexOf('fxhash-legacy-patch')).toBeLessThan(doc.indexOf('Math.pow(alphabet.length'))
 
   // The sandbox must stay exactly as strict as it was: opaque origin, scripts only.
@@ -82,7 +85,7 @@ test('a v2 iteration never fetches and keeps using src — srcdoc would strip it
   await runLive()
 
   const frame = document.querySelector('iframe')!
-  expect(frame.getAttribute('src')).toBe('https://ipfs.io/ipfs/QmGen/?fxhash=oo9')
+  expect(frame.getAttribute('src')).toBe(`${GATEWAYS[0]}QmGen/?fxhash=oo9`)
   expect(frame.getAttribute('srcdoc')).toBeNull()
   expect(fetchMock).not.toHaveBeenCalled()
 })
@@ -100,7 +103,7 @@ test('a middle-contract iteration keeps using src — its seed lives in the URL'
   await runLive()
 
   const frame = document.querySelector('iframe')!
-  expect(frame.getAttribute('src')).toBe('https://ipfs.io/ipfs/QmGen/?fxhash=oo9')
+  expect(frame.getAttribute('src')).toBe(`${GATEWAYS[0]}QmGen/?fxhash=oo9`)
   expect(frame.getAttribute('srcdoc')).toBeNull()
   expect(fetchMock).not.toHaveBeenCalled()
 })
@@ -115,7 +118,7 @@ test('the legacy patch is gated on the v1 contract address itself, not a list po
   renderPage('KT1SomeOtherContract')
   await runLive()
 
-  expect(document.querySelector('iframe')!.getAttribute('src')).toBe('https://ipfs.io/ipfs/QmGen')
+  expect(document.querySelector('iframe')!.getAttribute('src')).toBe(`${GATEWAYS[0]}QmGen`)
   expect(document.querySelector('iframe')!.getAttribute('srcdoc')).toBeNull()
   expect(fetchMock).not.toHaveBeenCalled()
   expect(V1).toBe('KT1KEa8z6vWXDJrVqtMrAeDVzsvxat3kHaCE')
@@ -132,7 +135,7 @@ test('a rejected artifact fetch falls back to the direct src rather than showing
     if (!f?.getAttribute('src')) throw new Error('no direct iframe yet')
     return f
   })
-  expect(frame.getAttribute('src')).toBe('https://ipfs.io/ipfs/QmGen')
+  expect(frame.getAttribute('src')).toBe(`${GATEWAYS[0]}QmGen`)
   expect(frame.getAttribute('srcdoc')).toBeNull()
 })
 
@@ -147,7 +150,7 @@ test('a non-OK artifact response falls back to the direct src', async () => {
     if (!f?.getAttribute('src')) throw new Error('no direct iframe yet')
     return f
   })
-  expect(frame.getAttribute('src')).toBe('https://ipfs.io/ipfs/QmGen')
+  expect(frame.getAttribute('src')).toBe(`${GATEWAYS[0]}QmGen`)
 })
 
 test('HTML that does not need patching is served directly, not through srcdoc', async () => {
@@ -161,7 +164,7 @@ test('HTML that does not need patching is served directly, not through srcdoc', 
     if (!f?.getAttribute('src')) throw new Error('no direct iframe yet')
     return f
   })
-  expect(frame.getAttribute('src')).toBe('https://ipfs.io/ipfs/QmGen')
+  expect(frame.getAttribute('src')).toBe(`${GATEWAYS[0]}QmGen`)
 })
 
 test('HTML with the snippet but no <head> falls back to the direct src', async () => {
@@ -177,7 +180,7 @@ test('HTML with the snippet but no <head> falls back to the direct src', async (
     if (!f?.getAttribute('src')) throw new Error('no direct iframe yet')
     return f
   })
-  expect(frame.getAttribute('src')).toBe('https://ipfs.io/ipfs/QmGen')
+  expect(frame.getAttribute('src')).toBe(`${GATEWAYS[0]}QmGen`)
 })
 
 test('shows a loading state while the artifact is being fetched', async () => {
@@ -208,7 +211,7 @@ test('offers a "load original" escape hatch that re-renders with the plain direc
   fireEvent.click(original)
 
   const frame = document.querySelector('iframe')!
-  expect(frame.getAttribute('src')).toBe('https://ipfs.io/ipfs/QmGen')
+  expect(frame.getAttribute('src')).toBe(`${GATEWAYS[0]}QmGen`)
   expect(frame.getAttribute('srcdoc')).toBeNull()
   // The escape hatch is one-way for this view; it must not bounce back to patched.
   expect(screen.queryByRole('button', { name: /load original/i })).toBeNull()

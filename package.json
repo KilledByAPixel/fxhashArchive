@@ -13,7 +13,8 @@
     "snapshot": "node scripts/snapshot.mjs",
     "snapshot:iterations": "node scripts/snapshot-iterations.mjs",
     "snapshot:contracts": "node scripts/snapshot-contracts.mjs",
-    "summary": "node scripts/build-summary.mjs"
+    "summary": "node scripts/build-summary.mjs",
+    "check:gateways": "node scripts/check-gateways.mjs"
   },
   "dependencies": {
     "react": "^19.2.8",

@@ -3,10 +3,26 @@
 // NXDOMAIN, so every image that failed the first two burned its last retry on a DNS
 // error before showing a placeholder. `w3s.link` and `nftstorage.link` both 301 onto
 // dweb.link, so they would have been the same operator as entry 2 wearing a hat.)
+//
+// "Live" has to mean live *to a browser*. The previous three entries — ipfs.io,
+// dweb.link and gateway.pinata.cloud — all answer curl with a cheerful 200 and answer
+// a real browser with a Cloudflare challenge: 403, plus `X-Frame-Options: SAMEORIGIN`
+// on the challenge page itself. An <img> can limp along on a clearance cookie and
+// falls back to a placeholder when it cannot; an <iframe> just says "refused to
+// connect", which is what running a live artwork had started doing for everyone. The
+// scripts never saw it because Node is not browser-shaped. `npm run check:gateways`
+// probes them the way a browser would; run it whenever the live view looks broken.
+//
+// Caveat kept honest: entries 1 and 3 both report `server: Filebase`, so they are one
+// operator serving two pinsets, not two operators. Entry 2 is genuinely separate.
+// Verified 2026-08-19: all three return byte-identical content, `access-control-allow-
+// origin: *`, no X-Frame-Options, and support `?format=tar` for the archiver.
 export const GATEWAYS = [
-  'https://ipfs.io/ipfs/',
-  'https://dweb.link/ipfs/',
-  'https://gateway.pinata.cloud/ipfs/',
+  // fxhash's own gateway. The platform is gone but this outlived it, and it is the
+  // one place every CID in this catalog was definitely pinned.
+  'https://gateway.fxhash.xyz/ipfs/',
+  'https://gateway.pinit.io/ipfs/',
+  'https://ipfs.raribleuserdata.com/ipfs/',
 ]
 
 // The only known resolver for fxhash's on-chain filesystem scheme.

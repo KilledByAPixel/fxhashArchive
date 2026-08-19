@@ -5,6 +5,9 @@ import IterationPage from './IterationPage'
 import * as tzkt from '../lib/tzkt'
 import * as data from '../lib/data'
 import type { Iteration } from '../lib/tzkt'
+// Asserted against the configured primary rather than a literal host: which gateway
+// is usable changes (ipfs.io now serves a Cloudflare challenge), the contract does not.
+import { GATEWAYS } from '../lib/ipfs'
 
 const iteration: Iteration = {
   contract: 'KT1x', tokenId: '9', name: 'Piece #9', iterationHash: 'oo9',
@@ -38,7 +41,7 @@ test('run live swaps in sandboxed iframe pointing at artifactUri', async () => {
   fireEvent.click(await screen.findByRole('button', { name: /run live/i }))
   const frame = document.querySelector('iframe')!
   expect(frame.getAttribute('sandbox')).toBe('allow-scripts')
-  expect(frame.getAttribute('src')).toBe('https://ipfs.io/ipfs/QmGen/?fxhash=oo9')
+  expect(frame.getAttribute('src')).toBe(`${GATEWAYS[0]}QmGen/?fxhash=oo9`)
 })
 
 test('run live button toggles back to the static image', async () => {

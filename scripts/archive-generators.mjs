@@ -43,7 +43,10 @@ import { readFile, writeFile, rename, unlink, mkdir, readdir, rm, stat, cp } fro
 import { join } from 'node:path'
 import { execFileSync } from 'node:child_process'
 
-const GATEWAYS = ['https://ipfs.io', 'https://dweb.link']
+// Kept in step with src/lib/ipfs.ts — see the note there on why ipfs.io and
+// dweb.link had to go. This script would not have noticed on its own: Node is not
+// browser-shaped, so it still gets 200s from gateways a visitor cannot use.
+const GATEWAYS = ['https://gateway.fxhash.xyz', 'https://gateway.pinit.io', 'https://ipfs.raribleuserdata.com']
 const TOKENS_DIR = 'public/data/tokens'
 const MARKET_DIR = 'public/data/market'
 const PRESERVE_FILE = 'data/preserve.json'
