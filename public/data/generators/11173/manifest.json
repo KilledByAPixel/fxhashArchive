@@ -1,0 +1,22 @@
+{
+        "id": "Agglo",
+        "name": "Agglo",
+        "short_name": "Agglo",
+        "icons": [
+                {
+                        "src": "favicon.png",
+                        "sizes": "256x256",
+                        "type": "image/png"
+                },
+                {
+                        "src": "icon.png",
+                        "sizes": "512x512",
+                        "type": "image/png"
+                }
+        ],
+        "lang": "en-US",
+        "start_url": "./",
+        "display": "fullscreen",
+        "background_color": "black",
+        "theme_color": "black"
+}

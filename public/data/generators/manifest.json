@@ -809,6 +809,15 @@
     "bytes": 842254,
     "reason": "top volume (32,993 tez)"
   },
+  "7385": {
+    "slug": "study-of-atom-in-analog-digital-and-a.i.",
+    "name": "Study of atom in analog, digital and A.I.",
+    "cid": "QmeYK5nnRJV8T6L6QM5uA2bogTBtbaFgVtKrekXjHsyyYk",
+    "entry": "index.html",
+    "bytes": 13981097,
+    "reason": "request (artist request; 13 MB, over the automatic size cap)",
+    "runner": "_run.html"
+  },
   "7519": {
     "slug": "growth-v02",
     "name": "Growth v02",
@@ -1109,6 +1118,15 @@
     "bytes": 831287,
     "reason": "top volume (12,548 tez)"
   },
+  "11173": {
+    "slug": "agglo",
+    "name": "Agglo",
+    "cid": "QmVMw4HzndXYSGF7KGhE1VJKPnBHgXbnCRKfLSwME2Yz5r",
+    "entry": "index.html",
+    "bytes": 188160,
+    "reason": "request (artist request (Leander Herzog))",
+    "runner": "_run.html"
+  },
   "11179": {
     "slug": "simple-things",
     "name": "simple things",
@@ -1149,6 +1167,14 @@
     "entry": "index.html",
     "bytes": 841060,
     "reason": "top volume (69,464 tez)"
+  },
+  "11463": {
+    "slug": "sprocket-factory",
+    "name": "Sprocket Factory",
+    "cid": "QmV7tVmoi4BLcYkAMPhGbeL1ZaAsYHGQoCmG8vcL64GoF5",
+    "entry": "index.html",
+    "bytes": 18068624,
+    "reason": "request (artist request; 17 MB, over the automatic size cap)"
   },
   "11517": {
     "slug": "hollow",
@@ -2109,6 +2135,15 @@
     "entry": "index.html",
     "bytes": 965614,
     "reason": "top volume (13,285 tez)"
+  },
+  "17768": {
+    "slug": "monolith-1",
+    "name": "MONOLITH",
+    "cid": "Qma3rgdrk9SemAstYf7x2oe2ELQYV2BPsHJoH8ZKGA4jPz",
+    "entry": "index.html",
+    "bytes": 11190304,
+    "reason": "request (artist request; 11 MB, over the automatic size cap)",
+    "runner": "_run.html"
   },
   "17776": {
     "slug": "artifact-1",

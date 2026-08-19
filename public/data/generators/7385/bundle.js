@@ -1,0 +1,1 @@
+console.log(fxhash),console.log(fxrand());

@@ -29,6 +29,26 @@
       "id": 26300,
       "slug": "brutal-nature",
       "reason": "artist request; 28 MB, over the automatic size cap"
+    },
+    {
+      "id": 11463,
+      "slug": "sprocket-factory",
+      "reason": "artist request; 17 MB, over the automatic size cap"
+    },
+    {
+      "id": 17768,
+      "slug": "monolith",
+      "reason": "artist request; 11 MB, over the automatic size cap"
+    },
+    {
+      "id": 7385,
+      "slug": "study-of-atom-in-analog-digital-and-ai",
+      "reason": "artist request; 13 MB, over the automatic size cap"
+    },
+    {
+      "id": 11173,
+      "slug": "agglo",
+      "reason": "artist request (Leander Herzog)"
     }
   ]
 }
