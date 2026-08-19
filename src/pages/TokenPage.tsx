@@ -6,8 +6,10 @@ import {
   loadIterationIds,
   loadProjectArtists,
   loadProjectMarketStats,
+  loadProjectText,
   loadSummary,
   type Collaborator,
+  type ProjectText,
 } from '../lib/data'
 import { fetchIterations, fetchIterationsByIds, type Iteration } from '../lib/tzkt'
 import type { LeanToken, MarketStats } from '../lib/types'
@@ -61,6 +63,9 @@ export default function TokenPage() {
   const [needsRunner, setNeedsRunner] = useState(false)
   // Set only when the author is a collaboration contract; see loadProjectArtists.
   const [collaborators, setCollaborators] = useState<Collaborator[] | null>(null)
+  // The artist's own words about the work. Present for every project, and held
+  // nowhere else in this archive — see scripts/snapshot-descriptions.mjs.
+  const [text, setText] = useState<ProjectText | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -78,6 +83,7 @@ export default function TokenPage() {
     setIsArchived(false)
     setNeedsRunner(false)
     setCollaborators(null)
+    setText(null)
     findTokenBySlug(slug!).then(
       (t) => { if (!cancelled) setState(t ? { status: 'ok', token: t } : { status: 'notfound' }) },
       // A rejected lookup says nothing about whether the project exists.
@@ -179,6 +185,13 @@ export default function TokenPage() {
   useEffect(() => {
     if (!token) return
     let cancelled = false
+    loadProjectText(token.id).then((t) => { if (!cancelled) setText(t) })
+    return () => { cancelled = true }
+  }, [token])
+
+  useEffect(() => {
+    if (!token) return
+    let cancelled = false
     // A no-op for the 98% of projects with an ordinary artist — it does not fetch
     // unless the recorded author is a contract.
     loadProjectArtists(token.id, token.author?.id).then(
@@ -255,6 +268,12 @@ export default function TokenPage() {
           )}
         </div>
       </div>
+
+      {/* Rendered as plain text with line breaks preserved, never as HTML: this is
+          artist-supplied content and the page has no business executing it. Some
+          descriptions use markdown, which shows through as its own punctuation —
+          honest, and safe. */}
+      {text?.description && <p className="project-description">{text.description}</p>}
 
       {/* Not gated on isArchived any more. The ids and seeds are local either way,
           so an unarchived project can still be stepped through — it just streams

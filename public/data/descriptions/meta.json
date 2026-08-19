@@ -1,0 +1,7 @@
+{
+  "generatedAt": "2026-08-19T18:03:01.763Z",
+  "note": "Artist-written text for each project, from fxhash's API. Chunked by projectId / 250.",
+  "chunk": 250,
+  "projectsSeen": 27430,
+  "withText": 27422
+}

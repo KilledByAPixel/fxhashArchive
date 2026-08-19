@@ -3,7 +3,13 @@ import { useParams, useSearchParams } from 'react-router-dom'
 import { fetchIteration, GENTK_V1_CONTRACT, type Iteration } from '../lib/tzkt'
 import { ipfsToHttp } from '../lib/ipfs'
 import { artifactBaseHref, injectLegacyPatch, needsLegacyPatch } from '../lib/legacyPatch'
-import { findTokenBySlug, loadProjectIteration, loadSummary, type LocalIteration } from '../lib/data'
+import {
+  findTokenBySlug,
+  loadProjectIteration,
+  loadProjectText,
+  loadSummary,
+  type LocalIteration,
+} from '../lib/data'
 import PieceFrame, { archivedSrc } from '../components/PieceFrame'
 import IpfsImage from '../components/IpfsImage'
 import LoadError from '../components/LoadError'
@@ -82,6 +88,16 @@ export default function IterationPage() {
   const iterNo = Number(params.get('i'))
   const hasIterNo = params.get('i') !== null && Number.isInteger(iterNo) && iterNo > 0
   const [projectName, setProjectName] = useState<string | null>(null)
+  // fxhash showed a line of the artist's own text on every iteration page. It is
+  // the same string for each piece in an edition, and it is held nowhere else.
+  const [iterationText, setIterationText] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!hasProject) { setIterationText(null); return }
+    let cancelled = false
+    loadProjectText(projectId).then((t) => { if (!cancelled) setIterationText(t.iterationText) })
+    return () => { cancelled = true }
+  }, [hasProject, projectId])
 
   useEffect(() => {
     if (!slugHint) { setProjectName(null); return }
@@ -240,6 +256,9 @@ export default function IterationPage() {
           <button className="link-button" onClick={() => setFrame({ view: 'direct' })}>load original</button>
         </p>
       )}
+      {/* Plain text, never markup — artist-supplied, on a page that also runs
+          untrusted art. */}
+      {iterationText && <p className="project-description">{iterationText}</p>}
       <dl className="iteration-meta">
         <dt>Hash</dt><dd><code>{it.iterationHash ?? 'unknown'}</code></dd>
         <dt>Minted by</dt><dd>{it.minter ?? 'unknown'}</dd>

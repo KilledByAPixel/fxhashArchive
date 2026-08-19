@@ -54,6 +54,8 @@ beforeEach(() => {
   // not, so its seed lookup has to be stubbed here or each of these tests waits on a
   // real fetch. Unsigned by default: these tests are about the list, not the player.
   vi.spyOn(data, 'loadProjectIteration').mockResolvedValue({ seed: null, query: null, artifact: null })
+  // Most tests here are about the iteration list, not the artist's text.
+  vi.spyOn(data, 'loadProjectText').mockResolvedValue({ description: null, iterationText: null })
 })
 
 afterEach(() => {
@@ -77,6 +79,43 @@ test('renders project info and iterations from tzkt', async () => {
   expect(editionLine.textContent).toBe('edition of 10')
   expect(screen.queryByText(/iterations loaded/i)).toBeNull()
   expect(screen.queryByText(/2 iterations · supply/i)).toBeNull()
+})
+
+test("shows the artist's own description of the work", async () => {
+  vi.spyOn(data, 'loadProjectText').mockResolvedValue({
+    description: 'A study of decay.\n\nMade with p5.',
+    iterationText: 'one of many',
+  })
+  vi.spyOn(tzkt, 'fetchIterations').mockResolvedValue([])
+  renderAt('/token/tok-5')
+
+  // Line breaks are the artist's, so they survive: CSS keeps them, and the text
+  // node holds them verbatim.
+  const p = await screen.findByText(/A study of decay/)
+  expect(p.textContent).toBe('A study of decay.\n\nMade with p5.')
+})
+
+test('a description is never rendered as HTML', async () => {
+  // Artist-supplied content on a page that also runs untrusted art: the one thing
+  // it must not become is markup.
+  vi.spyOn(data, 'loadProjectText').mockResolvedValue({
+    description: '<img src=x onerror=alert(1)> <b>bold</b>',
+    iterationText: null,
+  })
+  vi.spyOn(tzkt, 'fetchIterations').mockResolvedValue([])
+  renderAt('/token/tok-5')
+
+  const p = await screen.findByText(/onerror/)
+  expect(p.querySelector('img')).toBeNull()
+  expect(p.querySelector('b')).toBeNull()
+  expect(p.textContent).toContain('<b>bold</b>')
+})
+
+test('a project with no description simply shows none', async () => {
+  vi.spyOn(tzkt, 'fetchIterations').mockResolvedValue([])
+  const { container } = renderAt('/token/tok-5')
+  await screen.findByRole('heading', { name: 'Tok 5' })
+  expect(container.querySelector('.project-description')).toBeNull()
 })
 
 test('shows unavailable notice when tzkt fails', async () => {

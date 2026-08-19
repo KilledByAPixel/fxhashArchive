@@ -1,7 +1,7 @@
 import { test, expect, vi, beforeEach } from 'vitest'
 import {
   loadMeta, loadShard, findTokenBySlug, isVisible, loadIterationIds,
-  loadIterationContract, loadSummary, loadProjectMarketStats, loadProjectSeed, loadProjectIteration, _resetCache, loadProjectArtists } from './data'
+  loadIterationContract, loadSummary, loadProjectMarketStats, loadProjectSeed, loadProjectIteration, _resetCache, loadProjectArtists, loadProjectText } from './data'
 import type { LeanToken } from './types'
 
 const tok = (id: number, over: Partial<LeanToken> = {}): LeanToken => ({
@@ -329,4 +329,42 @@ test('loadProjectArtists reads the people behind a contract-authored project', a
   await expect(loadProjectArtists(5, 'KT1c')).resolves.toEqual([{ id: 'tz1a', name: 'Alice', share: 90 }])
   // A contract we have no record for is "we do not know", not an empty credit.
   await expect(loadProjectArtists(99, 'KT1c')).resolves.toBeNull()
+})
+
+// --- artist-written text -----------------------------------------------------
+
+test('loadProjectText names its own file from the project id', async () => {
+  // Chunked by id rather than by the slug index the other per-project files use,
+  // so a page holding a project id needs no lookup round trip first.
+  const fetchMock = vi.fn(async (url: string) => {
+    if (String(url).endsWith('descriptions/0004.json')) {
+      return { ok: true, json: async () => ({
+        '1002': { d: 'About the work', c: 'About this piece' },
+        '1003': { d: 'Only a description' },
+      }) } as Response
+    }
+    return { ok: false, status: 404 } as Response
+  })
+  vi.stubGlobal('fetch', fetchMock)
+
+  // 1002 / 250 = chunk 4.
+  await expect(loadProjectText(1002)).resolves.toEqual({
+    description: 'About the work',
+    iterationText: 'About this piece',
+  })
+  // A project with no per-iteration text is normal, not an error.
+  await expect(loadProjectText(1003)).resolves.toEqual({
+    description: 'Only a description',
+    iterationText: null,
+  })
+})
+
+test('a project with nothing written about it resolves empty, never rejects', async () => {
+  // Text is an extra, so its absence must not cost a visitor the page.
+  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 404 }) as Response))
+  await expect(loadProjectText(7)).resolves.toEqual({ description: null, iterationText: null })
+
+  vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('offline') }))
+  _resetCache()
+  await expect(loadProjectText(7)).resolves.toEqual({ description: null, iterationText: null })
 })

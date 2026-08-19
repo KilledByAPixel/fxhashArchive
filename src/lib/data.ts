@@ -260,6 +260,45 @@ export async function loadProjectSeed(projectId: number, tokenId: number): Promi
   return (await loadProjectIteration(projectId, tokenId)).seed
 }
 
+/**
+ * Projects per descriptions file. Must match CHUNK in
+ * scripts/snapshot-descriptions.mjs.
+ */
+const DESCRIPTION_CHUNK = 250
+
+/** Short keys because the file is mostly prose; see the snapshot script. */
+interface DescriptionRow { d?: string | null; c?: string | null }
+
+/** The artist's own words, which nothing else in this archive records. */
+export interface ProjectText {
+  /** What the project is, shown on its page. */
+  description: string | null
+  /** The text fxhash showed on each individual iteration. */
+  iterationText: string | null
+}
+
+const EMPTY_TEXT: ProjectText = { description: null, iterationText: null }
+
+/**
+ * Artist-written text for a project.
+ *
+ * Chunked by project id, not by the slug index the other per-project files use, so
+ * this needs no lookup first: a page holding a project id can name its own file.
+ *
+ * Resolves to empty rather than rejecting when there is nothing to show — a
+ * missing description is a normal state, and it must never cost a visitor the page.
+ */
+export async function loadProjectText(projectId: number): Promise<ProjectText> {
+  const chunk = String(Math.floor(projectId / DESCRIPTION_CHUNK)).padStart(4, '0')
+  try {
+    const rows = await getJson<Record<string, DescriptionRow>>(`descriptions/${chunk}.json`)
+    const row = rows[String(projectId)]
+    return { description: row?.d ?? null, iterationText: row?.c ?? null }
+  } catch {
+    return EMPTY_TEXT
+  }
+}
+
 /** Market stats sharded to mirror `tokens/index-NNN.json`. */
 const loadMarketShard = (i: number) =>
   getJson<Record<string, MarketStats | null>>(`market/stats-${String(i).padStart(3, '0')}.json`)

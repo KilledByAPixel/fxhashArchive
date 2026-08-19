@@ -99,3 +99,13 @@ img { max-width: 100%; }
   background: #1a1a1a; color: #777; text-align: center;
   font-size: 0.7rem; padding: 0.5rem; min-height: 4rem;
 }
+
+/* Artist-written, so it can be three lines or thirty, and its own line breaks
+ * carry meaning. Capped for readability rather than truncated — the whole point
+ * of keeping it is that someone can read all of it. */
+.project-description {
+  white-space: pre-wrap;
+  max-width: 44rem;
+  margin: 1.25rem 0 0;
+  opacity: 0.92;
+}

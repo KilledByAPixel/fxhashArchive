@@ -69,6 +69,13 @@ document with one script in front of it that makes those images request CORS.
 The artist's `index.html` is never modified, and the other 363 projects run it
 directly. See `scripts/cors-shim.mjs`.
 
+**What the artists said about it.** The description of every project — 27,422 of
+the 27,430 have one — plus the text fxhash showed on each individual iteration.
+382 bytes on average, 21.6 MB in total, and for most of this art the only prose
+anyone ever wrote about it. It survives in two places: fxhash's API, which is
+still answering despite the site being switched off for non-payment, and the
+metadata JSON on IPFS, behind exactly the pins this archive exists to outlive.
+
 **Who made the work.** 553 projects were minted through fxhash's shared
 collaboration contracts, which meant the catalog recorded a KT1 address as the
 artist and no name at all. Each of those contracts names its members in its own
