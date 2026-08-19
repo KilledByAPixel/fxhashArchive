@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom'
 import { fetchIteration, GENTK_V1_CONTRACT, type Iteration } from '../lib/tzkt'
 import { ipfsToHttp } from '../lib/ipfs'
 import { artifactBaseHref, injectLegacyPatch, needsLegacyPatch } from '../lib/legacyPatch'
-import { loadProjectIteration, loadSummary, type LocalIteration } from '../lib/data'
+import { findTokenBySlug, loadProjectIteration, loadSummary, type LocalIteration } from '../lib/data'
 import ArchivedFrame from '../components/ArchivedFrame'
 import IpfsImage from '../components/IpfsImage'
 import LoadError from '../components/LoadError'
@@ -62,6 +62,37 @@ export default function IterationPage() {
   const projectId = Number(params.get('p'))
   const hasProject = Number.isFinite(projectId) && params.get('p') !== null
   const [archived, setArchived] = useState<LocalIteration | null>(null)
+
+  /**
+   * Decorative only: the project's slug and this piece's iteration number, both
+   * carried by the link that got us here.
+   *
+   * fxhash named every piece "<project> #<n>", and that name reaches this page from
+   * the indexer. With the indexer down the page had nothing to call the artwork but
+   * its gentk token id — a five- or six-digit number that means nothing to anyone —
+   * even though the project page it was clicked from knew the name and the number
+   * perfectly well without a network. So it hands both over. Neither is trusted for
+   * anything but text: the generator is still chosen by `p`, checked against the
+   * archived set.
+   */
+  const slugHint = params.get('s')
+  const iterNo = Number(params.get('i'))
+  const hasIterNo = params.get('i') !== null && Number.isInteger(iterNo) && iterNo > 0
+  const [projectName, setProjectName] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!slugHint) { setProjectName(null); return }
+    let cancelled = false
+    setProjectName(null)
+    findTokenBySlug(slugHint).then(
+      (t) => { if (!cancelled) setProjectName(t?.name ?? null) },
+      () => { if (!cancelled) setProjectName(null) },
+    )
+    return () => { cancelled = true }
+  }, [slugHint])
+
+  /** What to call this piece without the indexer, or null if we cannot say. */
+  const localTitle = projectName && hasIterNo ? `${projectName} #${iterNo}` : null
 
   useEffect(() => {
     if (!hasProject) { setArchived(null); return }
@@ -123,17 +154,23 @@ export default function IterationPage() {
   if (state.status !== 'ok' && archived?.seed) {
     return (
       <div>
-        <h2>#{tokenId}</h2>
+        <h2>{localTitle ?? `#${tokenId}`}</h2>
         <p className="muted">
           Details are unavailable (TzKT unreachable), so this is the archived copy —
           rebuilt from the generator and seed stored in this repository, with no
           network of any kind.
         </p>
         <div className="iteration-view">
-          <ArchivedFrame projectId={projectId} seed={archived.seed} query={archived.query} label={`#${tokenId}`} />
+          <ArchivedFrame
+            projectId={projectId}
+            seed={archived.seed}
+            query={archived.query}
+            label={localTitle ?? `#${tokenId}`}
+          />
         </div>
         <dl className="iteration-meta">
           <dt>Hash</dt><dd><code>{archived.seed}</code></dd>
+          <dt>Token</dt><dd><code>#{tokenId}</code></dd>
         </dl>
       </div>
     )
@@ -148,11 +185,11 @@ export default function IterationPage() {
   const it = state.iteration
   const isLegacy = it.contract === GENTK_V1
   const live = frame.view !== 'image'
-  const title = it.name ?? 'artwork'
+  const title = it.name ?? localTitle ?? 'artwork'
 
   return (
     <div>
-      <h2>{it.name ?? `#${it.tokenId}`}</h2>
+      <h2>{it.name ?? localTitle ?? `#${it.tokenId}`}</h2>
       <div className="iteration-view">
         {frame.view === 'archived' && archived?.seed
           ? <ArchivedFrame projectId={projectId} seed={archived.seed} query={archived.query} label={title} />

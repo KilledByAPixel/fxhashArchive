@@ -197,11 +197,14 @@ test('a TzKT failure on the mapping path reports unavailable, without a silent f
 
   renderAt('/token/tok-5')
 
-  // The ids are held locally, so an unreachable indexer costs titles and previews,
-  // not the list. The iterations still appear, identified by token id.
+  // The ids are held locally, so an unreachable indexer costs previews, not the
+  // list — and not the names either: "<project> #<n>" is rebuilt from the project
+  // and the iteration's position, which is exactly how fxhash named them.
   expect(await screen.findByText(/titles and preview images are unavailable/i)).toBeTruthy()
-  expect(screen.getByText('#955')).toBeTruthy()
-  expect(screen.getByText('#960')).toBeTruthy()
+  expect(screen.getByText('Tok 5 #1')).toBeTruthy()
+  expect(screen.getByText('Tok 5 #2')).toBeTruthy()
+  // A bare gentk token id says nothing to a visitor and must not be what they see.
+  expect(screen.queryByText('#955')).toBeNull()
   // Knowing the ids exist, an unreachable indexer must never read as "never minted".
   expect(screen.queryByText(/have been minted/i)).toBeNull()
   expect(byIds).toHaveBeenCalled()
@@ -447,9 +450,9 @@ test('with TzKT entirely unreachable, the whole edition is still listed from loc
 
   renderAt('/token/tok-5')
 
-  expect(await screen.findByText('#955')).toBeTruthy()
-  expect(screen.getByText('#960')).toBeTruthy()
-  expect(screen.getByText('#961')).toBeTruthy()
+  expect(await screen.findByText('Tok 5 #1')).toBeTruthy()
+  expect(screen.getByText('Tok 5 #2')).toBeTruthy()
+  expect(screen.getByText('Tok 5 #3')).toBeTruthy()
   // The count comes from the local ids, so a visitor can see how large the edition is.
   expect(screen.getByRole('heading', { name: /iterations \(3\)/i })).toBeTruthy()
   // The lossy join must not be attempted just because the id path failed.
@@ -462,7 +465,7 @@ test('missing thumbnails say why rather than leaving a blank tile', async () => 
 
   renderAt('/token/tok-5')
 
-  await screen.findByText('#955')
+  await screen.findByText('Tok 5 #1')
   // Three different statements, and a visitor should be able to tell them apart:
   // "no image recorded" is about the artwork, "IPFS unreachable" is about the
   // gateways, and this one is about not having reached the indexer at all.

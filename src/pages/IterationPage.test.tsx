@@ -172,6 +172,44 @@ test('with the indexer dead, an archived iteration still renders from local file
   expect(screen.queryByRole('button', { name: /retry/i })).toBeNull()
 })
 
+test('with no indexer, the piece is still named the way fxhash named it', async () => {
+  vi.spyOn(tzkt, 'fetchIteration').mockRejectedValue(new Error('offline'))
+  vi.spyOn(data, 'loadSummary').mockResolvedValue(archivedSummary)
+  vi.spyOn(data, 'loadProjectIteration').mockResolvedValue({ seed: 'ooLOCAL', query: null })
+  const bySlug = vi.spyOn(data, 'findTokenBySlug').mockResolvedValue({
+    id: 42, slug: 'tok-5', name: 'Tok 5', flag: 'CLEAN', supply: 10, iterationsCount: 1,
+    createdAt: null, mintOpensAt: null, thumbnailUri: null, displayUri: null,
+    generativeUri: null, tags: [], author: null,
+  })
+
+  renderWithProject('?p=42&s=tok-5&i=7')
+
+  // "#9" is a gentk token id: a number that identifies the piece to a database and
+  // to nobody else. The project page knew the real name without a network, so it
+  // hands over the two halves it takes to rebuild it.
+  expect(await screen.findByRole('heading', { name: 'Tok 5 #7' })).toBeTruthy()
+  expect(bySlug).toHaveBeenCalledWith('tok-5')
+  // Demoted out of the title, not dropped.
+  expect(screen.getByText('#9')).toBeTruthy()
+})
+
+test('the labelling hints never decide which generator runs', async () => {
+  vi.spyOn(tzkt, 'fetchIteration').mockRejectedValue(new Error('offline'))
+  vi.spyOn(data, 'loadSummary').mockResolvedValue(archivedSummary)
+  vi.spyOn(data, 'loadProjectIteration').mockResolvedValue({ seed: 'ooLOCAL', query: null })
+  vi.spyOn(data, 'findTokenBySlug').mockResolvedValue(null)
+
+  // A slug pointing somewhere else entirely: `p` alone selects the code to run, and
+  // it is still checked against the archived set. Otherwise a hand-edited link could
+  // serve one project's artwork under another's name.
+  renderWithProject('?p=42&s=some-other-project&i=7')
+
+  const frame = (await screen.findByTitle(/archived generator/i)) as HTMLIFrameElement
+  expect(frame.getAttribute('src')).toContain('data/generators/42/')
+  // No name resolved, so no invented title either.
+  expect(await screen.findByRole('heading', { name: '#9' })).toBeTruthy()
+})
+
 test('the archived copy is offered as a choice when the indexer is alive', async () => {
   vi.spyOn(data, 'loadSummary').mockResolvedValue(archivedSummary)
   vi.spyOn(data, 'loadProjectIteration').mockResolvedValue({ seed: 'ooLOCAL', query: null })

@@ -68,10 +68,29 @@ img { max-width: 100%; }
 .archived-filter { display: inline-flex; align-items: center; gap: 0.35rem; }
 .browse-note { opacity: 0.8; font-size: 0.9rem; margin: 0.5rem 0 0; }
 .archived-player { margin: 1.5rem 0; }
-.archived-frame {
-  width: 100%; aspect-ratio: 1 / 1; max-width: 640px;
+/* The stage and everything that can occupy it share one geometry, so an unsigned
+   mint or a seed still loading leaves the page exactly as tall as a rendered piece. */
+.archived-stage { max-width: 640px; }
+/* Sized by the children, not the stage: IterationPage renders an ArchivedFrame on
+   its own, with no stage around it. */
+.archived-frame, .archived-blank {
+  width: 100%; max-width: 640px; aspect-ratio: 1 / 1;
   border: 1px solid #333; border-radius: 8px; background: #000; display: block;
 }
+.archived-blank {
+  display: flex; align-items: center; justify-content: center;
+  padding: 1.5rem; text-align: center; color: #999;
+}
+.archived-blank p { margin: 0; max-width: 26rem; }
+.archived-nav {
+  display: flex; align-items: center; gap: 0.75rem;
+  flex-wrap: wrap; margin: 0.75rem 0 0; max-width: 640px;
+}
+.archived-nav .load-more { margin: 0; }
+.archived-counter { font-size: 0.9rem; }
+/* Two lines' worth: the seed wraps on narrow screens and the caption must not
+   change height under the controls when it does. */
+.archived-caption { min-height: 2.6em; margin: 0.5rem 0 0; }
 .archived-player code { font-size: 0.85em; opacity: 0.85; word-break: break-all; }
 .img-fallback {
   display: flex; align-items: center; justify-content: center;

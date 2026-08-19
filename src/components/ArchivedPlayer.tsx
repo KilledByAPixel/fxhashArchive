@@ -19,16 +19,27 @@ import ArchivedFrame from './ArchivedFrame'
 
 interface Props {
   projectId: number
+  /** For labelling only — iterations are named "<project> #<n>", as fxhash named them. */
+  projectName: string
   /** Minted iteration ids for this project, as `FX{version}-{tokenId}`. */
   iterationIds: string[]
 }
 
-export default function ArchivedPlayer({ projectId, iterationIds }: Props) {
+export default function ArchivedPlayer({ projectId, projectName, iterationIds }: Props) {
   const [index, setIndex] = useState(0)
   const [local, setLocal] = useState<LocalIteration | null | undefined>(undefined)
 
   const current = iterationIds[index]
   const tokenId = current ? Number(current.split('-')[1]) : NaN
+  /**
+   * Iteration number, taken from the position in the id list.
+   *
+   * Verified rather than assumed: across a 1,550-project sample, all 8,173
+   * iterations whose captured artifact URI carries an authoritative
+   * `fxiteration=` matched their position exactly, unsigned mints included —
+   * those still consume a number. This is what lets the piece be named offline.
+   */
+  const label = `${projectName} #${index + 1}`
 
   useEffect(() => {
     if (!Number.isFinite(tokenId)) return
@@ -43,6 +54,8 @@ export default function ArchivedPlayer({ projectId, iterationIds }: Props) {
 
   if (iterationIds.length === 0) return null
 
+  const step = (delta: number) =>
+    setIndex((i) => (i + delta + iterationIds.length) % iterationIds.length)
 
   return (
     <section className="archived-player">
@@ -53,35 +66,50 @@ export default function ArchivedPlayer({ projectId, iterationIds }: Props) {
         network of any kind.
       </p>
 
-      {local === undefined && <p>Loading seed…</p>}
-      {local !== undefined && !local?.seed && (
-        <p>
-          This mint was never signed by fxhash, so no seed was ever assigned and no
-          artwork was generated for it.
-        </p>
-      )}
-      {local?.seed && (
-        <>
+      {/*
+        The stage keeps its size whatever it holds. Stepping through an edition
+        lands on unsigned mints and on seeds still loading, and if those collapsed
+        the box, everything below them — including the button being clicked —
+        jumped up the page mid-click.
+      */}
+      <div className="archived-stage">
+        {local === undefined ? (
+          <div className="archived-blank"><p>Loading seed…</p></div>
+        ) : local?.seed ? (
           <ArchivedFrame
             projectId={projectId}
             seed={local.seed}
             query={local.query}
-            label={`iteration ${current}`}
+            label={label}
           />
-          <p className="muted">
-            <code>{current}</code> · seed <code>{local.seed}</code>
-          </p>
-        </>
-      )}
+        ) : (
+          <div className="archived-blank">
+            <p>
+              This mint was never signed by fxhash, so no seed was ever assigned and
+              no artwork was generated for it.
+            </p>
+          </div>
+        )}
+      </div>
 
-      {iterationIds.length > 1 && (
-        <button
-          className="load-more"
-          onClick={() => setIndex((i) => (i + 1) % iterationIds.length)}
-        >
-          Next iteration ({index + 1} of {iterationIds.length})
-        </button>
-      )}
+      <div className="archived-nav">
+        {iterationIds.length > 1 && (
+          <button className="load-more" onClick={() => step(-1)}>‹ Previous</button>
+        )}
+        <span className="archived-counter">
+          {label} <span className="muted">of {iterationIds.length}</span>
+        </span>
+        {iterationIds.length > 1 && (
+          <button className="load-more" onClick={() => step(1)}>Next ›</button>
+        )}
+      </div>
+
+      {/* Last on purpose: this is the only line whose height varies, so its reflow
+          cannot move the controls above it. */}
+      <p className="muted archived-caption">
+        <code>{current}</code>
+        {local?.seed && <> · seed <code>{local.seed}</code></>}
+      </p>
     </section>
   )
 }

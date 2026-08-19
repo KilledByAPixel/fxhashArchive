@@ -178,9 +178,14 @@ export default function TokenPage() {
   const enrichment = new Map((iterations ?? []).map((it) => [it.tokenId, it]))
   const localCells =
     Array.isArray(objktIds) && objktIds.length > 0 && iterContract
-      ? objktIds.slice(0, offset + PAGE).map((id) => {
+      ? objktIds.slice(0, offset + PAGE).map((id, i) => {
           const tokenId = id.split('-')[1]
-          return { id, tokenId, contract: iterContract, row: enrichment.get(tokenId) }
+          // Position in the mint-ordered id list *is* the iteration number: across a
+          // 1,550-project sample, every iteration whose captured artifact URI carries
+          // an authoritative `fxiteration=` agreed with its position, unsigned mints
+          // included. So a piece can be named "<project> #<n>" — exactly as fxhash
+          // named it — with the indexer unreachable and nothing but this repo.
+          return { id, tokenId, n: i + 1, contract: iterContract, row: enrichment.get(tokenId) }
         })
       : null
   const localDone = localCells !== null && Array.isArray(objktIds)
@@ -222,7 +227,7 @@ export default function TokenPage() {
       </div>
 
       {isArchived && Array.isArray(objktIds) && objktIds.length > 0 && (
-        <ArchivedPlayer projectId={project.id} iterationIds={objktIds} />
+        <ArchivedPlayer projectId={project.id} projectName={project.name} iterationIds={objktIds} />
       )}
 
       <h3>Iterations{Array.isArray(objktIds) && objktIds.length > 0 && ` (${objktIds.length})`}</h3>
@@ -253,7 +258,9 @@ export default function TokenPage() {
               key={cell.id}
               // Carry the project so the iteration page can find its archived
               // generator; a gentk URL alone does not say which project it belongs to.
-              to={`/gentk/${cell.contract}/${cell.tokenId}?p=${project.id}`}
+              // `p` is what finds the archived generator; `s` and `i` are labelling
+              // only, so a link that arrives without them still works as it always did.
+              to={`/gentk/${cell.contract}/${cell.tokenId}?p=${project.id}&s=${project.slug}&i=${cell.n}`}
               className="token-card"
             >
               {/* No row means the indexer never answered for this id, so we do not
@@ -262,15 +269,17 @@ export default function TokenPage() {
               {cell.row ? (
                 <IpfsImage
                   uri={cell.row.thumbnailUri ?? cell.row.displayUri}
-                  alt={cell.row.name ?? `#${cell.tokenId}`}
+                  alt={cell.row.name ?? `${project.name} #${cell.n}`}
                   className="token-thumb"
                 />
               ) : (
-                <div className="img-fallback token-thumb" title={`#${cell.tokenId}: preview unavailable — TzKT unreachable`}>
+                <div className="img-fallback token-thumb" title={`${project.name} #${cell.n}: preview unavailable — TzKT unreachable`}>
                   <span>Preview unavailable</span>
                 </div>
               )}
-              <div className="token-name">{cell.row?.name ?? `#${cell.tokenId}`}</div>
+              {/* The indexer supplies "<project> #<n>"; offline we can build the same
+                  string ourselves, so a bare token id is never what a visitor sees. */}
+              <div className="token-name">{cell.row?.name ?? `${project.name} #${cell.n}`}</div>
             </Link>
           ))}
         </div>
@@ -279,7 +288,7 @@ export default function TokenPage() {
       {!localCells && iterations && iterations.length > 0 && (
         <div className="token-grid">
           {iterations.map((it) => (
-            <Link key={`${it.contract}-${it.tokenId}`} to={`/gentk/${it.contract}/${it.tokenId}?p=${project.id}`} className="token-card">
+            <Link key={`${it.contract}-${it.tokenId}`} to={`/gentk/${it.contract}/${it.tokenId}?p=${project.id}&s=${project.slug}`} className="token-card">
               <IpfsImage uri={it.thumbnailUri ?? it.displayUri} alt={it.name ?? it.tokenId} className="token-thumb" />
               <div className="token-name">{it.name ?? `#${it.tokenId}`}</div>
             </Link>
