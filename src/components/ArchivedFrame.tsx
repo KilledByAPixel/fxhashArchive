@@ -10,20 +10,32 @@
 /** Every archived generator unpacks with this entry point; see scripts/archive-generators.mjs. */
 const ENTRY = 'index.html'
 
-export function archivedSrc(projectId: number, seed: string) {
-  return `${import.meta.env.BASE_URL}data/generators/${projectId}/${ENTRY}?fxhash=${encodeURIComponent(seed)}`
+/**
+ * Prefer the exact query fxhash used over one rebuilt from the seed.
+ *
+ * `?fxhash=<seed>` alone is enough for most pieces, but it silently drops
+ * `fxiteration` and `fxminter`, which some generators read — and for the 11,818
+ * fx(params) iterations it drops the parameters the minter chose, which ride in
+ * the URL fragment. Those would render the artist's defaults instead of the
+ * piece that was actually minted: right generator, right seed, wrong artwork.
+ */
+export function archivedSrc(projectId: number, seed: string, query?: string | null) {
+  const suffix = query ?? `?fxhash=${encodeURIComponent(seed)}`
+  return `${import.meta.env.BASE_URL}data/generators/${projectId}/${ENTRY}${suffix}`
 }
 
 export default function ArchivedFrame({
   projectId,
   seed,
+  query,
   label,
 }: {
   projectId: number
   seed: string
+  query?: string | null
   label: string
 }) {
-  const src = archivedSrc(projectId, seed)
+  const src = archivedSrc(projectId, seed, query)
   return (
     <iframe
       key={src}

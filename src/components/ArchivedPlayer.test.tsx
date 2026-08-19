@@ -11,7 +11,7 @@ afterEach(() => {
 const ids = ['FX0-100', 'FX0-101']
 
 test('runs the local generator with the local seed, touching no network service', async () => {
-  const seed = vi.spyOn(data, 'loadProjectSeed').mockResolvedValue('ooSEED')
+  const seed = vi.spyOn(data, 'loadProjectIteration').mockResolvedValue({ seed: 'ooSEED', query: null })
   render(<ArchivedPlayer projectId={42} iterationIds={ids} />)
 
   const frame = (await screen.findByTitle(/archived generator/i)) as HTMLIFrameElement
@@ -22,7 +22,7 @@ test('runs the local generator with the local seed, touching no network service'
 })
 
 test('keeps the sandbox that stops archived third-party code reading this origin', async () => {
-  vi.spyOn(data, 'loadProjectSeed').mockResolvedValue('ooSEED')
+  vi.spyOn(data, 'loadProjectIteration').mockResolvedValue({ seed: 'ooSEED', query: null })
   render(<ArchivedPlayer projectId={42} iterationIds={ids} />)
   const frame = await screen.findByTitle(/archived generator/i)
   // Scripts yes, same-origin never: the generator is served from our own origin
@@ -31,9 +31,9 @@ test('keeps the sandbox that stops archived third-party code reading this origin
 })
 
 test('stepping to the next iteration loads that iteration own seed', async () => {
-  const seed = vi.spyOn(data, 'loadProjectSeed')
-    .mockResolvedValueOnce('ooFIRST')
-    .mockResolvedValueOnce('ooSECOND')
+  const seed = vi.spyOn(data, 'loadProjectIteration')
+    .mockResolvedValueOnce({ seed: 'ooFIRST', query: null })
+    .mockResolvedValueOnce({ seed: 'ooSECOND', query: null })
   render(<ArchivedPlayer projectId={42} iterationIds={ids} />)
   await screen.findByTitle(/archived generator/i)
 
@@ -44,7 +44,7 @@ test('stepping to the next iteration loads that iteration own seed', async () =>
 })
 
 test('says an unsigned mint has no seed rather than rendering random art', async () => {
-  vi.spyOn(data, 'loadProjectSeed').mockResolvedValue(null)
+  vi.spyOn(data, 'loadProjectIteration').mockResolvedValue({ seed: null, query: null })
   render(<ArchivedPlayer projectId={42} iterationIds={ids} />)
   expect(await screen.findByText(/never signed by fxhash/i)).toBeTruthy()
   // Running the generator with no seed would draw *a* piece, not *the* piece.
@@ -52,7 +52,24 @@ test('says an unsigned mint has no seed rather than rendering random art', async
 })
 
 test('renders nothing when the project has no minted iterations', () => {
-  vi.spyOn(data, 'loadProjectSeed').mockResolvedValue('ooSEED')
+  vi.spyOn(data, 'loadProjectIteration').mockResolvedValue({ seed: 'ooSEED', query: null })
   const { container } = render(<ArchivedPlayer projectId={42} iterationIds={[]} />)
   expect(container.firstChild).toBeNull()
+})
+
+test('an fx(params) piece is driven by the exact query fxhash used, fragment included', async () => {
+  // The params the minter chose ride in the URL fragment of the captured artifact
+  // URI, and exist nowhere else. Rebuilding the URL from the seed alone would run
+  // the artist's defaults instead: right generator, right seed, wrong artwork.
+  vi.spyOn(data, 'loadProjectIteration').mockResolvedValue({
+    seed: 'ooSEED',
+    query: '?fxhash=ooSEED&fxiteration=1&fxminter=tz1abc&fxchain=TEZOS#0x4031000000000000',
+  })
+  render(<ArchivedPlayer projectId={42} iterationIds={ids} />)
+
+  const frame = (await screen.findByTitle(/archived generator/i)) as HTMLIFrameElement
+  const src = frame.getAttribute('src') ?? ''
+  expect(src).toContain('#0x4031000000000000')
+  expect(src).toContain('fxiteration=1')
+  expect(src).toContain('fxminter=tz1abc')
 })

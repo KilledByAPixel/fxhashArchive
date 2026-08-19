@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom'
 import { fetchIteration, GENTK_V1_CONTRACT, type Iteration } from '../lib/tzkt'
 import { ipfsToHttp } from '../lib/ipfs'
 import { artifactBaseHref, injectLegacyPatch, needsLegacyPatch } from '../lib/legacyPatch'
-import { loadProjectSeed, loadSummary } from '../lib/data'
+import { loadProjectIteration, loadSummary, type LocalIteration } from '../lib/data'
 import ArchivedFrame from '../components/ArchivedFrame'
 import IpfsImage from '../components/IpfsImage'
 import LoadError from '../components/LoadError'
@@ -61,20 +61,20 @@ export default function IterationPage() {
    */
   const projectId = Number(params.get('p'))
   const hasProject = Number.isFinite(projectId) && params.get('p') !== null
-  const [archivedSeed, setArchivedSeed] = useState<string | null>(null)
+  const [archived, setArchived] = useState<LocalIteration | null>(null)
 
   useEffect(() => {
-    if (!hasProject) { setArchivedSeed(null); return }
+    if (!hasProject) { setArchived(null); return }
     let cancelled = false
-    setArchivedSeed(null)
+    setArchived(null)
     // Both halves have to hold: the project's code must be archived here, and this
     // token must have a seed. Either missing means there is nothing local to run.
-    Promise.all([loadSummary(), loadProjectSeed(projectId, Number(tokenId))]).then(
-      ([summary, seed]) => {
+    Promise.all([loadSummary(), loadProjectIteration(projectId, Number(tokenId))]).then(
+      ([summary, local]) => {
         if (cancelled) return
-        setArchivedSeed(summary.archived.includes(projectId) ? seed : null)
+        setArchived(summary.archived.includes(projectId) && local.seed ? local : null)
       },
-      () => { if (!cancelled) setArchivedSeed(null) },
+      () => { if (!cancelled) setArchived(null) },
     )
     return () => { cancelled = true }
   }, [hasProject, projectId, tokenId])
@@ -120,7 +120,7 @@ export default function IterationPage() {
   // An archived copy is enough to render the page on its own. The indexer supplies
   // the title, the owner and the attributes, and losing those must no longer cost a
   // visitor the artwork itself when it is sitting in this repository.
-  if (state.status !== 'ok' && archivedSeed) {
+  if (state.status !== 'ok' && archived?.seed) {
     return (
       <div>
         <h2>#{tokenId}</h2>
@@ -130,10 +130,10 @@ export default function IterationPage() {
           network of any kind.
         </p>
         <div className="iteration-view">
-          <ArchivedFrame projectId={projectId} seed={archivedSeed} label={`#${tokenId}`} />
+          <ArchivedFrame projectId={projectId} seed={archived.seed} query={archived.query} label={`#${tokenId}`} />
         </div>
         <dl className="iteration-meta">
-          <dt>Hash</dt><dd><code>{archivedSeed}</code></dd>
+          <dt>Hash</dt><dd><code>{archived.seed}</code></dd>
         </dl>
       </div>
     )
@@ -154,8 +154,8 @@ export default function IterationPage() {
     <div>
       <h2>{it.name ?? `#${it.tokenId}`}</h2>
       <div className="iteration-view">
-        {frame.view === 'archived' && archivedSeed
-          ? <ArchivedFrame projectId={projectId} seed={archivedSeed} label={title} />
+        {frame.view === 'archived' && archived?.seed
+          ? <ArchivedFrame projectId={projectId} seed={archived.seed} query={archived.query} label={title} />
           : live && liveSrc
           ? (frame.view === 'fetching'
             ? <p>Preparing live view…</p>
@@ -164,7 +164,7 @@ export default function IterationPage() {
               : <iframe src={liveSrc} sandbox="allow-scripts" className="live-frame" title={title} />)
           : <IpfsImage uri={it.displayUri ?? it.thumbnailUri} alt={title} className="iteration-img" />}
       </div>
-      {archivedSeed && (
+      {archived?.seed && (
         <button
           className="load-more"
           onClick={() => setFrame(frame.view === 'archived' ? { view: 'image' } : { view: 'archived' })}

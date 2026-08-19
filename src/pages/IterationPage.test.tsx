@@ -160,7 +160,7 @@ const archivedSummary = {
 test('with the indexer dead, an archived iteration still renders from local files', async () => {
   vi.spyOn(tzkt, 'fetchIteration').mockRejectedValue(new Error('offline'))
   vi.spyOn(data, 'loadSummary').mockResolvedValue(archivedSummary)
-  vi.spyOn(data, 'loadProjectSeed').mockResolvedValue('ooLOCAL')
+  vi.spyOn(data, 'loadProjectIteration').mockResolvedValue({ seed: 'ooLOCAL', query: null })
 
   renderWithProject()
 
@@ -174,7 +174,7 @@ test('with the indexer dead, an archived iteration still renders from local file
 
 test('the archived copy is offered as a choice when the indexer is alive', async () => {
   vi.spyOn(data, 'loadSummary').mockResolvedValue(archivedSummary)
-  vi.spyOn(data, 'loadProjectSeed').mockResolvedValue('ooLOCAL')
+  vi.spyOn(data, 'loadProjectIteration').mockResolvedValue({ seed: 'ooLOCAL', query: null })
 
   renderWithProject()
   await screen.findByRole('heading', { name: 'Piece #9' })
@@ -187,7 +187,7 @@ test('the archived copy is offered as a choice when the indexer is alive', async
 
 test('a project that is not archived gets no local option', async () => {
   vi.spyOn(data, 'loadSummary').mockResolvedValue({ ...archivedSummary, archived: [] })
-  vi.spyOn(data, 'loadProjectSeed').mockResolvedValue('ooLOCAL')
+  vi.spyOn(data, 'loadProjectIteration').mockResolvedValue({ seed: 'ooLOCAL', query: null })
 
   renderWithProject()
   await screen.findByRole('heading', { name: 'Piece #9' })
@@ -196,7 +196,7 @@ test('a project that is not archived gets no local option', async () => {
 
 test('without the project hint the page behaves exactly as before', async () => {
   const summary = vi.spyOn(data, 'loadSummary')
-  const seed = vi.spyOn(data, 'loadProjectSeed')
+  const seed = vi.spyOn(data, 'loadProjectIteration')
 
   renderPage()
   await screen.findByRole('heading', { name: 'Piece #9' })

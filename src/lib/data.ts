@@ -148,6 +148,19 @@ interface SeedChunk {
   from: number
   size: number
   seeds: Array<string | null>
+  artifacts: Array<string | null>
+}
+
+/** What this repository holds for one minted iteration. */
+export interface LocalIteration {
+  seed: string | null
+  /**
+   * The query string and fragment fxhash itself used to drive the generator,
+   * taken from the captured artifact URI — `?fxhash=…&fxiteration=…&fxminter=…`
+   * and, for fx(params) projects, a trailing `#0x…` carrying the minter's chosen
+   * parameters. Null when the artifact URI carried none.
+   */
+  query: string | null
 }
 
 const loadSeedChunk = (contractIndex: number, chunk: number) =>
@@ -166,14 +179,32 @@ const loadSeedChunk = (contractIndex: number, chunk: number) =>
  * whose contract we do not know, and a token that was minted but never signed, so
  * no seed was ever assigned to it.
  */
-export async function loadProjectSeed(projectId: number, tokenId: number): Promise<string | null> {
+export async function loadProjectIteration(
+  projectId: number,
+  tokenId: number,
+): Promise<LocalIteration> {
   const { byProject } = await loadIterationContracts()
   const contractIndex = byProject[String(projectId)]
-  if (contractIndex === undefined) return null
+  if (contractIndex === undefined) return { seed: null, query: null }
   const chunk = await loadSeedChunk(contractIndex, Math.floor(tokenId / SEED_CHUNK))
   // Indexed off the chunk's own `from`: one contract's ids start mid-chunk, so
   // `tokenId % SEED_CHUNK` would silently read the wrong slot for every token in it.
-  return chunk.seeds[tokenId - chunk.from] ?? null
+  const i = tokenId - chunk.from
+  const artifact = chunk.artifacts?.[i] ?? null
+  const mark = artifact ? artifact.indexOf('?') : -1
+  return {
+    seed: chunk.seeds[i] ?? null,
+    // Everything from the '?' on, fragment included. Rebuilding this from the
+    // seed alone would drop fxiteration, fxminter, and — for fx(params) pieces —
+    // the parameters the minter chose, which are carried in the fragment and
+    // exist nowhere else we captured.
+    query: mark >= 0 ? artifact!.slice(mark) : null,
+  }
+}
+
+/** Just the seed. See loadProjectIteration for what else is stored beside it. */
+export async function loadProjectSeed(projectId: number, tokenId: number): Promise<string | null> {
+  return (await loadProjectIteration(projectId, tokenId)).seed
 }
 
 /** Market stats sharded to mirror `tokens/index-NNN.json`. */

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { loadProjectSeed } from '../lib/data'
+import { loadProjectIteration, type LocalIteration } from '../lib/data'
 import ArchivedFrame from './ArchivedFrame'
 
 /**
@@ -25,7 +25,7 @@ interface Props {
 
 export default function ArchivedPlayer({ projectId, iterationIds }: Props) {
   const [index, setIndex] = useState(0)
-  const [seed, setSeed] = useState<string | null | undefined>(undefined)
+  const [local, setLocal] = useState<LocalIteration | null | undefined>(undefined)
 
   const current = iterationIds[index]
   const tokenId = current ? Number(current.split('-')[1]) : NaN
@@ -33,10 +33,10 @@ export default function ArchivedPlayer({ projectId, iterationIds }: Props) {
   useEffect(() => {
     if (!Number.isFinite(tokenId)) return
     let cancelled = false
-    setSeed(undefined)
-    loadProjectSeed(projectId, tokenId).then(
-      (s) => { if (!cancelled) setSeed(s) },
-      () => { if (!cancelled) setSeed(null) },
+    setLocal(undefined)
+    loadProjectIteration(projectId, tokenId).then(
+      (r) => { if (!cancelled) setLocal(r) },
+      () => { if (!cancelled) setLocal(null) },
     )
     return () => { cancelled = true }
   }, [projectId, tokenId])
@@ -53,18 +53,23 @@ export default function ArchivedPlayer({ projectId, iterationIds }: Props) {
         network of any kind.
       </p>
 
-      {seed === undefined && <p>Loading seed…</p>}
-      {seed === null && (
+      {local === undefined && <p>Loading seed…</p>}
+      {local !== undefined && !local?.seed && (
         <p>
           This mint was never signed by fxhash, so no seed was ever assigned and no
           artwork was generated for it.
         </p>
       )}
-      {seed && (
+      {local?.seed && (
         <>
-          <ArchivedFrame projectId={projectId} seed={seed} label={`iteration ${current}`} />
+          <ArchivedFrame
+            projectId={projectId}
+            seed={local.seed}
+            query={local.query}
+            label={`iteration ${current}`}
+          />
           <p className="muted">
-            <code>{current}</code> · seed <code>{seed}</code>
+            <code>{current}</code> · seed <code>{local.seed}</code>
           </p>
         </>
       )}

@@ -1,7 +1,7 @@
 import { test, expect, vi, beforeEach } from 'vitest'
 import {
   loadMeta, loadShard, findTokenBySlug, isVisible, loadIterationIds,
-  loadIterationContract, loadSummary, loadProjectMarketStats, loadProjectSeed, _resetCache,
+  loadIterationContract, loadSummary, loadProjectMarketStats, loadProjectSeed, loadProjectIteration, _resetCache,
 } from './data'
 import type { LeanToken } from './types'
 
@@ -263,4 +263,40 @@ test('loadProjectSeed returns null when the project has no known contract', asyn
   }))
   _resetCache()
   await expect(loadProjectSeed(999, 1)).resolves.toBeNull()
+})
+
+test('loadProjectIteration carries the params fragment out of the captured artifact', async () => {
+  const chunk = {
+    contract: 2, address: 'KT1E', from: 0, size: 1,
+    seeds: ['ooSEED'],
+    // fx(params): the minter's chosen parameters ride in the fragment.
+    artifacts: ['ipfs://QmX/?fxhash=ooSEED&fxiteration=1&fxchain=TEZOS#0x4031000000000000'],
+  }
+  vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) =>
+    Promise.resolve({
+      ok: true,
+      json: async () => (String(url).includes('contracts.json')
+        ? { contracts: ['KT1E'], byProject: { '7': 0 } }
+        : chunk),
+    })))
+  _resetCache()
+
+  const local = await loadProjectIteration(7, 0)
+  expect(local.seed).toBe('ooSEED')
+  expect(local.query).toBe('?fxhash=ooSEED&fxiteration=1&fxchain=TEZOS#0x4031000000000000')
+})
+
+test('loadProjectIteration reports no query when the artifact had none', async () => {
+  const chunk = { contract: 0, address: 'KT1K', from: 0, size: 1, seeds: ['ooSEED'], artifacts: ['ipfs://QmX'] }
+  vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) =>
+    Promise.resolve({
+      ok: true,
+      json: async () => (String(url).includes('contracts.json')
+        ? { contracts: ['KT1K'], byProject: { '7': 0 } }
+        : chunk),
+    })))
+  _resetCache()
+
+  // The caller then falls back to ?fxhash=<seed>, which is right for those eras.
+  await expect(loadProjectIteration(7, 0)).resolves.toEqual({ seed: 'ooSEED', query: null })
 })
