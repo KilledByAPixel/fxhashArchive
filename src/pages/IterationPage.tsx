@@ -4,7 +4,7 @@ import { fetchIteration, GENTK_V1_CONTRACT, type Iteration } from '../lib/tzkt'
 import { ipfsToHttp } from '../lib/ipfs'
 import { artifactBaseHref, injectLegacyPatch, needsLegacyPatch } from '../lib/legacyPatch'
 import { findTokenBySlug, loadProjectIteration, loadSummary, type LocalIteration } from '../lib/data'
-import ArchivedFrame from '../components/ArchivedFrame'
+import PieceFrame, { archivedSrc } from '../components/PieceFrame'
 import IpfsImage from '../components/IpfsImage'
 import LoadError from '../components/LoadError'
 import NotFoundPage from './NotFoundPage'
@@ -161,11 +161,10 @@ export default function IterationPage() {
           network of any kind.
         </p>
         <div className="iteration-view">
-          <ArchivedFrame
-            projectId={projectId}
-            seed={archived.seed}
-            query={archived.query}
+          <PieceFrame
+            src={archivedSrc(projectId, archived.seed, archived.query)}
             label={localTitle ?? `#${tokenId}`}
+            source="archived"
           />
         </div>
         <dl className="iteration-meta">
@@ -184,16 +183,30 @@ export default function IterationPage() {
 
   const it = state.iteration
   const isLegacy = it.contract === GENTK_V1
-  const live = frame.view !== 'image'
+  const running = frame.view !== 'image'
   const title = it.name ?? localTitle ?? 'artwork'
+
+  /**
+   * One button, not two.
+   *
+   * There used to be "Run archived copy" beside "Run live", which asked a visitor
+   * to care about a distinction that is ours, not theirs: they want to see the
+   * artwork move. So the button just runs it, preferring the archived copy when we
+   * have one — same artwork, no gateway in the way — and streaming from IPFS
+   * otherwise. Comparing the two is still possible, as a link rather than a rival
+   * button, since it only matters to someone checking our work.
+   */
+  const canArchived = Boolean(archived?.seed)
+  const liveView: Frame = { view: isLegacy ? 'fetching' : 'direct' }
+  const runView: Frame = canArchived ? { view: 'archived' } : liveView
 
   return (
     <div>
       <h2>{it.name ?? localTitle ?? `#${it.tokenId}`}</h2>
       <div className="iteration-view">
         {frame.view === 'archived' && archived?.seed
-          ? <ArchivedFrame projectId={projectId} seed={archived.seed} query={archived.query} label={title} />
-          : live && liveSrc
+          ? <PieceFrame src={archivedSrc(projectId, archived.seed, archived.query)} label={title} source="archived" />
+          : running && liveSrc
           ? (frame.view === 'fetching'
             ? <p>Preparing live view…</p>
             : frame.view === 'patched'
@@ -201,21 +214,18 @@ export default function IterationPage() {
               : <iframe src={liveSrc} sandbox="allow-scripts" className="live-frame" title={title} />)
           : <IpfsImage uri={it.displayUri ?? it.thumbnailUri} alt={title} className="iteration-img" />}
       </div>
-      {archived?.seed && (
-        <button
-          className="load-more"
-          onClick={() => setFrame(frame.view === 'archived' ? { view: 'image' } : { view: 'archived' })}
-        >
-          {frame.view === 'archived' ? 'Show image' : 'Run archived copy'}
+      {(canArchived || liveSrc) && (
+        <button className="load-more" onClick={() => setFrame(running ? { view: 'image' } : runView)}>
+          {running ? 'Show image' : 'Run artwork'}
         </button>
       )}
-      {liveSrc && (
-        <button
-          className="load-more"
-          onClick={() => setFrame(live ? { view: 'image' } : { view: isLegacy ? 'fetching' : 'direct' })}
-        >
-          {live ? 'Show image' : 'Run live'}
-        </button>
+      {frame.view === 'archived' && liveSrc && (
+        <p className="muted legacy-note">
+          Running the copy archived in this repository.{' '}
+          <button className="link-button" onClick={() => setFrame(liveView)}>
+            stream the original from IPFS
+          </button>
+        </p>
       )}
       {frame.view === 'patched' && (
         // Manual escape hatch: nothing outside the sandbox can tell whether a patched

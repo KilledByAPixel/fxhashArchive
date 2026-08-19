@@ -81,7 +81,12 @@ test('renders the iterations of a project that lives on the middle gentk contrac
   expect(screen.getByText('Century XXX #101')).toBeTruthy()
   expect(screen.queryByText(/could not load iterations/i)).toBeNull()
 
-  const urls = vi.mocked(fetch).mock.calls.map((c) => String(c[0]))
+  // Only the indexer calls are the subject here. The page also reads local data
+  // files (the player's seed lookup), and counting every fetch made this assertion
+  // a tripwire for unrelated features rather than for querying the wrong contract.
+  const urls = vi.mocked(fetch).mock.calls
+    .map((c) => String(c[0]))
+    .filter((u) => u.includes('tzkt.io'))
   expect(urls).toHaveLength(1)
   expect(urls[0]).toContain(`contract=${MIDDLE}`)
   // The `FX0-` prefix must not drag the query onto gentk v1.

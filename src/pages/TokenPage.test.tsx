@@ -1,4 +1,4 @@
-import { render, screen, cleanup, fireEvent } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent, within, waitFor } from '@testing-library/react'
 import { test, expect, vi, beforeEach, afterEach } from 'vitest'
 import { MemoryRouter, Routes, Route, Link } from 'react-router-dom'
 import TokenPage from './TokenPage'
@@ -22,6 +22,14 @@ const iter = (over: Partial<Iteration> = {}): Iteration => ({
 /** The middle gentk contract — the one that used to be unreachable entirely. */
 const PROJECT_CONTRACT = tzkt.GENTK_CONTRACTS[1]
 
+/**
+ * The iteration grid alone. The player above it names the piece it is showing with
+ * the same "<project> #<n>" string, so an unscoped text query now matches twice —
+ * and a link's accessible name folds in its image alt, so an exact-name link query
+ * does not match either.
+ */
+const grid = () => within(document.querySelector('.token-grid') as HTMLElement)
+
 const renderAt = (path: string) =>
   render(
     <MemoryRouter initialEntries={[path]}>
@@ -42,6 +50,10 @@ beforeEach(() => {
   // Default: never traded. Stated explicitly so unrelated tests don't hit the real
   // loader, whose relative-URL fetch fails in jsdom.
   vi.spyOn(data, 'loadProjectMarketStats').mockResolvedValue(null)
+  // The iteration player now renders for every project with minted ids, archived or
+  // not, so its seed lookup has to be stubbed here or each of these tests waits on a
+  // real fetch. Unsigned by default: these tests are about the list, not the player.
+  vi.spyOn(data, 'loadProjectIteration').mockResolvedValue({ seed: null, query: null, artifact: null })
 })
 
 afterEach(() => {
@@ -54,7 +66,7 @@ test('renders project info and iterations from tzkt', async () => {
   vi.spyOn(tzkt, 'fetchIterations').mockResolvedValue([iter()])
   renderAt('/token/tok-5')
   expect(await screen.findByRole('heading', { name: 'Tok 5' })).toBeTruthy()
-  expect(await screen.findByText('Tok 5 #1')).toBeTruthy()
+  await waitFor(() => expect(grid().getByText('Tok 5 #1')).toBeTruthy())
   expect(screen.getByRole('link', { name: /Tok 5 #1/ }).getAttribute('href')).toContain('/gentk/KT1x/9')
 
   // Edition size (supply) plus the authoritative mint count from the captured
@@ -201,8 +213,8 @@ test('a TzKT failure on the mapping path reports unavailable, without a silent f
   // list — and not the names either: "<project> #<n>" is rebuilt from the project
   // and the iteration's position, which is exactly how fxhash named them.
   expect(await screen.findByText(/titles and preview images are unavailable/i)).toBeTruthy()
-  expect(screen.getByText('Tok 5 #1')).toBeTruthy()
-  expect(screen.getByText('Tok 5 #2')).toBeTruthy()
+  expect(grid().getByText('Tok 5 #1')).toBeTruthy()
+  expect(grid().getByText('Tok 5 #2')).toBeTruthy()
   // A bare gentk token id says nothing to a visitor and must not be what they see.
   expect(screen.queryByText('#955')).toBeNull()
   // Knowing the ids exist, an unreachable indexer must never read as "never minted".
@@ -450,9 +462,9 @@ test('with TzKT entirely unreachable, the whole edition is still listed from loc
 
   renderAt('/token/tok-5')
 
-  expect(await screen.findByText('Tok 5 #1')).toBeTruthy()
-  expect(screen.getByText('Tok 5 #2')).toBeTruthy()
-  expect(screen.getByText('Tok 5 #3')).toBeTruthy()
+  await waitFor(() => expect(grid().getByText('Tok 5 #1')).toBeTruthy())
+  expect(grid().getByText('Tok 5 #2')).toBeTruthy()
+  expect(grid().getByText('Tok 5 #3')).toBeTruthy()
   // The count comes from the local ids, so a visitor can see how large the edition is.
   expect(screen.getByRole('heading', { name: /iterations \(3\)/i })).toBeTruthy()
   // The lossy join must not be attempted just because the id path failed.
@@ -465,7 +477,7 @@ test('missing thumbnails say why rather than leaving a blank tile', async () => 
 
   renderAt('/token/tok-5')
 
-  await screen.findByText('Tok 5 #1')
+  await waitFor(() => grid().getByText('Tok 5 #1'))
   // Three different statements, and a visitor should be able to tell them apart:
   // "no image recorded" is about the artwork, "IPFS unreachable" is about the
   // gateways, and this one is about not having reached the indexer at all.

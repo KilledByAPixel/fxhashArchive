@@ -298,5 +298,11 @@ test('loadProjectIteration reports no query when the artifact had none', async (
   _resetCache()
 
   // The caller then falls back to ?fxhash=<seed>, which is right for those eras.
-  await expect(loadProjectIteration(7, 0)).resolves.toEqual({ seed: 'ooSEED', query: null })
+  await expect(loadProjectIteration(7, 0)).resolves.toEqual({
+    seed: 'ooSEED',
+    query: null,
+    // Still the piece's address on IPFS, which is what lets a non-archived project
+    // be played and stepped through without an indexer.
+    artifact: 'ipfs://QmX',
+  })
 })

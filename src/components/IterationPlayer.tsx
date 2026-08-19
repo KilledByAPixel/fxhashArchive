@@ -1,19 +1,24 @@
 import { useEffect, useState } from 'react'
 import { loadProjectIteration, type LocalIteration } from '../lib/data'
-import ArchivedFrame from './ArchivedFrame'
+import { ipfsToHttp } from '../lib/ipfs'
+import PieceFrame, { archivedSrc } from './PieceFrame'
 
 /**
- * Runs a project's archived generator entirely from this repository.
+ * Steps through a project's edition, playing each piece.
  *
- * This is the payoff of the whole preservation effort, and the only part of the
- * site that touches neither IPFS nor Tezos. Everywhere else, an artwork is
- * fetched: the image from IPFS, the iteration's details from a public indexer.
- * Here the generator is a file in this repo and the seed came out of the captured
- * seed data, so the piece is reconstructed rather than retrieved. Unplug the
- * network and this still draws.
+ * Two sources, one control surface. When the project's generator is archived here,
+ * the piece is rebuilt from that code and its seed and touches no network at all —
+ * the payoff of the whole preservation effort. When it is not, the same seed data
+ * still holds the piece's artifact URI, so it streams from an IPFS gateway instead.
  *
- * The seed is the reason it works. A generator alone renders *a* piece, not *the*
- * piece — the seed is what selects the one that was actually minted, and it exists
+ * The important part is that *both* work with no indexer. Every iteration id, seed
+ * and artifact address in this catalog is a file in this repository, so browsing an
+ * edition never depended on TzKT — it just used to be written as though it did, and
+ * the player only appeared for archived projects. A visitor should not have to know
+ * which projects those are to press Next.
+ *
+ * The seed is what makes either source honest. A generator alone renders *a* piece,
+ * not *the* piece — the seed selects the one that was actually minted, and it exists
  * nowhere on chain.
  */
 
@@ -23,9 +28,11 @@ interface Props {
   projectName: string
   /** Minted iteration ids for this project, as `FX{version}-{tokenId}`. */
   iterationIds: string[]
+  /** Whether this project's generator code is stored in this repository. */
+  archived: boolean
 }
 
-export default function ArchivedPlayer({ projectId, projectName, iterationIds }: Props) {
+export default function IterationPlayer({ projectId, projectName, iterationIds, archived }: Props) {
   const [index, setIndex] = useState(0)
   const [local, setLocal] = useState<LocalIteration | null | undefined>(undefined)
 
@@ -57,13 +64,35 @@ export default function ArchivedPlayer({ projectId, projectName, iterationIds }:
   const step = (delta: number) =>
     setIndex((i) => (i + delta + iterationIds.length) % iterationIds.length)
 
+  // Archived wins when it exists: it is the same artwork without the network, and
+  // without a gateway that might be rate-limiting or gone. A project that is not
+  // archived falls back to the address the piece has always had on IPFS.
+  const liveSrc = local?.artifact ? ipfsToHttp(local.artifact) : null
+  const playable = Boolean(local?.seed)
+  const useArchived = playable && archived
+  const src = !playable
+    ? null
+    : useArchived
+    ? archivedSrc(projectId, local!.seed!, local!.query)
+    : liveSrc
+
   return (
     <section className="archived-player">
-      <h3>Archived copy</h3>
+      <h3>{archived ? 'Archived copy' : 'Play this edition'}</h3>
       <p className="muted">
-        This project's generator is stored in this repository. What you see below is
-        rebuilt from that code and the piece's original seed — no IPFS, no Tezos, no
-        network of any kind.
+        {archived ? (
+          <>
+            This project's generator is stored in this repository. What you see below is
+            rebuilt from that code and the piece's original seed — no IPFS, no Tezos, no
+            network of any kind.
+          </>
+        ) : (
+          <>
+            This project's code is not archived here, so each piece is streamed from
+            IPFS. The edition list and every seed still come from this repository, so
+            stepping through the edition works even with no indexer.
+          </>
+        )}
       </p>
 
       {/*
@@ -75,13 +104,13 @@ export default function ArchivedPlayer({ projectId, projectName, iterationIds }:
       <div className="archived-stage">
         {local === undefined ? (
           <div className="archived-blank"><p>Loading seed…</p></div>
+        ) : src ? (
+          <PieceFrame src={src} label={label} source={useArchived ? 'archived' : 'ipfs'} />
         ) : local?.seed ? (
-          <ArchivedFrame
-            projectId={projectId}
-            seed={local.seed}
-            query={local.query}
-            label={label}
-          />
+          // A seed but nowhere to run it: not archived, and no artifact address.
+          <div className="archived-blank">
+            <p>No artifact address was recorded for this piece, so it cannot be played.</p>
+          </div>
         ) : (
           <div className="archived-blank">
             <p>

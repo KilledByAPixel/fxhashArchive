@@ -6,7 +6,7 @@ import type { LeanToken, MarketStats } from '../lib/types'
 import IpfsImage from '../components/IpfsImage'
 import LoadError from '../components/LoadError'
 import NotFoundPage from './NotFoundPage'
-import ArchivedPlayer from '../components/ArchivedPlayer'
+import IterationPlayer from '../components/IterationPlayer'
 
 const PAGE = 48
 
@@ -226,8 +226,17 @@ export default function TokenPage() {
         </div>
       </div>
 
-      {isArchived && Array.isArray(objktIds) && objktIds.length > 0 && (
-        <ArchivedPlayer projectId={project.id} projectName={project.name} iterationIds={objktIds} />
+      {/* Not gated on isArchived any more. The ids and seeds are local either way,
+          so an unarchived project can still be stepped through — it just streams
+          each piece from IPFS instead of from this repo. Hiding the controls for
+          those projects made a data distinction look like a missing feature. */}
+      {Array.isArray(objktIds) && objktIds.length > 0 && (
+        <IterationPlayer
+          projectId={project.id}
+          projectName={project.name}
+          iterationIds={objktIds}
+          archived={isArchived}
+        />
       )}
 
       <h3>Iterations{Array.isArray(objktIds) && objktIds.length > 0 && ` (${objktIds.length})`}</h3>

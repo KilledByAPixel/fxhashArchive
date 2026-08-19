@@ -161,6 +161,15 @@ export interface LocalIteration {
    * parameters. Null when the artifact URI carried none.
    */
   query: string | null
+  /**
+   * The whole captured artifact URI, `ipfs://<cid>/?…`.
+   *
+   * This is the piece's address on IPFS, and it is held for every one of the
+   * 1.8M iterations — which means a project whose code is *not* archived here can
+   * still be played straight from a gateway, and stepped through, without asking
+   * an indexer for anything. Null for a token that was never signed.
+   */
+  artifact: string | null
 }
 
 const loadSeedChunk = (contractIndex: number, chunk: number) =>
@@ -185,7 +194,7 @@ export async function loadProjectIteration(
 ): Promise<LocalIteration> {
   const { byProject } = await loadIterationContracts()
   const contractIndex = byProject[String(projectId)]
-  if (contractIndex === undefined) return { seed: null, query: null }
+  if (contractIndex === undefined) return { seed: null, query: null, artifact: null }
   const chunk = await loadSeedChunk(contractIndex, Math.floor(tokenId / SEED_CHUNK))
   // Indexed off the chunk's own `from`: one contract's ids start mid-chunk, so
   // `tokenId % SEED_CHUNK` would silently read the wrong slot for every token in it.
@@ -199,6 +208,7 @@ export async function loadProjectIteration(
     // the parameters the minter chose, which are carried in the fragment and
     // exist nowhere else we captured.
     query: mark >= 0 ? artifact!.slice(mark) : null,
+    artifact,
   }
 }
 

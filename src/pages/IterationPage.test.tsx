@@ -36,27 +36,27 @@ test('shows image, hash, traits, minter; no iframe by default', async () => {
   expect(document.querySelector('iframe')).toBeNull()
 })
 
-test('run live swaps in sandboxed iframe pointing at artifactUri', async () => {
+test('running the artwork swaps in sandboxed iframe pointing at artifactUri', async () => {
   renderPage()
-  fireEvent.click(await screen.findByRole('button', { name: /run live/i }))
+  fireEvent.click(await screen.findByRole('button', { name: /run artwork/i }))
   const frame = document.querySelector('iframe')!
   expect(frame.getAttribute('sandbox')).toBe('allow-scripts')
   expect(frame.getAttribute('src')).toBe(`${GATEWAYS[0]}QmGen/?fxhash=oo9`)
 })
 
-test('run live button toggles back to the static image', async () => {
+test('the run button toggles back to the static image', async () => {
   renderPage()
-  fireEvent.click(await screen.findByRole('button', { name: /run live/i }))
+  fireEvent.click(await screen.findByRole('button', { name: /run artwork/i }))
   expect(document.querySelector('iframe')).not.toBeNull()
   fireEvent.click(screen.getByRole('button', { name: /show image/i }))
   expect(document.querySelector('iframe')).toBeNull()
 })
 
-test('hides the run live button when the iteration has no artifactUri', async () => {
+test('hides the run button when the iteration has no artifactUri', async () => {
   vi.spyOn(tzkt, 'fetchIteration').mockResolvedValue({ ...iteration, artifactUri: null })
   renderPage()
   expect(await screen.findByRole('heading', { name: 'Piece #9' })).toBeTruthy()
-  expect(screen.queryByRole('button', { name: /run live/i })).toBeNull()
+  expect(screen.queryByRole('button', { name: /run artwork/i })).toBeNull()
 })
 
 test('resets iteration and live state when the route param changes on an already-mounted page', async () => {
@@ -79,7 +79,7 @@ test('resets iteration and live state when the route param changes on an already
   )
 
   expect(await screen.findByRole('heading', { name: 'Piece #9' })).toBeTruthy()
-  fireEvent.click(await screen.findByRole('button', { name: /run live/i }))
+  fireEvent.click(await screen.findByRole('button', { name: /run artwork/i }))
   expect(document.querySelector('iframe')).not.toBeNull()
 
   fireEvent.click(screen.getByText('go to B'))
@@ -88,7 +88,7 @@ test('resets iteration and live state when the route param changes on an already
   expect(await screen.findByRole('heading', { name: 'Piece #3' })).toBeTruthy()
   expect(screen.queryByText('Piece #9')).toBeNull()
   expect(document.querySelector('iframe')).toBeNull()
-  expect(screen.getByRole('button', { name: /run live/i })).toBeTruthy()
+  expect(screen.getByRole('button', { name: /run artwork/i })).toBeTruthy()
 })
 
 test('an in-flight fetch for a superseded param cannot overwrite the newer iteration', async () => {
@@ -163,11 +163,11 @@ const archivedSummary = {
 test('with the indexer dead, an archived iteration still renders from local files', async () => {
   vi.spyOn(tzkt, 'fetchIteration').mockRejectedValue(new Error('offline'))
   vi.spyOn(data, 'loadSummary').mockResolvedValue(archivedSummary)
-  vi.spyOn(data, 'loadProjectIteration').mockResolvedValue({ seed: 'ooLOCAL', query: null })
+  vi.spyOn(data, 'loadProjectIteration').mockResolvedValue({ seed: 'ooLOCAL', query: null, artifact: 'ipfs://QmLive/' })
 
   renderWithProject()
 
-  const frame = (await screen.findByTitle(/archived generator/i)) as HTMLIFrameElement
+  const frame = (await screen.findByTitle(/archived copy/i)) as HTMLIFrameElement
   expect(frame.getAttribute('src')).toContain('data/generators/42/index.html?fxhash=ooLOCAL')
   // The seed is the identity of the piece, so it is still shown even with no indexer.
   expect(screen.getByText('ooLOCAL')).toBeTruthy()
@@ -178,7 +178,7 @@ test('with the indexer dead, an archived iteration still renders from local file
 test('with no indexer, the piece is still named the way fxhash named it', async () => {
   vi.spyOn(tzkt, 'fetchIteration').mockRejectedValue(new Error('offline'))
   vi.spyOn(data, 'loadSummary').mockResolvedValue(archivedSummary)
-  vi.spyOn(data, 'loadProjectIteration').mockResolvedValue({ seed: 'ooLOCAL', query: null })
+  vi.spyOn(data, 'loadProjectIteration').mockResolvedValue({ seed: 'ooLOCAL', query: null, artifact: 'ipfs://QmLive/' })
   const bySlug = vi.spyOn(data, 'findTokenBySlug').mockResolvedValue({
     id: 42, slug: 'tok-5', name: 'Tok 5', flag: 'CLEAN', supply: 10, iterationsCount: 1,
     createdAt: null, mintOpensAt: null, thumbnailUri: null, displayUri: null,
@@ -199,7 +199,7 @@ test('with no indexer, the piece is still named the way fxhash named it', async 
 test('the labelling hints never decide which generator runs', async () => {
   vi.spyOn(tzkt, 'fetchIteration').mockRejectedValue(new Error('offline'))
   vi.spyOn(data, 'loadSummary').mockResolvedValue(archivedSummary)
-  vi.spyOn(data, 'loadProjectIteration').mockResolvedValue({ seed: 'ooLOCAL', query: null })
+  vi.spyOn(data, 'loadProjectIteration').mockResolvedValue({ seed: 'ooLOCAL', query: null, artifact: 'ipfs://QmLive/' })
   vi.spyOn(data, 'findTokenBySlug').mockResolvedValue(null)
 
   // A slug pointing somewhere else entirely: `p` alone selects the code to run, and
@@ -207,32 +207,54 @@ test('the labelling hints never decide which generator runs', async () => {
   // serve one project's artwork under another's name.
   renderWithProject('?p=42&s=some-other-project&i=7')
 
-  const frame = (await screen.findByTitle(/archived generator/i)) as HTMLIFrameElement
+  const frame = (await screen.findByTitle(/archived copy/i)) as HTMLIFrameElement
   expect(frame.getAttribute('src')).toContain('data/generators/42/')
   // No name resolved, so no invented title either.
   expect(await screen.findByRole('heading', { name: '#9' })).toBeTruthy()
 })
 
-test('the archived copy is offered as a choice when the indexer is alive', async () => {
+test('one button, and it prefers the archived copy over the gateway', async () => {
   vi.spyOn(data, 'loadSummary').mockResolvedValue(archivedSummary)
-  vi.spyOn(data, 'loadProjectIteration').mockResolvedValue({ seed: 'ooLOCAL', query: null })
+  vi.spyOn(data, 'loadProjectIteration').mockResolvedValue({ seed: 'ooLOCAL', query: null, artifact: 'ipfs://QmLive/' })
 
   renderWithProject()
   await screen.findByRole('heading', { name: 'Piece #9' })
 
-  fireEvent.click(await screen.findByRole('button', { name: /run archived copy/i }))
-  const frame = (await screen.findByTitle(/archived generator/i)) as HTMLIFrameElement
+  // Asking a visitor to choose between "Run live" and "Run archived copy" made them
+  // decide something that is our business, not theirs. They want to see it move.
+  expect(screen.getAllByRole('button', { name: /^run /i })).toHaveLength(1)
+  fireEvent.click(await screen.findByRole('button', { name: /run artwork/i }))
+  const frame = (await screen.findByTitle(/archived copy/i)) as HTMLIFrameElement
   expect(frame.getAttribute('src')).toContain('fxhash=ooLOCAL')
   expect(frame.getAttribute('sandbox')).toBe('allow-scripts')
 })
 
-test('a project that is not archived gets no local option', async () => {
-  vi.spyOn(data, 'loadSummary').mockResolvedValue({ ...archivedSummary, archived: [] })
-  vi.spyOn(data, 'loadProjectIteration').mockResolvedValue({ seed: 'ooLOCAL', query: null })
+test('the IPFS original stays reachable, as a link rather than a rival button', async () => {
+  // Only matters to someone checking that the archived copy matches the original,
+  // so it earns a link and not equal billing with the thing everyone wants.
+  vi.spyOn(data, 'loadSummary').mockResolvedValue(archivedSummary)
+  vi.spyOn(data, 'loadProjectIteration').mockResolvedValue({ seed: 'ooLOCAL', query: null, artifact: 'ipfs://QmLive/' })
 
   renderWithProject()
-  await screen.findByRole('heading', { name: 'Piece #9' })
-  expect(screen.queryByRole('button', { name: /run archived copy/i })).toBeNull()
+  fireEvent.click(await screen.findByRole('button', { name: /run artwork/i }))
+  await screen.findByTitle(/archived copy/i)
+
+  fireEvent.click(screen.getByRole('button', { name: /stream the original/i }))
+  const frame = (await screen.findByTitle('Piece #9')) as HTMLIFrameElement
+  expect(frame.getAttribute('src')).toBe(`${GATEWAYS[0]}QmGen/?fxhash=oo9`)
+})
+
+test('an unarchived project runs the original from IPFS under the same button', async () => {
+  vi.spyOn(data, 'loadSummary').mockResolvedValue({ ...archivedSummary, archived: [] })
+  vi.spyOn(data, 'loadProjectIteration').mockResolvedValue({ seed: 'ooLOCAL', query: null, artifact: 'ipfs://QmLive/' })
+
+  renderWithProject()
+  fireEvent.click(await screen.findByRole('button', { name: /run artwork/i }))
+
+  // Not archived, so there is nothing local to prefer — but the button still runs it.
+  const frame = (await screen.findByTitle('Piece #9')) as HTMLIFrameElement
+  expect(frame.getAttribute('src')).toBe(`${GATEWAYS[0]}QmGen/?fxhash=oo9`)
+  expect(screen.queryByTitle(/archived copy/i)).toBeNull()
 })
 
 test('without the project hint the page behaves exactly as before', async () => {
@@ -245,5 +267,8 @@ test('without the project hint the page behaves exactly as before', async () => 
   // A cold deep link cannot know the project, so it must not even ask.
   expect(summary).not.toHaveBeenCalled()
   expect(seed).not.toHaveBeenCalled()
-  expect(screen.queryByRole('button', { name: /run archived copy/i })).toBeNull()
+  // The live artifact is still runnable from the indexer's record, just not the
+  // archived copy — the button is present, it simply has one source to choose from.
+  expect(screen.getByRole('button', { name: /run artwork/i })).toBeTruthy()
+  expect(screen.queryByText(/stream the original/i)).toBeNull()
 })

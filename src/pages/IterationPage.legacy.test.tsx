@@ -47,7 +47,7 @@ const renderPage = (contract: string) =>
   )
 
 const runLive = async () =>
-  fireEvent.click(await screen.findByRole('button', { name: /run live/i }))
+  fireEvent.click(await screen.findByRole('button', { name: /run artwork/i }))
 
 test('a v1 iteration fetches the artifact and renders it via srcdoc with the patch ahead of the snippet', async () => {
   const fetchMock = mockFetchText(V1_HTML)
