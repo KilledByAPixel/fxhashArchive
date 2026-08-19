@@ -56,6 +56,9 @@ export default function TokenPage() {
   // Whether this project's generator code is stored in this repo, which is what
   // makes the archived player possible. A failed summary just means no player.
   const [isArchived, setIsArchived] = useState(false)
+  // Whether this project runs through its generated runner rather than the
+  // artist's own entry point; see archivedSrc.
+  const [needsRunner, setNeedsRunner] = useState(false)
   // Set only when the author is a collaboration contract; see loadProjectArtists.
   const [collaborators, setCollaborators] = useState<Collaborator[] | null>(null)
 
@@ -73,6 +76,7 @@ export default function TokenPage() {
     setDone(false)
     setMarket(null)
     setIsArchived(false)
+    setNeedsRunner(false)
     setCollaborators(null)
     findTokenBySlug(slug!).then(
       (t) => { if (!cancelled) setState(t ? { status: 'ok', token: t } : { status: 'notfound' }) },
@@ -162,8 +166,12 @@ export default function TokenPage() {
     if (!token) return
     let cancelled = false
     loadSummary().then(
-      (s) => { if (!cancelled) setIsArchived(s.archived.includes(token.id)) },
-      () => { if (!cancelled) setIsArchived(false) },
+      (s) => {
+        if (cancelled) return
+        setIsArchived(s.archived.includes(token.id))
+        setNeedsRunner(s.runners?.includes(token.id) ?? false)
+      },
+      () => { if (!cancelled) { setIsArchived(false); setNeedsRunner(false) } },
     )
     return () => { cancelled = true }
   }, [token])
@@ -258,6 +266,7 @@ export default function TokenPage() {
           projectName={project.name}
           iterationIds={objktIds}
           archived={isArchived}
+          needsRunner={needsRunner}
         />
       )}
 

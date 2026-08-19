@@ -68,6 +68,17 @@ export interface Summary {
   /** Project ids whose generator code is archived in this repo. */
   archived: number[]
   /**
+   * Archived projects that must be run through their generated `_run.html`
+   * instead of the artist's own entry point.
+   *
+   * Those pieces draw their own images onto a canvas, which the viewer's sandbox
+   * turns into a SecurityError: the iframe has an opaque origin, so the
+   * generator's own files are cross-origin to it and taint anything they touch.
+   * The runner is the artist's document with a small script in front of it that
+   * makes those images ask for CORS. See scripts/cors-shim.mjs.
+   */
+  runners: number[]
+  /**
    * Enough cards for the landing page to render its two strips without
    * fetching the 16.5 MB catalog. `top` is in rank order; `sample` is spread
    * across the catalog so the random strip covers every era of the platform.

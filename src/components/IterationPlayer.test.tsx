@@ -160,6 +160,41 @@ test('an archived project never falls back to the gateway', async () => {
   expect(screen.queryByTitle(/streamed from IPFS/i)).toBeNull()
 })
 
+test('a project that taints its canvas runs through the generated runner', async () => {
+  // These pieces put their own images on a canvas, which the sandbox's opaque
+  // origin turns into a SecurityError. _run.html is the artist's document with a
+  // script in front of it that makes those images request CORS.
+  vi.spyOn(data, 'loadProjectIteration').mockResolvedValue(local())
+  render(player({ needsRunner: true }))
+
+  const frame = (await screen.findByTitle(/archived copy/i)) as HTMLIFrameElement
+  expect(frame.getAttribute('src')).toContain('data/generators/42/_run.html?fxhash=ooSEED')
+})
+
+test('everything else runs the artist own file', async () => {
+  // The runner is a workaround, so it is used only where it is needed: 363 of the
+  // 417 archived projects execute exactly the document their artist shipped.
+  vi.spyOn(data, 'loadProjectIteration').mockResolvedValue(local())
+  render(player())
+
+  const frame = (await screen.findByTitle(/archived copy/i)) as HTMLIFrameElement
+  expect(frame.getAttribute('src')).toContain('data/generators/42/index.html?fxhash=ooSEED')
+  expect(frame.getAttribute('src')).not.toContain('_run.html')
+})
+
+test('the runner keeps the exact invocation, fragment included', async () => {
+  // Same contract as the artist's entry point: the runner is loaded with the very
+  // query fxhash used, so an fx(params) piece still gets its parameters.
+  vi.spyOn(data, 'loadProjectIteration').mockResolvedValue(
+    local({ query: '?fxhash=ooSEED&fxiteration=3&fxminter=tz1abc#0x4031' }),
+  )
+  render(player({ needsRunner: true }))
+
+  const src = (await screen.findByTitle(/archived copy/i)).getAttribute('src') ?? ''
+  expect(src).toContain('_run.html?fxhash=ooSEED&fxiteration=3')
+  expect(src).toContain('#0x4031')
+})
+
 test('an unarchived piece with no artifact address says so instead of rendering blank', async () => {
   vi.spyOn(data, 'loadProjectIteration').mockResolvedValue(local({ artifact: null }))
   render(player({ archived: false }))

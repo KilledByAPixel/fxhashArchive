@@ -60,6 +60,15 @@ has something to show with IPFS unreachable. Everything else streams as before:
 for an archived project the generator and seed reproduce any image at any
 resolution, which is better than a stored JPEG.
 
+Artwork runs in a sandboxed iframe with no same-origin access, which is what
+keeps ~400 unaudited third-party programs away from this site. A side effect is
+that a piece cannot read its *own* images: the sandbox gives it an opaque origin,
+so its files count as cross-origin and taint any canvas they touch. 54 projects
+do exactly that. Each of those gets a generated `_run.html` — the artist's
+document with one script in front of it that makes those images request CORS.
+The artist's `index.html` is never modified, and the other 363 projects run it
+directly. See `scripts/cors-shim.mjs`.
+
 **Who made the work.** 553 projects were minted through fxhash's shared
 collaboration contracts, which meant the catalog recorded a KT1 address as the
 artist and no name at all. Each of those contracts names its members in its own

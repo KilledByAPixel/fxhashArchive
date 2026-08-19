@@ -10,5 +10,15 @@ export default defineConfig({
   // shells, so the failure will not always reproduce locally. Do not re-add
   // `globals: true` to get automatic React Testing Library cleanup "for free";
   // every rendering test file instead registers `afterEach(cleanup)` itself.
+  /**
+   * Archived generators run in a sandboxed iframe, which gives them an opaque
+   * origin — so their own images count as cross-origin and taint any canvas they
+   * touch. The fix is for those images to request CORS (see scripts/cors-shim.mjs),
+   * which needs the server to allow it. GitHub Pages sends this header on
+   * everything; Vite sends nothing, so without this the affected pieces work in
+   * production and fail locally, which is the worst way round.
+   */
+  server: { headers: { 'Access-Control-Allow-Origin': '*' } },
+  preview: { headers: { 'Access-Control-Allow-Origin': '*' } },
   test: { environment: 'jsdom' },
 })

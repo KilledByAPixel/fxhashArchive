@@ -120,7 +120,7 @@ test('badges the artist works whose code is fully archived', async () => {
       projects: 2, artists: 1, iterations: 0, seeds: 0, archived: 1,
       archivedShareOfVolume: 50,
     },
-    ranked: [1], archived: [1],
+    ranked: [1], archived: [1], runners: [],
     featured: { top: [], sample: [] },
     thumbs: {},
   })

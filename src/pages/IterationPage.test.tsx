@@ -155,7 +155,7 @@ const renderWithProject = (search = '?p=42') =>
 const archivedSummary = {
   generatedAt: '2026-08-18T00:00:00.000Z',
   counts: { projects: 1, artists: 1, iterations: 1, seeds: 1, archived: 1, archivedShareOfVolume: 100 },
-  ranked: [42], archived: [42],
+  ranked: [42], archived: [42], runners: [],
   featured: { top: [], sample: [] },
   thumbs: {},
 }

@@ -121,7 +121,7 @@ export function buildArchivedVolumeShare(volumes, archivedIds) {
 
 export function buildSummary({
   projectCount, artistCount, iterationCount, seedCount, volumes, archivedIds, generatedAt,
-  visibleTokens = [], thumbs = {}, collaborations = {},
+  visibleTokens = [], thumbs = {}, collaborations = {}, runnerIds = [],
 }) {
   const archived = [...archivedIds].sort((a, b) => a - b)
   const ranked = buildRanking(volumes)
@@ -139,6 +139,14 @@ export function buildSummary({
     },
     ranked,
     archived,
+    /**
+     * Archived projects that must be run through their generated `_run.html`
+     * rather than the artist's own entry point, because they put their own images
+     * on a canvas and the viewer's sandbox would otherwise taint it. See
+     * scripts/cors-shim.mjs. A small list, so it rides along here instead of
+     * costing the client a second fetch.
+     */
+    runners: [...runnerIds].sort((a, b) => a - b),
     featured: buildFeatured(visibleTokens, ranked, archivedTokens, FEATURED_TOP, FEATURED_SAMPLE, collaborations),
     /**
      * Project id -> the preview image saved under public/data/thumbs.

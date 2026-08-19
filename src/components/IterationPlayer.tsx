@@ -30,9 +30,17 @@ interface Props {
   iterationIds: string[]
   /** Whether this project's generator code is stored in this repository. */
   archived: boolean
+  /** Whether this project needs its generated runner; see archivedSrc. */
+  needsRunner?: boolean
 }
 
-export default function IterationPlayer({ projectId, projectName, iterationIds, archived }: Props) {
+export default function IterationPlayer({
+  projectId,
+  projectName,
+  iterationIds,
+  archived,
+  needsRunner = false,
+}: Props) {
   const [index, setIndex] = useState(0)
   const [local, setLocal] = useState<LocalIteration | null | undefined>(undefined)
 
@@ -73,7 +81,7 @@ export default function IterationPlayer({ projectId, projectName, iterationIds, 
   const src = !playable
     ? null
     : useArchived
-    ? archivedSrc(projectId, local!.seed!, local!.query)
+    ? archivedSrc(projectId, local!.seed!, local!.query, needsRunner)
     : liveSrc
 
   return (

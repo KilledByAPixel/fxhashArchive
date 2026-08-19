@@ -17,7 +17,7 @@ const summary = {
     archivedShareOfVolume: 70.5,
   },
   ranked: [3, 1, 2],
-  archived: [1],
+  archived: [1], runners: [],
   // The strips now come from here rather than the 16.5 MB catalog. `top` is in
   // rank order; `sample` is the pool the random strip shuffles.
   featured: {

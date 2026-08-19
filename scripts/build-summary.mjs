@@ -92,6 +92,7 @@ async function main() {
     seedCount: seedsMeta.seedsCaptured ?? 0,
     volumes,
     archivedIds: Object.keys(manifest).map(Number),
+    runnerIds: Object.entries(manifest).filter(([, e]) => e.runner).map(([id]) => Number(id)),
     visibleTokens,
     thumbs,
     collaborations,

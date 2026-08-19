@@ -12,6 +12,15 @@
 const ENTRY = 'index.html'
 
 /**
+ * The derived entry point, generated for the 54 projects that put their own
+ * images on a canvas. Identical to the artist's document apart from a script that
+ * makes those images request CORS, without which the sandbox's opaque origin
+ * taints the canvas and the piece throws instead of rendering. Built by
+ * scripts/build-runners.mjs; the artist's file is never modified.
+ */
+const RUNNER_ENTRY = '_run.html'
+
+/**
  * Prefer the exact query fxhash used over one rebuilt from the seed.
  *
  * `?fxhash=<seed>` alone is enough for most pieces, but it silently drops
@@ -20,9 +29,15 @@ const ENTRY = 'index.html'
  * the URL fragment. Those would render the artist's defaults instead of the
  * piece that was actually minted: right generator, right seed, wrong artwork.
  */
-export function archivedSrc(projectId: number, seed: string, query?: string | null) {
+export function archivedSrc(
+  projectId: number,
+  seed: string,
+  query?: string | null,
+  useRunner = false,
+) {
   const suffix = query ?? `?fxhash=${encodeURIComponent(seed)}`
-  return `${import.meta.env.BASE_URL}data/generators/${projectId}/${ENTRY}${suffix}`
+  const entry = useRunner ? RUNNER_ENTRY : ENTRY
+  return `${import.meta.env.BASE_URL}data/generators/${projectId}/${entry}${suffix}`
 }
 
 interface Props {
