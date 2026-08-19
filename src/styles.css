@@ -47,6 +47,8 @@ img { max-width: 100%; }
 .landing section > h2 { margin: 0 0 0.75rem; }
 .landing section > p { margin: 0 0 0.75rem; }
 .landing-intro { max-width: 42rem; }
+.landing-intro p { margin: 0 0 0.75rem; }
+.landing-intro p:last-child { margin-bottom: 0; }
 .landing-stats { display: flex; flex-wrap: wrap; gap: 1.5rem; list-style: none; padding: 0; }
 .landing-stats strong { display: block; font-size: 1.5rem; }
 .landing-coverage { max-width: 42rem; }

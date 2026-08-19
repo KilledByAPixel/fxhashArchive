@@ -77,11 +77,23 @@ export default function LandingPage() {
   return (
     <div className="landing">
       <h1>An archive of fxhash on Tezos</h1>
-      <p className="landing-intro">
-        fxhash went offline. This is an unofficial, read-only viewer for the generative
-        art made there — every project, every artist, and the seed behind every piece
-        ever minted. Nothing here is for sale.
-      </p>
+      {/* Most people arriving here have never heard of fxhash, and "generative art
+          platform" explains nothing on its own. What makes the seeds worth keeping
+          is that the artwork is a *program*, so say that first — the rest of the
+          page only makes sense once someone knows it. */}
+      <div className="landing-intro">
+        <p>
+          fxhash was a platform for generative art. An artist publishes a program
+          rather than a picture, and every mint runs that program with a different
+          random seed — so each collector ends up with a piece nobody, the artist
+          included, had seen before. It opened on Tezos in 2021.
+        </p>
+        <p>
+          It is offline now. This is an unofficial, read-only archive of the work made
+          there: every project, every artist, and the seed behind every piece ever
+          minted, which is what lets any of them be drawn again. Nothing is for sale.
+        </p>
+      </div>
 
       {error && <p>Could not load archive statistics: {error}</p>}
 

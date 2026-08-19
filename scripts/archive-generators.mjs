@@ -101,11 +101,28 @@ async function dirSize(dir) {
 
 // ---------------------------------------------------------------- selection
 
+/**
+ * fxhash's own moderation flags. The viewer hides these projects from every grid
+ * and refuses to resolve their slug, and the README promises as much.
+ *
+ * Mirrors HIDDEN_FLAGS in src/lib/data.ts.
+ */
+const HIDDEN_FLAGS = new Set(['MALICIOUS', 'HIDDEN', 'REPORTED', 'AUTO_DETECT_COPY'])
+
 async function loadCatalog() {
   const projects = []
+  let moderated = 0
   for (const f of (await readdir(TOKENS_DIR)).filter((f) => /^index-\d+\.json$/.test(f)).sort()) {
-    for (const p of await loadJson(join(TOKENS_DIR, f), [])) projects.push(p)
+    for (const p of await loadJson(join(TOKENS_DIR, f), [])) {
+      // Filtered here rather than inside the selection rules, so that no rule —
+      // not a volume ranking, not a named artist, not an accepted request — can
+      // reach one. "Moderation is honored" has to mean we do not store and serve
+      // the code either, or it is only honored where it is easy to look.
+      if (HIDDEN_FLAGS.has(p.flag)) { moderated++; continue }
+      projects.push(p)
+    }
   }
+  if (moderated) console.log(`skipping ${moderated} projects flagged by fxhash moderation`)
   return projects
 }
 
