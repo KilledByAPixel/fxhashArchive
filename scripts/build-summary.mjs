@@ -75,6 +75,16 @@ async function main() {
     if (m) thumbs[m[1]] = f
   }
 
+  // Optional: without it the landing page credits collaborations to the KT1 contract
+  // they minted through, which is what the catalog literally records and what the
+  // page used to show.
+  const collaborations = await readFile(join(DATA, 'collaborations.json'), 'utf8')
+    .then((s) => JSON.parse(s).byProject ?? {})
+    .catch(() => ({}))
+  if (!Object.keys(collaborations).length) {
+    console.warn('no collaborations.json — featured cards will name contracts, not artists')
+  }
+
   const summary = buildSummary({
     projectCount,
     artistCount: artists.length,
@@ -84,6 +94,7 @@ async function main() {
     archivedIds: Object.keys(manifest).map(Number),
     visibleTokens,
     thumbs,
+    collaborations,
     generatedAt: new Date().toISOString(),
   })
 

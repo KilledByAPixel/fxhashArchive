@@ -6,11 +6,18 @@ export default function TokenCard({
   token,
   archived = false,
   localThumb,
+  authorLabel,
 }: {
   token: CardToken
   archived?: boolean
   /** Filename under `data/thumbs/`, when this project's preview is stored here. */
   localThumb?: string
+  /**
+   * Overrides the recorded author. Used for the 553 collaborations, whose author
+   * field holds the KT1 contract they minted through rather than a person — a card
+   * reading "KT1EDDWGi1ZD…" credits nobody.
+   */
+  authorLabel?: string
 }) {
   return (
     <Link to={`/token/${token.slug}`} className="token-card">
@@ -41,7 +48,7 @@ export default function TokenCard({
         </span>
       )}
       <div className="token-name">{token.name}</div>
-      <div className="token-author">{token.author?.name ?? token.author?.id ?? 'unknown'}</div>
+      <div className="token-author">{authorLabel ?? token.author?.name ?? token.author?.id ?? 'unknown'}</div>
     </Link>
   )
 }

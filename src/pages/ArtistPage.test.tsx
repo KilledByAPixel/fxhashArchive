@@ -22,10 +22,18 @@ const renderAt = (id: string) =>
     </MemoryRouter>,
   )
 
+const noCollabs: data.Collaborations = {
+  generatedAt: '2026-08-19T00:00:00.000Z',
+  counts: { contracts: 0, projects: 0, artists: 0 },
+  byProject: {},
+  byArtist: {},
+}
+
 beforeEach(() => {
   vi.spyOn(data, 'loadArtists').mockResolvedValue([artist])
   vi.spyOn(data, 'loadTokensMap').mockResolvedValue({ tz1a: [1, 2] })
   vi.spyOn(data, 'loadAllTokens').mockResolvedValue([tok(1), tok(2, { flag: 'MALICIOUS' })])
+  vi.spyOn(data, 'loadCollaborations').mockResolvedValue(noCollabs)
 })
 
 afterEach(cleanup)
@@ -42,6 +50,55 @@ test('an unknown artist id renders not-found', async () => {
   renderAt('tz1nobody')
   expect(await screen.findByText(/not found/i)).toBeTruthy()
   expect(screen.queryByRole('button', { name: /retry/i })).toBeNull()
+})
+
+// --- collaborations -----------------------------------------------------------
+// A project minted through a shared collaboration contract is recorded under that
+// contract, so it used to belong to nobody and appear on no artist's page.
+
+const collabs: data.Collaborations = {
+  generatedAt: '2026-08-19T00:00:00.000Z',
+  counts: { contracts: 1, projects: 1, artists: 2 },
+  byProject: {
+    '3': {
+      contract: 'KT1collab',
+      collaborators: [
+        { id: 'tz1a', name: 'Alice', share: 90 },
+        { id: 'tz1b', name: 'Bob', share: 10 },
+      ],
+    },
+  },
+  byArtist: { tz1a: [3], tz1b: [3] },
+}
+
+test('a collaboration appears on the pages of each artist who made it', async () => {
+  vi.spyOn(data, 'loadCollaborations').mockResolvedValue(collabs)
+  vi.spyOn(data, 'loadAllTokens').mockResolvedValue([
+    tok(1),
+    tok(3, { name: 'Joint Work', author: { id: 'KT1collab', name: null, avatarUri: null } }),
+  ])
+
+  renderAt('tz1a')
+  expect(await screen.findByText('Joint Work')).toBeTruthy()
+  // And credited to the people, not to the contract they minted through.
+  expect(screen.getByText('Alice and Bob')).toBeTruthy()
+  expect(screen.queryByText('KT1collab')).toBeNull()
+})
+
+test('an artist known only from a collaboration still gets a page', async () => {
+  // The artists index was built from people who minted something of their own, and
+  // a third of collaborators never did. Answering "not found" to a link this site
+  // renders itself is worse than a sparse page.
+  vi.spyOn(data, 'loadCollaborations').mockResolvedValue(collabs)
+  vi.spyOn(data, 'loadTokensMap').mockResolvedValue({ tz1a: [1, 2] })
+  vi.spyOn(data, 'loadAllTokens').mockResolvedValue([
+    tok(3, { name: 'Joint Work', author: { id: 'KT1collab', name: null, avatarUri: null } }),
+  ])
+
+  renderAt('tz1b')
+  expect(await screen.findByRole('heading', { name: 'Bob' })).toBeTruthy()
+  expect(screen.getByText('Joint Work')).toBeTruthy()
+  expect(screen.queryByText(/not found/i)).toBeNull()
 })
 
 test('a failed load offers a retry instead of claiming the artist does not exist', async () => {

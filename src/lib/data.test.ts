@@ -1,8 +1,7 @@
 import { test, expect, vi, beforeEach } from 'vitest'
 import {
   loadMeta, loadShard, findTokenBySlug, isVisible, loadIterationIds,
-  loadIterationContract, loadSummary, loadProjectMarketStats, loadProjectSeed, loadProjectIteration, _resetCache,
-} from './data'
+  loadIterationContract, loadSummary, loadProjectMarketStats, loadProjectSeed, loadProjectIteration, _resetCache, loadProjectArtists } from './data'
 import type { LeanToken } from './types'
 
 const tok = (id: number, over: Partial<LeanToken> = {}): LeanToken => ({
@@ -305,4 +304,29 @@ test('loadProjectIteration reports no query when the artifact had none', async (
     // be played and stepped through without an indexer.
     artifact: 'ipfs://QmX',
   })
+})
+
+// --- collaborations -----------------------------------------------------------
+
+test('loadProjectArtists does not fetch anything for an ordinary artist', async () => {
+  // 98% of projects have a person as their author. They must not pay a 282 KB
+  // download for a lookup that can only ever return null.
+  const fetchMock = vi.fn()
+  vi.stubGlobal('fetch', fetchMock)
+  await expect(loadProjectArtists(5, 'tz1alice')).resolves.toBeNull()
+  await expect(loadProjectArtists(5, null)).resolves.toBeNull()
+  expect(fetchMock).not.toHaveBeenCalled()
+})
+
+test('loadProjectArtists reads the people behind a contract-authored project', async () => {
+  const body = {
+    generatedAt: 'x',
+    counts: { contracts: 1, projects: 1, artists: 2 },
+    byProject: { '5': { contract: 'KT1c', collaborators: [{ id: 'tz1a', name: 'Alice', share: 90 }] } },
+    byArtist: { tz1a: [5] },
+  }
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(body), { status: 200 })))
+  await expect(loadProjectArtists(5, 'KT1c')).resolves.toEqual([{ id: 'tz1a', name: 'Alice', share: 90 }])
+  // A contract we have no record for is "we do not know", not an empty credit.
+  await expect(loadProjectArtists(99, 'KT1c')).resolves.toBeNull()
 })

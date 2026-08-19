@@ -118,3 +118,29 @@ test('buildFeatured draws its sample from the archived set, not the whole catalo
   // stored here, so it is not a row of empty tiles once IPFS is unreachable.
   expect(sample.map((c) => c.id)).toEqual([2, 4])
 })
+
+test('leanCard credits a collaboration to its artists, not to the contract', () => {
+  // 31 of the 240 landing-page cards are collaborations, Richter among them. Their
+  // recorded author is the KT1 they minted through, so the front page was crediting
+  // its highest-value work to a contract address.
+  const project = {
+    id: 7, slug: 'joint', name: 'Joint Work', flag: 'CLEAN', thumbnailUri: null,
+    author: { id: 'KT1collab', name: null },
+  }
+  const collabs = { 7: { collaborators: [{ id: 'tz1a', name: 'Alice' }, { id: 'tz1b', name: 'Bob' }] } }
+  expect(leanCard(project, collabs).author).toEqual({ id: 'KT1collab', name: 'Alice and Bob' })
+  // The id stays the contract: that is what the record says, and the card links by
+  // slug anyway. Only the display name is recovered.
+  expect(leanCard(project).author).toEqual({ id: 'KT1collab', name: null })
+})
+
+test('leanCard summarises a credit past two names', () => {
+  const project = {
+    id: 7, slug: 'joint', name: 'Joint Work', flag: 'CLEAN', thumbnailUri: null,
+    author: { id: 'KT1collab', name: null },
+  }
+  const many = {
+    7: { collaborators: [{ id: 'tz1a', name: 'Alice' }, { id: 'tz1b', name: 'Bob' }, { id: 'tz1c', name: null }] },
+  }
+  expect(leanCard(project, many).author.name).toBe('Alice and 2 others')
+})

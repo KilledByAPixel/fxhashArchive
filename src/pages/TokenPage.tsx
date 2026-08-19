@@ -1,12 +1,21 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { findTokenBySlug, loadIterationContract, loadIterationIds, loadProjectMarketStats, loadSummary } from '../lib/data'
+import {
+  findTokenBySlug,
+  loadIterationContract,
+  loadIterationIds,
+  loadProjectArtists,
+  loadProjectMarketStats,
+  loadSummary,
+  type Collaborator,
+} from '../lib/data'
 import { fetchIterations, fetchIterationsByIds, type Iteration } from '../lib/tzkt'
 import type { LeanToken, MarketStats } from '../lib/types'
 import IpfsImage from '../components/IpfsImage'
 import LoadError from '../components/LoadError'
 import NotFoundPage from './NotFoundPage'
 import IterationPlayer from '../components/IterationPlayer'
+import Byline from '../components/Byline'
 
 const PAGE = 48
 
@@ -47,6 +56,8 @@ export default function TokenPage() {
   // Whether this project's generator code is stored in this repo, which is what
   // makes the archived player possible. A failed summary just means no player.
   const [isArchived, setIsArchived] = useState(false)
+  // Set only when the author is a collaboration contract; see loadProjectArtists.
+  const [collaborators, setCollaborators] = useState<Collaborator[] | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -62,6 +73,7 @@ export default function TokenPage() {
     setDone(false)
     setMarket(null)
     setIsArchived(false)
+    setCollaborators(null)
     findTokenBySlug(slug!).then(
       (t) => { if (!cancelled) setState(t ? { status: 'ok', token: t } : { status: 'notfound' }) },
       // A rejected lookup says nothing about whether the project exists.
@@ -156,6 +168,19 @@ export default function TokenPage() {
     return () => { cancelled = true }
   }, [token])
 
+  useEffect(() => {
+    if (!token) return
+    let cancelled = false
+    // A no-op for the 98% of projects with an ordinary artist — it does not fetch
+    // unless the recorded author is a contract.
+    loadProjectArtists(token.id, token.author?.id).then(
+      (people) => { if (!cancelled) setCollaborators(people) },
+      // Falling back to the contract address is ugly but true; inventing a name is not.
+      () => { if (!cancelled) setCollaborators(null) },
+    )
+    return () => { cancelled = true }
+  }, [token])
+
   if (state.status === 'loading') return <p>Loading…</p>
   if (state.status === 'notfound') return <NotFoundPage />
   if (state.status === 'error') {
@@ -204,10 +229,7 @@ export default function TokenPage() {
         <div>
           <h2>{project.name}</h2>
           <p>
-            by{' '}
-            {project.author
-              ? <Link to={`/artist/${project.author.id}`}>{project.author.name ?? project.author.id}</Link>
-              : 'unknown'}
+            <Byline author={project.author} collaborators={collaborators} />
           </p>
           <p className="muted">
             edition of {project.supply}

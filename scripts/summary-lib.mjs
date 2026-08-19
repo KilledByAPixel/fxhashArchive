@@ -17,16 +17,36 @@ export const FEATURED_SAMPLE = 200
  *
  * `flag` is carried so the client can still apply its own moderation check
  * rather than trusting that this file was built with one.
+ *
+ * `collaborations` is byProject from public/data/collaborations.json. 31 of the
+ * 240 landing-page cards are collaborations, whose recorded author is the contract
+ * they minted through — so without this the front page credits a third of its
+ * highest-value work, Richter included, to "KT1CzKMTA6JyL4gnsh4Ziqd7Z8dxDDBphua5".
+ * The name is resolved here rather than in the browser so the landing page stays a
+ * single small fetch.
  */
-export function leanCard(t) {
+export function leanCard(t, collaborations = {}) {
+  const credit = collaborations[t.id]?.collaborators
   return {
     id: t.id,
     slug: t.slug,
     name: t.name,
     flag: t.flag,
     thumbnailUri: t.thumbnailUri ?? null,
-    author: t.author ? { id: t.author.id, name: t.author.name ?? null } : null,
+    // id stays the contract, because that is what the record says. Only the display
+    // name is filled in, from the people the contract itself names on chain.
+    author: t.author
+      ? { id: t.author.id, name: credit ? creditLine(credit) : t.author.name ?? null }
+      : null,
   }
+}
+
+/** Mirrors bylineLabel in src/components/Byline.tsx: cards have room for one line. */
+export function creditLine(collaborators) {
+  const names = collaborators.map((c) => c.name ?? `${c.id.slice(0, 8)}…${c.id.slice(-4)}`)
+  if (names.length === 0) return null
+  if (names.length <= 2) return names.join(' and ')
+  return `${names[0]} and ${names.length - 1} others`
 }
 
 /**
@@ -53,19 +73,22 @@ export function buildFeatured(
   sampleFrom = tokens,
   topCount = FEATURED_TOP,
   sampleCount = FEATURED_SAMPLE,
+  collaborations = {},
 ) {
   const byId = new Map(tokens.map((t) => [t.id, t]))
   const top = []
   for (const id of ranked) {
     if (top.length >= topCount) break
     const t = byId.get(id)
-    if (t) top.push(leanCard(t))
+    if (t) top.push(leanCard(t, collaborations))
   }
 
   const sample = []
   const n = Math.min(sampleCount, sampleFrom.length)
   for (let i = 0; i < n; i++) {
-    sample.push(leanCard(sampleFrom[Math.floor((i * (sampleFrom.length - 1)) / Math.max(1, n - 1))]))
+    sample.push(
+      leanCard(sampleFrom[Math.floor((i * (sampleFrom.length - 1)) / Math.max(1, n - 1))], collaborations),
+    )
   }
   return { top, sample }
 }
@@ -98,7 +121,7 @@ export function buildArchivedVolumeShare(volumes, archivedIds) {
 
 export function buildSummary({
   projectCount, artistCount, iterationCount, seedCount, volumes, archivedIds, generatedAt,
-  visibleTokens = [], thumbs = {},
+  visibleTokens = [], thumbs = {}, collaborations = {},
 }) {
   const archived = [...archivedIds].sort((a, b) => a - b)
   const ranked = buildRanking(volumes)
@@ -116,7 +139,7 @@ export function buildSummary({
     },
     ranked,
     archived,
-    featured: buildFeatured(visibleTokens, ranked, archivedTokens),
+    featured: buildFeatured(visibleTokens, ranked, archivedTokens, FEATURED_TOP, FEATURED_SAMPLE, collaborations),
     /**
      * Project id -> the preview image saved under public/data/thumbs.
      * Present only for archived projects; everything else still streams its

@@ -50,6 +50,7 @@ const GATEWAYS = ['https://gateway.fxhash.xyz', 'https://gateway.pinit.io', 'htt
 const TOKENS_DIR = 'public/data/tokens'
 const MARKET_DIR = 'public/data/market'
 const PRESERVE_FILE = 'data/preserve.json'
+const COLLAB_FILE = 'public/data/collaborations.json'
 const OUT = 'public/data/generators'
 const COMMIT_EVERY = 25
 const DELAY_MS = 150
@@ -123,7 +124,7 @@ async function loadVolumes() {
   return vol
 }
 
-function buildPriorityList(projects, volumes, rules, explicit) {
+function buildPriorityList(projects, volumes, rules, explicit, collaborations = {}) {
   const byId = new Map(projects.map((p) => [p.id, p]))
   const picked = new Map() // id -> reason, insertion order = priority
 
@@ -139,11 +140,24 @@ function buildPriorityList(projects, volumes, rules, explicit) {
   }
 
   // 2. named artists, whole body of work
+  //
+  // "Whole body of work" has to include collaborations. A project minted through a
+  // shared contract records that contract as its author, so matching on the author
+  // field alone silently skipped every collaborative piece by the very artists this
+  // rule exists to cover — 553 projects across the catalog. The people behind those
+  // contracts are read from chain by scripts/snapshot-collaborators.mjs.
   const artists = (rules.artists ?? []).map((a) => a.toLowerCase())
   if (artists.length) {
+    const matches = (name, id) => {
+      const who = `${name ?? ''} ${id ?? ''}`.toLowerCase()
+      return artists.some((a) => who.includes(a))
+    }
     for (const p of projects) {
-      const who = `${p.author?.name ?? ''} ${p.author?.id ?? ''}`.toLowerCase()
-      if (artists.some((a) => who.includes(a))) add(p.id, `artist: ${p.author?.name ?? p.author?.id}`)
+      if (matches(p.author?.name, p.author?.id)) add(p.id, `artist: ${p.author?.name ?? p.author?.id}`)
+    }
+    for (const [projectId, entry] of Object.entries(collaborations)) {
+      const who = entry.collaborators.find((c) => matches(c.name, c.id))
+      if (who) add(Number(projectId), `collaborator: ${who.name ?? who.id}`)
     }
   }
 
@@ -317,7 +331,13 @@ async function main() {
   if (volumes.size === 0) {
     console.warn('WARNING: no market data found — run snapshot-market.mjs first, or only requests and artists will be archived.')
   }
-  const list = buildPriorityList(projects, volumes, rules, preserve.projects ?? [])
+  // Optional: without it the artist rule still works, it just cannot see through a
+  // collaboration contract to the people who made the piece.
+  const collaborations = (await loadJson(COLLAB_FILE, null))?.byProject ?? {}
+  if (!Object.keys(collaborations).length) {
+    console.warn(`no ${COLLAB_FILE} — collaborative work by named artists will be skipped; run snapshot-collaborators.mjs`)
+  }
+  const list = buildPriorityList(projects, volumes, rules, preserve.projects ?? [], collaborations)
 
   console.log(`archive-generators: ${projects.length} projects in catalog, ${volumes.size} with market data`)
   console.log(`priority list: ${list.length} projects | budget ${mb(BUDGET_BYTES)} | per-project cap ${maxProjectBytes === Infinity ? 'none' : mb(maxProjectBytes)}\n`)

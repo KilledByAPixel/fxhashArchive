@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { loadAllTokens, loadSummary, isVisible } from '../lib/data'
+import { loadAllTokens, loadSummary, loadCollaborations, isVisible, type Collaborations } from '../lib/data'
 import { seededShuffle } from '../lib/shuffle'
 import type { LeanToken, Summary } from '../lib/types'
 import TokenCard from '../components/TokenCard'
+import { bylineLabel } from '../components/Byline'
 
 const PAGE = 60
 type SortMode = 'random' | 'collected' | 'newest'
@@ -11,6 +12,9 @@ export default function BrowsePage() {
   const [tokens, setTokens] = useState<LeanToken[] | null>(null)
   const [summary, setSummary] = useState<Summary | null>(null)
   const [summaryFailed, setSummaryFailed] = useState(false)
+  // Credits for the 553 collaborations, whose catalog author is the contract they
+  // minted through. Without it those cards name a KT1 address, which credits nobody.
+  const [collabs, setCollabs] = useState<Collaborations | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<SortMode>('random')
@@ -28,6 +32,9 @@ export default function BrowsePage() {
     // only" would read "0 projects" — which says "none of these are archived"
     // rather than "we don't know" — so the failure must surface as a visible note.
     loadSummary().then(setSummary, () => { setSummary(null); setSummaryFailed(true) })
+    // Purely additive: without it, collaborations fall back to showing the contract,
+    // which is what they did before and is at least not a wrong name.
+    loadCollaborations().then(setCollabs, () => setCollabs(null))
   }, [])
 
   const rank = useMemo(() => {
@@ -99,6 +106,11 @@ export default function BrowsePage() {
             token={t}
             archived={archivedIds.has(t.id)}
             localThumb={summary?.thumbs[String(t.id)]}
+            authorLabel={
+              collabs?.byProject[String(t.id)]
+                ? bylineLabel(collabs.byProject[String(t.id)].collaborators)
+                : undefined
+            }
           />
         ))}
       </div>
