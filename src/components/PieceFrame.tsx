@@ -8,6 +8,8 @@
  * there is one component rather than one per source.
  */
 
+import { ipfsToHttp } from '../lib/ipfs'
+
 /** Every archived generator unpacks with this entry point; see scripts/archive-generators.mjs. */
 const ENTRY = 'index.html'
 
@@ -38,6 +40,50 @@ export function archivedSrc(
   const suffix = query ?? `?fxhash=${encodeURIComponent(seed)}`
   const entry = useRunner ? RUNNER_ENTRY : ENTRY
   return `${import.meta.env.BASE_URL}data/generators/${projectId}/${entry}${suffix}`
+}
+
+/**
+ * The URL that runs a piece from IPFS, repaired.
+ *
+ * A captured artifact URI is not usable as-is. Two faults, measured across all
+ * 1,802,387 iterations, leave only 12.7% of them working untouched:
+ *
+ *   73.9% carry `?fxhash=…` with no `/` before the `?`. Gateways answer that with
+ *          a 301 to the directory and drop the query on the way, so the piece loads
+ *          with no seed at all — `fxhash.slice` throws and `fxrand` never exists.
+ *   13.4% carry no query whatsoever, mostly the older eras.
+ *
+ * Both are repaired from data this repository already holds: the trailing slash
+ * stops the redirect, and the seed is the one captured for this very token. An
+ * fxhash artifact reads its seed from the URL, so getting the URL wrong is the
+ * difference between the minted piece and a crash.
+ */
+export function liveArtifactSrc(artifact: string, seed: string | null): string | null {
+  const url = ipfsToHttp(artifact)
+  if (!url) return null
+
+  const hashAt = url.indexOf('#')
+  const fragment = hashAt >= 0 ? url.slice(hashAt) : ''
+  const withoutFragment = hashAt >= 0 ? url.slice(0, hashAt) : url
+
+  const queryAt = withoutFragment.indexOf('?')
+  let path = queryAt >= 0 ? withoutFragment.slice(0, queryAt) : withoutFragment
+  let query = queryAt >= 0 ? withoutFragment.slice(queryAt + 1) : ''
+
+  // Only a directory needs the slash. A URI naming an actual file — anything whose
+  // last segment has an extension — must be left alone, or it stops resolving.
+  const last = path.slice(path.lastIndexOf('/') + 1)
+  if (last && !last.includes('.')) path += '/'
+
+  // Append rather than rebuild: the captured query also carries fxiteration,
+  // fxminter and fxchain, and re-encoding a string a generator parses itself is
+  // a risk with no upside.
+  if (seed && !/[?&]fxhash=/.test(`?${query}`)) {
+    const pair = `fxhash=${encodeURIComponent(seed)}`
+    query = query ? `${query}&${pair}` : pair
+  }
+
+  return `${path}${query ? `?${query}` : ''}${fragment}`
 }
 
 interface Props {

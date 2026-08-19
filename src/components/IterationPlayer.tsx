@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { loadProjectIteration, type LocalIteration } from '../lib/data'
-import { ipfsToHttp } from '../lib/ipfs'
-import PieceFrame, { archivedSrc } from './PieceFrame'
+import PieceFrame, { archivedSrc, liveArtifactSrc } from './PieceFrame'
 
 /**
  * Steps through a project's edition, playing each piece.
@@ -75,7 +74,7 @@ export default function IterationPlayer({
   // Archived wins when it exists: it is the same artwork without the network, and
   // without a gateway that might be rate-limiting or gone. A project that is not
   // archived falls back to the address the piece has always had on IPFS.
-  const liveSrc = local?.artifact ? ipfsToHttp(local.artifact) : null
+  const liveSrc = local?.artifact ? liveArtifactSrc(local.artifact, local.seed) : null
   const playable = Boolean(local?.seed)
   const useArchived = playable && archived
   const src = !playable

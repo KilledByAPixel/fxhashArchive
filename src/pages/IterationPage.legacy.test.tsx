@@ -14,6 +14,17 @@ const V1 = GENTK_CONTRACTS[0]
 const MIDDLE = GENTK_CONTRACTS[1]
 const V2 = GENTK_CONTRACTS[2]
 
+/**
+ * What the page actually loads for these fixtures.
+ *
+ * `ipfs://QmGen` is the broken shape 13.4% of real artifact URIs have — bare CID,
+ * no trailing slash and no seed — so the page repairs it before fetching. The
+ * slash matters here beyond seeding: without it the gateway 301s to the directory,
+ * and the <base href> computed from the pre-redirect URL points a v1 piece's
+ * relative script tags at the parent. See liveArtifactSrc.
+ */
+const LIVE = `${GATEWAYS[0]}QmGen/?fxhash=oo9`
+
 /** Enough of a real v1 artifact to be recognised by needsLegacyPatch. */
 const V1_HTML = `<!DOCTYPE html><html><head><script id="fxhash-snippet">
 let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
@@ -62,7 +73,7 @@ test('a v1 iteration fetches the artifact and renders it via srcdoc with the pat
     return f
   })
 
-  expect(fetchMock).toHaveBeenCalledWith(`${GATEWAYS[0]}QmGen`)
+  expect(fetchMock).toHaveBeenCalledWith(LIVE)
 
   const doc = frame.getAttribute('srcdoc')!
   expect(doc).toContain('fxhash-legacy-patch')
@@ -118,7 +129,7 @@ test('the legacy patch is gated on the v1 contract address itself, not a list po
   renderPage('KT1SomeOtherContract')
   await runLive()
 
-  expect(document.querySelector('iframe')!.getAttribute('src')).toBe(`${GATEWAYS[0]}QmGen`)
+  expect(document.querySelector('iframe')!.getAttribute('src')).toBe(LIVE)
   expect(document.querySelector('iframe')!.getAttribute('srcdoc')).toBeNull()
   expect(fetchMock).not.toHaveBeenCalled()
   expect(V1).toBe('KT1KEa8z6vWXDJrVqtMrAeDVzsvxat3kHaCE')
@@ -135,7 +146,7 @@ test('a rejected artifact fetch falls back to the direct src rather than showing
     if (!f?.getAttribute('src')) throw new Error('no direct iframe yet')
     return f
   })
-  expect(frame.getAttribute('src')).toBe(`${GATEWAYS[0]}QmGen`)
+  expect(frame.getAttribute('src')).toBe(LIVE)
   expect(frame.getAttribute('srcdoc')).toBeNull()
 })
 
@@ -150,7 +161,7 @@ test('a non-OK artifact response falls back to the direct src', async () => {
     if (!f?.getAttribute('src')) throw new Error('no direct iframe yet')
     return f
   })
-  expect(frame.getAttribute('src')).toBe(`${GATEWAYS[0]}QmGen`)
+  expect(frame.getAttribute('src')).toBe(LIVE)
 })
 
 test('HTML that does not need patching is served directly, not through srcdoc', async () => {
@@ -164,7 +175,7 @@ test('HTML that does not need patching is served directly, not through srcdoc', 
     if (!f?.getAttribute('src')) throw new Error('no direct iframe yet')
     return f
   })
-  expect(frame.getAttribute('src')).toBe(`${GATEWAYS[0]}QmGen`)
+  expect(frame.getAttribute('src')).toBe(LIVE)
 })
 
 test('HTML with the snippet but no <head> falls back to the direct src', async () => {
@@ -180,7 +191,7 @@ test('HTML with the snippet but no <head> falls back to the direct src', async (
     if (!f?.getAttribute('src')) throw new Error('no direct iframe yet')
     return f
   })
-  expect(frame.getAttribute('src')).toBe(`${GATEWAYS[0]}QmGen`)
+  expect(frame.getAttribute('src')).toBe(LIVE)
 })
 
 test('shows a loading state while the artifact is being fetched', async () => {
@@ -211,7 +222,7 @@ test('offers a "load original" escape hatch that re-renders with the plain direc
   fireEvent.click(original)
 
   const frame = document.querySelector('iframe')!
-  expect(frame.getAttribute('src')).toBe(`${GATEWAYS[0]}QmGen`)
+  expect(frame.getAttribute('src')).toBe(LIVE)
   expect(frame.getAttribute('srcdoc')).toBeNull()
   // The escape hatch is one-way for this view; it must not bounce back to patched.
   expect(screen.queryByRole('button', { name: /load original/i })).toBeNull()

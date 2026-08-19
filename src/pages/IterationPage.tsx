@@ -10,7 +10,7 @@ import {
   loadSummary,
   type LocalIteration,
 } from '../lib/data'
-import PieceFrame, { archivedSrc } from '../components/PieceFrame'
+import PieceFrame, { archivedSrc, liveArtifactSrc } from '../components/PieceFrame'
 import IpfsImage from '../components/IpfsImage'
 import LoadError from '../components/LoadError'
 import NotFoundPage from './NotFoundPage'
@@ -146,7 +146,12 @@ export default function IterationPage() {
     return () => { cancelled = true }
   }, [contract, tokenId, attempt])
 
-  const liveSrc = state.status === 'ok' ? ipfsToHttp(state.iteration.artifactUri) : null
+  // Repaired, not used raw: see liveArtifactSrc. The seed comes from the indexer
+  // here, falling back to the captured one, since either is the same value.
+  const liveSrc =
+    state.status === 'ok' && state.iteration.artifactUri
+      ? liveArtifactSrc(state.iteration.artifactUri, state.iteration.iterationHash ?? archived?.seed ?? null)
+      : null
 
   /**
    * Download a v1 artifact and splice fxhash's legacy Math.pow patch in ahead of its
