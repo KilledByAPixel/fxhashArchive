@@ -1,0 +1,814 @@
+<!DOCTYPE html><html>
+<head>
+	<title>SMOLSKULL-FLAG</title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="Author" content="Mark Knol">
+    <meta name="License" content="This NFT is released under the NFT License 2.0 - www.nftlicense.org">
+</head>
+<body>
+<canvas id=canvas width="2000" height="1200"></canvas>
+<script id="fxhash-snippet">
+      let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+      var fxhash = new URLSearchParams(window.location.search).get('fxhash')
+      let b58dec = str=>[...str].reduce((p,c)=>p*alphabet.length+alphabet.indexOf(c)|0, 0)
+      let fxhashTrunc = fxhash.slice(2)
+      let regex = new RegExp(".{" + ((fxhashTrunc.length/4)|0) + "}", 'g')
+      let hashes = fxhashTrunc.match(regex).map(h => b58dec(h))
+      let sfc32 = (a, b, c, d) => {
+        return () => {
+          a |= 0; b |= 0; c |= 0; d |= 0
+          var t = (a + b | 0) + d | 0
+          d = d + 1 | 0
+          a = b ^ b >>> 9
+          b = c + (c << 3) | 0
+          c = c << 21 | c >>> 11
+          c = c + t | 0
+          return (t >>> 0) / 4294967296
+        }
+      }
+      var fxrand = sfc32(...hashes)
+      // used to get features during token mint
+      window.addEventListener("message", (event) => {
+        if (event.data === "fxhash_getFeatures") {
+          parent.postMessage({
+            id: "fxhash_getFeatures",
+            data: window.$fxhashFeatures
+          }, "*")
+        }
+      })
+      var isFxpreview = new URLSearchParams(window.location.search).get('preview') === "1"
+      function fxpreview() {
+        window.dispatchEvent(new Event("fxhash-preview"))
+        setTimeout(() => fxpreview(), 500)
+      }
+</script>
+
+<style>
+* {
+	margin:0; padding:0;
+}
+canvas {
+	width: 100vw;
+	height: 100vh;
+	aspect-ratio: 5 / 3;
+	object-fit: contain;
+}
+</style>
+
+<script>
+/*
+
+Generative art by Mark Knol
+Based on https://www.fxhash.xyz/generative/14
+
+https://twitter.com/mknol
+
+https://www.fxhash.xyz/u/markknol
+https://hicetnunc.art/markknol
+https://tryshowtime.com/markknol
+https://objkt.com/profile/markknol
+
+*/
+let search = new URLSearchParams(window.location.search);
+
+canvas.width = search.get('size') ? parseInt(search.get('size')) : window.innerWidth * 2;
+canvas.height = canvas.width * (3 / 5);
+let flagWidth = canvas.width;
+let flagHeight = canvas.height;
+
+let ctx = canvas.getContext('2d');
+
+const WHITE = "#EEEEEE";
+const BLACK = "#111111";
+const GREEN = "#58cf34";
+const GRAY = "#555555";
+const RED = "#cd202c";
+const BLUE = "#347fcf";
+const YELLOW = "#e4d81a";
+
+let features = {
+	flag: "",
+	stars: 0,
+	smolskulls: 0,
+}
+
+function pick(arr, remove) {
+	let value = arr[fxrand()*arr.length|0];
+	if (remove) {
+		removeAll(arr, value);
+	}
+	return value
+}
+
+function removeAll(arr, value) {
+	let index = arr.indexOf(value);
+	while (index >= 0) {
+		arr.splice(index, 1);
+		index = arr.indexOf(value);
+	}
+	return arr;
+}
+
+let colors = [WHITE, BLACK, GREEN, RED, BLUE, YELLOW, GRAY];
+let allColors = [...colors];
+if (fxrand() > 0.9) colors = [pick([RED, YELLOW, GREEN, BLUE, GRAY]), BLACK, WHITE];
+let type = pick([0,1,0,1,2,3,4,5,6,7,8,9,10,11,12,/*13,*/14,15]);
+
+let usedColors = [];
+
+function getEmoji(color) {
+	if (color == WHITE) return '⚪'
+	if (color == BLACK) return '⚫'
+	if (color == GREEN) return '🟢'
+	if (color == RED) return '🔴'
+	if (color == BLUE) return '🔵'
+	if (color == YELLOW) return '🟡'
+	if (color == GRAY) return '⚪+⚫'
+}
+
+function rect(x, y, w, h, color) {
+	x = Math.ceil(x);
+	y = Math.ceil(y);
+	w = Math.ceil(w);
+	h = Math.ceil(h);
+	ctx.fillStyle = color;
+	ctx.fillRect(x,y,w,h);
+}
+
+function circle(x, y, r, color) {
+	ctx.fillStyle = color;
+	ctx.beginPath();
+	ctx.arc(x,y,r,0, Math.PI*2);
+	ctx.closePath();
+	ctx.fill();
+}
+
+function star(x, y, r, color, gib) {
+	if (gib) r*=1.5;
+	
+	ctx.fillStyle = color;
+	ctx.beginPath();
+	let angle = Math.PI*0.5 * 3;
+	let cx = x;
+	let cy = y;
+	let sides = 5;
+	let step = Math.PI / sides;
+	r *= 1.25;
+	for (let i=0;i<sides;i++) {
+		cx = x + Math.cos(angle) * r;
+		cy = y + Math.sin(angle) * r;
+		ctx.lineTo(cx,cy);
+		angle += step;
+		cx = x + Math.cos(angle) * r*0.5;
+		cy = y + Math.sin(angle) * r*0.5;
+		ctx.lineTo(cx,cy)
+		angle += step;
+	}
+	ctx.closePath();
+	ctx.fill();
+	
+	features.stars ++;
+}
+
+function smol(x, y, r, color, gib) {
+	if (gib) r *= 1.5;
+	let scale = r/7;
+	let smol = getSmolskull(faceProps1, color, scale).canvas;
+	ctx.drawImage(smol, x - smol.width/2, y - smol.height/2);
+	
+	features.smolskulls ++;
+}
+
+function smol2(x, y, r, color, gib) {
+	if (gib) r *= 1.5;
+	let scale = r/7;
+	let smol = getSmolskull(faceProps2, color, scale).canvas;
+	ctx.drawImage(smol, x - smol.width/2, y - smol.height/2);
+	
+	features.smolskulls ++;
+}
+
+function setFeatureColors(usedColors) {
+	for(let color of allColors) {
+		features[getEmoji(color)] = usedColors.includes(color);
+	}
+}
+
+function createFlag(type) {
+	let color1 = pick(colors, true);
+	let color2 = pick(colors, true);
+	let color3 = pick(colors, true);
+	
+	usedColors.push(color1);
+	usedColors.push(color2);
+	usedColors.push(color3);
+	
+	let inv = fxrand() > 0.5;
+	switch(type) {
+		case 0: {
+			features.flag = "three stripes horizontal"
+			let h = flagHeight/3;
+			let w = flagWidth/3;
+			let color6 = pick([color1,color3]);
+			rect(0, h*0, flagWidth, h, color1);
+			rect(0, h*1, flagWidth, h, color2);
+			rect(0, h*2, flagWidth, h, color6);
+			
+			let totalStars = pick([1,2,2,2,2,3]);
+			if (totalStars == 1) {
+				if (fxrand() > 0.5 && color6==color1) {
+					features.flag += " with moon"
+					circle(flagWidth/2, flagHeight/2, flagHeight/3, color3);
+					smol(flagWidth/2, flagHeight/2, flagHeight/6, color2);
+				} else {
+					smol(flagWidth/2, flagHeight/2, flagHeight/7, color3);
+				}
+			} else {
+				let smolPosIdx = totalStars == 2 ? pick([-1,0]) : 0;
+				let color5 = pick([color1,color3])
+				let color4 = pick([color1,color3])
+				if (fxrand() > 0.5) {
+					for(let i=-totalStars/2;i<totalStars/2;i++) {
+						if (Math.round(i)==smolPosIdx|| (inv&&Math.round(i)==smolPosIdx)) smol(flagWidth/2 + (w*i + w/2), flagHeight/2, flagHeight/7, color4);
+						else star(flagWidth/2 + (w*i + w/2), flagHeight/2, flagHeight/9, color5);
+					}
+				} else {
+					totalStars = 3;
+					smolPosIdx = 0;
+					for(let i=-totalStars/2;i<totalStars/2;i++) {
+						if (Math.round(i)==smolPosIdx|| (inv&&Math.round(i)==smolPosIdx)) smol(flagWidth/2, flagHeight/2 + (h*i + h/2) , flagHeight/7, color1);
+						else star(flagWidth/2, flagHeight/2 + (h*i + h/2) , flagHeight/9, color2);
+					}
+				}
+			}
+			break;
+		}
+		case 1: {
+			features.flag = "three striped vertical"
+			let h = flagHeight/3;
+			let w = flagWidth/3;
+			let color6 = pick([color1,color3]);
+			rect(w*0, 0, w, flagHeight, color1);
+			rect(w*1, 0, w, flagHeight, color2);
+			rect(w*2, 0, w, flagHeight, color6);
+			
+			let totalStars = pick([1,2,2,2,2,3]);
+			if (totalStars == 1) {
+				smol(flagWidth/2, flagHeight/2, flagHeight/5, color6);
+			} else {
+				let smolPosIdx = totalStars == 2 ? pick([-1,0]) : 0;
+				if (fxrand() > 0.5) {
+					totalStars = 3;
+					smolPosIdx = 0;
+					for(let i=-totalStars/2;i<totalStars/2;i++) {
+						if (Math.round(i)==smolPosIdx || (inv&&Math.round(i)==smolPosIdx)) smol(flagWidth/2 + (w*i + w/2), flagHeight/2, flagHeight/7, color1);
+						else star(flagWidth/2 + (w*i + w/2), flagHeight/2, flagHeight/9, color2);
+					}
+				} else {
+					for(let i=-totalStars/2;i<totalStars/2;i++) {
+						if (Math.round(i)==smolPosIdx|| (inv&&Math.round(i)==smolPosIdx)) smol(flagWidth/2, flagHeight/2 + (h*i + h/2) , flagHeight/6, color3);
+						else star(flagWidth/2, flagHeight/2 + (h*i + h/2) , flagHeight/8, color3);
+					}
+				}
+			}
+			break;
+		}
+		case 2: {
+			features.flag = "two stripes horizontal"
+			let h = flagHeight/2;
+			rect(0, h*0, flagWidth, h, color1);
+			rect(0, h*1, flagWidth, h, color2);
+			
+			if (fxrand() > 0.5) {
+				features.flag += " with moon"
+				circle(flagWidth/2, flagHeight/2, flagHeight/2*0.75, color3);
+				smol(flagWidth/2, flagHeight/2, flagHeight/6, pick([color1,color2]), true);
+			} else {
+				let totalStars = 2;
+				h = flagHeight/2;
+				let smolPosIdx = pick([-1,0]);
+				for(let i=-totalStars/2;i<totalStars/2;i++) {
+					if (Math.round(i)==smolPosIdx) smol(flagWidth/2, flagHeight/2 + (h*i + h/2) , flagHeight/5.555, smolPosIdx == 0 ? color1: color2);
+					else star(flagWidth/2, flagHeight/2 + (h*i + h/2) , flagHeight/7, smolPosIdx != 0 ? color1: color2);
+				}
+			}
+			break;
+		}
+		case 3: {
+			features.flag = "two stripes vertical"
+			let w = flagWidth/2;
+			rect(w*0, 0, w, flagHeight, color1);
+			rect(w*1, 0, w, flagHeight, color2);
+			
+			if (fxrand() > 0.5) {
+				features.flag += " with moon"
+				circle(flagWidth/2, flagHeight/2, flagHeight/2*0.75, color3);
+				smol(flagWidth/2, flagHeight/2, flagHeight/6, pick([color1,color2]), true);
+			} else {
+				let totalStars = 2;
+				h = flagHeight/2;
+				let smolPosIdx = pick([-1,0]);
+				for(let i=-totalStars/2;i<totalStars/2;i++) {
+					if (Math.round(i)==smolPosIdx) smol(flagWidth/2 + (w*i + w/2), flagHeight/2, flagHeight/5.555, smolPosIdx == 0 ? pick([color1,color3]) : color2);
+					else star(flagWidth/2 + (w*i + w/2), flagHeight/2 , flagHeight/7, smolPosIdx != 0 ? color1 : pick([color2,color3]));
+				}
+			}
+			break;
+		}
+		case 4: {
+			features.flag = "four blocks"
+			let w=flagWidth/2;
+			let h=flagHeight/2;
+			rect(0, h, w, h, color1);
+			rect(w, 0, w, h, color1);
+			rect(w, h, w, h, color2);
+			rect(0, 0, w, h, color2);
+			
+			if (fxrand() > 0.5) {
+				features.flag += " with moon"
+				circle(w, h, flagHeight/2*0.5, color3);
+				smol(w,h, flagHeight/9, pick([color2,color1]), true);
+			} else {
+				let smolPosType = pick([1,2,3]);
+				if (smolPosType==1 || smolPosType==3) {
+					let color = pick([color1,color3,color2]);
+					smol(w/2, h/2, flagHeight/6, smolPosType==3 ? color1 : pick([color3,color1]));
+					smol(w + w/2, h+h/2, flagHeight/6, smolPosType==3 ? color1 : pick([color3,color1]));
+				}
+				if (smolPosType==2 || smolPosType==3) {
+					let color = pick([color1,color3,color2]);
+					smol(w + w/2, h/2, flagHeight/6, smolPosType==3 ? color2 : pick([color3,color2]));
+					smol(w/2, h+h/2, flagHeight/6, smolPosType==3 ? color2 : pick([color3,color2]));
+				}
+			}
+			break;
+		}
+		case 5: {
+			features.flag = "chequered"
+			let w = flagWidth/4;
+			let h = flagHeight/4;
+			for(let y=0;y<4;y++) for(let x=0;x<4;x++) {
+				rect(x*w, y*h, w, h, (x+y) % 2 == 0 ? color1 : color2);
+			}
+			
+			if (fxrand() > 0.5) {
+				features.flag += " with moon"
+				circle(flagWidth/2, flagHeight/2, flagHeight/2*(0.5), color3);
+				smol(flagWidth/2, flagHeight/2, flagHeight/9, pick([color1,color2]), true);
+			} else {
+				features.flag += " with moons"
+				let totalStars = 2;
+				w = flagWidth/2;
+				h = flagHeight/2;
+				let smolPosIdx = pick([-1,0]);
+				if (fxrand() > 0.75) {
+					let circleColor = pick([color1,color2]);
+					for(let i=-totalStars/2;i<totalStars/2;i++) {
+						circle(flagWidth/2, flagHeight/2 + (h*i + h/2), flagHeight/2*0.5, i == -totalStars/2 ? color1 : color3);
+						if (Math.round(i)==smolPosIdx) smol(flagWidth/2, flagHeight/2 + (h*i + h/2) , flagHeight/7, i != -totalStars/2 ? color1 : color3);
+						else star(flagWidth/2, flagHeight/2 + (h*i + h/2) , flagHeight/7, i != -totalStars/2 ? color1 : color3);
+					}
+				} else {
+					let circleColor = pick([color1,color3]);
+					for(let i=-totalStars/2;i<totalStars/2;i++) {
+						circle(flagWidth/2 + (w*i + w/2), flagHeight/2, flagHeight/2*0.5, circleColor);
+						if (Math.round(i)==smolPosIdx) smol(flagWidth/2 + (w*i + w/2), flagHeight/2, flagHeight/7, color2);
+						else star(flagWidth/2 + (w*i + w/2), flagHeight/2, flagHeight/7, color2);
+					}
+				}
+			}
+			
+			break;
+		}
+		case 6: {
+			features.flag = "cross"
+			let w = flagWidth/3;
+			let h = flagHeight/3;
+			
+			let offset = pick([0.3,0.5,0.6]);
+			
+			if (offset != 0.5) features.flag = " asymmetrical";
+			
+			rect(0, 0, flagWidth, flagHeight, color1);
+			rect((flagWidth*offset-h/2), 0, h, flagHeight, color2);
+			rect(0, (flagHeight-h)/2, flagWidth, h, color2);
+			
+			smol(flagWidth*offset, flagHeight/2, flagHeight/9, pick([color3,color1]), true);
+			
+			break;
+		}
+		case 7: {
+			features.flag = "diagonal"
+			let w = flagWidth/3.5;
+			let h = flagHeight/3.5;
+			
+			rect(0, 0, flagWidth, flagHeight, color1);
+			ctx.fillStyle = color2;
+			ctx.beginPath();
+			if(fxrand()>0.5) {
+				ctx.moveTo(0,0);
+				ctx.lineTo(flagWidth,0);
+				ctx.lineTo(flagWidth,flagHeight);
+			} else {
+				ctx.moveTo(flagWidth,0);
+				ctx.lineTo(flagWidth,flagHeight);
+				ctx.lineTo(0,flagHeight);
+			}
+			ctx.closePath();
+			ctx.fill();
+			
+			if (fxrand() > 0.5) {
+				features.flag += " with moon"
+				circle(flagWidth/2, flagHeight/2, flagHeight/2*0.75, color3);
+				smol(flagWidth/2, flagHeight/2, flagHeight/6, pick([color1,color2]), true);
+			} else {
+				smol(flagWidth/2, flagHeight/2, flagHeight/4, color3, true);
+			}
+			break;
+		}
+		case 8: {
+			features.flag = "star"
+			let w = flagWidth/3.5;
+			let h = flagHeight/3.5;
+			
+			rect(0, 0, flagWidth, flagHeight, color1);
+			if (fxrand()>0.5) {
+				features.flag = "two stripes star"
+				rect(flagWidth/2, 0, flagWidth/2, flagHeight, color2);
+			}
+			
+			star(flagWidth/2, flagHeight/1.83, flagHeight/2*0.75, color3);
+			smol(flagWidth/2, flagHeight/1.83, flagHeight/9, pick([color1,color2]), true);
+		
+			break;
+		}
+		case 9: {
+			features.flag = "united smol states"
+			let totalStripes = 13;
+			let w = flagWidth/2;
+			let h = flagHeight/totalStripes * 7;
+			
+			rect(0, 0, flagWidth, flagHeight, color1);
+			
+			let stripeColor = color2;
+			for(let i=0;i<totalStripes*2;i+=2) {
+				rect(0, flagHeight/totalStripes * i, flagWidth, flagHeight/totalStripes, stripeColor);
+			}
+			
+			let smolColor = pick([color1,color2]);
+			let areaColor = smolColor == color1 ? color3 : pick([color1,color3]);
+			
+			if (fxrand()>0.5) {
+				rect(0, 0, w, h, areaColor);
+				let totalX = 7;
+				let totalY = 3;
+				for(let y=0;y<totalY;y++) for(let x=0;x<totalX;x++) {
+					let y1 = y;
+					if(x%2==1) y1-=0.25;
+					else y1+=0.25;
+					smol((x+1) * (w/(totalX+1)), (y1+1) * (h/(totalY+1)), flagHeight/18, smolColor);
+				}
+			} else {
+				rect(w, 0, w, h, color1);
+				let totalX = 7;
+				let totalY = 4;
+				for(let y=0;y<totalY;y++) for(let x=0;x<totalX;x++) {
+					let y1 = y;
+					if(x%2==1) y1-=0.25;
+					else y1+=0.25;
+					smol(w + (x+1) * (w/(totalX+1)), (y1+1) * (h/(totalY+0.5)), flagHeight/18, color3);
+				}
+			}
+			break;
+		}
+		case 10: {
+			features.flag = "triangle"
+			let w = flagWidth/3.5;
+			let h = flagHeight/3.5;
+			
+			rect(0, 0, flagWidth, flagHeight, color1);
+			rect(0, flagHeight/2, flagWidth, flagHeight/2, color2);
+			
+			ctx.fillStyle = color3;
+			ctx.beginPath();
+			if (fxrand()>0.5) {
+				ctx.moveTo(0,0);
+				ctx.lineTo(flagWidth,flagHeight/2);
+				ctx.lineTo(0,flagHeight);
+				ctx.closePath();
+				ctx.fill();
+				if (fxrand() > 0.5) {
+					features.flag += " with moon"
+					circle(flagWidth/4, flagHeight/2, flagHeight/4, color1);
+				}
+				smol(flagWidth/4, flagHeight/2, flagHeight/6, color2);
+			} else {
+				ctx.moveTo(flagWidth,0);
+				ctx.lineTo(0,flagHeight/2);
+				ctx.lineTo(flagWidth,flagHeight);
+				ctx.closePath();
+				ctx.fill();
+				if (fxrand() > 0.5) {
+					features.flag += " with moon"
+					circle(flagWidth - flagWidth/4, flagHeight/2, flagHeight/4, color1);
+				}
+				smol(flagWidth - flagWidth/4, flagHeight/2, flagHeight/6, color2);
+			}
+			break;
+		}
+		case 11: {
+			features.flag = "diamond"
+			let w = flagWidth/3.5;
+			let h = flagHeight/3.5;
+			
+			rect(0, 0, flagWidth, flagHeight, color1);
+			rect(0, flagHeight/2, flagWidth, flagHeight/2, color2);
+			
+			ctx.fillStyle = color3;
+			ctx.beginPath();
+			
+			ctx.moveTo(flagWidth/2, flagHeight*0.1);
+			ctx.lineTo(flagWidth*0.9,flagHeight/2);
+			ctx.lineTo(flagWidth/2,flagHeight * 0.9);
+			ctx.lineTo(flagWidth*0.1,flagHeight/2);
+			ctx.closePath();
+			ctx.fill();
+			
+			if (fxrand() > 0.5) {
+				features.flag += " with moon"
+				circle(flagWidth/2, flagHeight/2, flagHeight/4, color1);
+			}
+			smol(flagWidth/2, flagHeight/2, flagHeight/6, color2);
+		
+			break;
+		}
+		case 12: {
+			features.flag = "smol unite"
+			let w = flagWidth/2;
+			let h = flagHeight/2;
+			
+			rect(0, 0, flagWidth, flagHeight, color1);
+			
+			let diversityFlag = fxrand() > 0.99;
+			let rainbow = [...allColors];
+			removeAll(rainbow, color1);
+			
+			let alternate = pick([true,false]);
+			let total = 12;
+			for(let i=0;i<total;i++) {
+				let color = diversityFlag ? rainbow[i%rainbow.length] : color2
+				let a = Math.PI*2 * i/total;
+				let x = w + Math.sin(a) * h*0.75;
+				let y = h + Math.cos(a) * h*0.75;
+				if (alternate && ((!inv && i%2==0) || (inv && i%2 == 1)) ) star(x, y, flagHeight/14, color);
+				else smol(x, y, flagHeight/12, color);
+			}
+			
+			if (alternate) {
+				if (fxrand()> 0.5) {
+					features.flag = "alternate smol unite with leader"
+					smol2(w, h, flagHeight/5, color2);
+				} else {
+					features.flag = "alternate smol unite with moon"
+					circle(w, h, flagHeight/5, color2);
+				}
+			}
+		
+			break;
+		}
+		case 13: {
+			features.flag = "cross with moon"
+			let w = flagWidth/3;
+			let h = flagHeight/4.5;
+			rect(0, 0, flagWidth, flagHeight, color1);
+			rect((flagWidth-h)/2, 0, h, flagHeight, color2);
+			rect(0, (flagHeight-h)/2, flagWidth, h, color2);
+			
+			circle(flagWidth/2, flagHeight/2, flagHeight/2* 0.85, color2);
+			circle(flagWidth/2, flagHeight/2, flagHeight/2* 0.5, color1);
+			smol(flagWidth/2, flagHeight/2, flagHeight/9, pick([color3,color2]), true);
+		
+			break;
+		}
+		case 14: {
+			let strokeType = pick([1,2,3]);
+			
+			features.flag = strokeType == 1 || strokeType==2 ? "diagonal stripe" : "smol united"
+			let w = flagWidth/3;
+			let h = flagHeight/4;
+			rect(0, 0, flagWidth, flagHeight, color1);
+			
+			ctx.strokeStyle = color2;
+			ctx.beginPath();
+			ctx.lineWidth = flagHeight/1.5;
+			
+			if (strokeType == 1 || strokeType == 3) {
+				ctx.moveTo(0,0);
+				ctx.lineTo(flagWidth,flagHeight);
+			}
+			if (strokeType == 2 || strokeType == 3) {
+				ctx.moveTo(flagWidth,0);
+				ctx.lineTo(0,flagHeight);
+			}
+			if (strokeType == 3) {
+				ctx.lineWidth = flagHeight/3;
+				
+				ctx.moveTo(0,flagHeight/2);
+				ctx.lineTo(flagWidth,flagHeight/2);
+				ctx.moveTo(flagWidth/2,0);
+				ctx.lineTo(flagWidth/2,flagHeight);
+			}
+			ctx.closePath();
+			ctx.stroke();
+			
+			let horizontal = fxrand() > 0.5;
+			if (strokeType == 3) {
+				ctx.lineWidth = flagHeight/5;
+				ctx.strokeStyle = color1;
+				ctx.beginPath();
+				if (!horizontal) {
+					ctx.moveTo(0,flagHeight/2);
+					ctx.lineTo(flagWidth,flagHeight/2);
+					ctx.moveTo(flagWidth/2,0);
+					ctx.lineTo(flagWidth/2,flagHeight);
+				} else {
+					ctx.moveTo(0,0);
+					ctx.lineTo(flagWidth,flagHeight);
+					ctx.moveTo(flagWidth,0);
+					ctx.lineTo(0,flagHeight);
+				}
+				ctx.closePath();
+				ctx.stroke();
+			}
+			
+			if (strokeType < 3) {
+				smol(flagWidth/2, flagHeight/2, flagHeight/7, pick([color1,color3]), true);
+				if (fxrand() > 0.5) {
+					if (strokeType == 1) {
+						let starColor = pick([color1,color3]);
+						star(flagWidth*0.2, flagHeight*0.2, flagHeight/10, starColor); 
+						star(flagWidth*0.8, flagHeight*0.8, flagHeight/10, starColor);
+					} else {
+						let starColor = pick([color1,color3]);
+						star(flagWidth*0.8, flagHeight*0.2, flagHeight/10, starColor); 
+						star(flagWidth*0.2, flagHeight*0.8, flagHeight/10, starColor);
+					}
+				}
+			} else {
+				if (horizontal) {
+					smol(flagWidth/2, flagHeight*0.15, flagHeight/16, color3, true);
+					smol(flagWidth/2, flagHeight*0.50, flagHeight/16, pick([color2,color3]), true);
+					smol(flagWidth/2, flagHeight*0.85, flagHeight/16, color3, true);
+				} else {
+					(inv ? star : smol)(flagWidth*0.25, flagHeight*0.5, (inv ? flagHeight/23 : flagHeight/18), color3, true);
+					(inv ? smol : star)(flagWidth*0.50, flagHeight*0.5, (inv ? flagHeight/18 : flagHeight/16), pick([color2,color3]), true);
+					(inv ? star : smol)(flagWidth*0.75, flagHeight*0.5, (inv ? flagHeight/23 : flagHeight/18), color3, true);
+				}
+			}
+			break;
+		}
+		
+		case 15: {
+			rect(0, 0, flagWidth, flagHeight, color1);
+			
+			features.flag = "moon"
+			circle(flagWidth/2, flagHeight/2, flagHeight/2*0.75, color2);
+			smol(flagWidth/2, flagHeight/2, flagHeight/6, pick([color1,color3]), true);
+		
+			break;
+		}
+	}
+	
+}
+
+
+const s = 11;
+
+let faceProps1 = {
+	eyeHeight: pick([0,1,2,3]),
+	mouthType: pick([0,1]),
+	mouthSize: pick([0,1,2,3]),
+	eyeDirection: pick([0,1,2,3]),
+	eyeColor: pick([0,1,2,3]),
+	eyeY: 1 + fxrand() * 3 | 0,
+	mouthY: fxrand() * 2|0,
+	drawEyeDirection: false,//fxrand() > 0.2,
+	cheekW: 1+fxrand()*2|0,
+	cheekH: 1+fxrand()*4|0,
+	smolMouth: pick([true,false]),
+	clearMouth: fxrand() > 0.8,
+}
+
+let faceProps2 = {
+	eyeHeight: pick([0,1,2,3]),
+	mouthType: pick([0,1]),
+	mouthSize: pick([0,1,2,3]),
+	eyeDirection: pick([0,1,2,3]),
+	eyeColor: pick([0,1,2,3]),
+	eyeY: 1 + fxrand() * 3 | 0,
+	mouthY: fxrand() * 2|0,
+	drawEyeDirection: false,//fxrand() > 0.2,
+	cheekW: 1+fxrand()*2|0,
+	cheekH: 1+fxrand()*4|0,
+	smolMouth: pick([true,false]),
+	clearMouth: fxrand() > 0.8,
+}
+
+function getSmolskull(faceProps, skin, scale = 20) {
+	let smolCanvas = document.createElement('canvas');
+	smolCanvas.width = s;
+	smolCanvas.height = s;
+	let ctx = smolCanvas.getContext('2d');
+	
+	ctx.fillStyle = skin;
+	ctx.fillRect(0,0,s,s);
+	
+	let eyeY = faceProps.eyeY;
+	if (faceProps.mouthSize == 2) eyeY = 1;
+	
+	ctx.clearRect(2, eyeY, 3, faceProps.eyeHeight + 2);
+	ctx.clearRect(6, eyeY, 3, faceProps.eyeHeight + 2);
+	
+	ctx.fillStyle = BLACK;
+	if (faceProps.eyeHeight <= 2 || faceProps.drawEyeDirection) { 
+		usedColors.push(BLACK);
+		if (faceProps.eyeDirection == 0) {
+			ctx.fillRect(2, eyeY, 1, faceProps.eyeHeight + 2);
+			ctx.fillRect(6, eyeY, 1, faceProps.eyeHeight + 2);
+		} else if (faceProps.eyeDirection == 1) {
+			ctx.fillRect(2 + 2, eyeY, 1, faceProps.eyeHeight + 2);
+			ctx.fillRect(6 + 2, eyeY, 1, faceProps.eyeHeight + 2);
+		} else if (faceProps.eyeDirection == 2) {
+			ctx.fillRect(2, faceProps.eyeHeight + eyeY+1, 3, 1);
+			ctx.fillRect(6, faceProps.eyeHeight + eyeY+1, 3, 1);
+		} else if (faceProps.eyeDirection == 3) {
+			ctx.fillRect(2, eyeY, 3, 1);
+			ctx.fillRect(6, eyeY, 3, 1);
+		}
+	}
+	
+	mouthY = (eyeY+1) + faceProps.eyeHeight + 2 + faceProps.mouthY;
+	if (faceProps.mouthSize == 2) mouthY = (eyeY+1) + faceProps.eyeHeight + 2;
+	
+	ctx.fillStyle = BLACK;
+	let fillFn = skin == BLACK || faceProps.clearMouth ? 'clearRect' : 'fillRect';
+	if (fillFn == 'fillRect') usedColors.push(BLACK);
+	if (faceProps.mouthType == 0) {	
+		if (faceProps.smolMouth) {
+			ctx[fillFn](3, mouthY, 5, (faceProps.mouthSize+1)*2);
+		} else {
+			ctx[fillFn](4, mouthY, 3, (faceProps.mouthSize+1)*2);
+		}
+	} else {
+		ctx[fillFn](3, mouthY, 1, (faceProps.mouthSize+1)*2);
+		ctx[fillFn](5, mouthY, 1, (faceProps.mouthSize+1)*2);
+		ctx[fillFn](7, mouthY, 1, (faceProps.mouthSize+1)*2);
+	}
+	
+	// rounded corner part 1
+	ctx.clearRect(0, 0, 1, 1);
+	ctx.clearRect(s-1, 0, 1, 1);
+	
+	// side cheeks
+	let w = faceProps.cheekW;
+	let h = faceProps.cheekH;
+	ctx.clearRect(0, s-h, w, h);
+	ctx.clearRect(s-w, s-h, w, h);
+	
+	const finalImage = upscale(ctx, scale);
+	
+	finalImage.fillStyle = skin;
+	finalImage.beginPath();
+	finalImage.arc(1*scale, 1*scale, scale, 0, Math.PI*2);
+	finalImage.arc(10*scale, 1*scale, scale, 0, Math.PI*2);
+	finalImage.fill();
+	
+	return finalImage;
+}
+
+function upscale(ctx, scale = 5) {
+	const out = document.createElement("canvas");
+	out.width = ctx.canvas.width * scale;
+	out.height = ctx.canvas.height * scale;
+	const ctx2 = out.getContext("2d");
+	ctx2.imageSmoothingEnabled = false;
+	ctx2.drawImage(
+		ctx.canvas,
+		0,
+		0,
+		ctx.canvas.width * scale,
+		ctx.canvas.height * scale
+	);
+	return ctx2;
+}
+
+window.onload = () => {
+	createFlag(type);
+	setFeatureColors(usedColors);
+	window.$fxhashFeatures = features;
+	console.log(JSON.stringify(window.$fxhashFeatures));
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Agharta</title>
+
+  <style>
+    body {
+      margin: 0;
+      background-color: #000;
+      color: #fff;
+      font-family: Helvetica, Arial, sans-serif;
+      overflow: hidden;
+      /* disable scrolling / rubberband effect on mobile */
+    }
+
+    canvas {
+      display: block;
+      position: absolute;
+      outline: 0;
+    }
+
+    * {
+      /* disable on touch highlights of html elements, especially on mobile! */
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+
+    footer {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      box-sizing: border-box;
+      width: 100vw;
+      padding: 20px;
+      text-align: right;
+      font-size: 18px;
+      color: var(--highlight-color);
+    }
+
+    footer a,
+    footer a:hover,
+    footer a:active {
+      color: var(--highlight-color);
+    }
+  </style>
+
+
+  <script id="fxhash-snippet">
+      let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+      var fxhash = new URLSearchParams(window.location.search).get('fxhash')
+      let b58dec = str=>[...str].reduce((p,c)=>p*alphabet.length+alphabet.indexOf(c)|0, 0)
+      let fxhashTrunc = fxhash.slice(2)
+      let regex = new RegExp(".{" + ((fxhashTrunc.length/4)|0) + "}", 'g')
+      let hashes = fxhashTrunc.match(regex).map(h => b58dec(h))
+      let sfc32 = (a, b, c, d) => {
+        return () => {
+          a |= 0; b |= 0; c |= 0; d |= 0
+          var t = (a + b | 0) + d | 0
+          d = d + 1 | 0
+          a = b ^ b >>> 9
+          b = c + (c << 3) | 0
+          c = c << 21 | c >>> 11
+          c = c + t | 0
+          return (t >>> 0) / 4294967296
+        }
+      }
+      var fxrand = sfc32(...hashes)
+      // used to get features during token mint
+      window.addEventListener("message", (event) => {
+        if (event.data === "fxhash_getFeatures") {
+          parent.postMessage({
+            id: "fxhash_getFeatures",
+            data: window.$fxhashFeatures
+          }, "*")
+        }
+      })
+      var isFxpreview = new URLSearchParams(window.location.search).get('preview') === "1"
+      function fxpreview() {
+        window.dispatchEvent(new Event("fxhash-preview"))
+        setTimeout(() => fxpreview(), 500)
+      }
+</script> 
+
+</head>
+
+<body>
+
+  <canvas id="glcanvas" width="100vw" height="100vh" tabindex="1"></canvas>
+
+  <libs></libs>
+  <script type="text/javascript" src="./patch.js" async></script>
+  <corelibs></corelibs>
+
+  <script>
+    // disable rubberband effect on mobile devices
+    document.getElementById('glcanvas').addEventListener('touchmove', (e) => {
+      e.preventDefault();
+    }, false);
+
+
+    function patchInitialized(patch) {
+      // You can now access the patch object (patch), register variable watchers and so on
+    }
+
+    function patchFinishedLoading(patch) {
+      // The patch is ready now, all assets have been loaded
+      fxpreview()
+    }
+
+    document.addEventListener('CABLES.jsLoaded', function (event) {
+      CABLES.patch = new CABLES.Patch({
+        patch: CABLES.exportedPatch,
+        prefixAssetPath: '',
+        glCanvasId: 'glcanvas',
+        glCanvasResizeToWindow: true,
+        onPatchLoaded: patchInitialized,
+        onFinishedLoading: patchFinishedLoading,
+      });
+
+      CABLES.patch.setVariable("randomSeed", fxrand())
+      
+      const colorPalette = CABLES.patch.getVar("colorPaletteName")
+
+      window.$fxhashFeatures = {
+        "Palette": colorPalette.getValue()
+      }
+    });
+  </script>
+</body>
+
+</html>

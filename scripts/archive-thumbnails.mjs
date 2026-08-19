@@ -25,8 +25,9 @@
 import { readFile, writeFile, mkdir, readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { execFileSync } from 'node:child_process'
+import { GATEWAYS as SHARED_GATEWAYS } from './archive-lib.mjs'
 
-const GATEWAYS = ['https://ipfs.io/ipfs/', 'https://dweb.link/ipfs/', 'https://gateway.pinata.cloud/ipfs/']
+const GATEWAYS = SHARED_GATEWAYS
 const TOKENS_DIR = 'public/data/tokens'
 const MANIFEST = 'public/data/generators/manifest.json'
 const DELAY_MS = 80

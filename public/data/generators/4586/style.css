@@ -1,0 +1,16 @@
+html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0px;
+    padding: 0px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+canvas {
+    margin: auto;
+    display: block;
+}
+
+* {color:transparent;}

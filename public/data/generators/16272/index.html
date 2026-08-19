@@ -1,0 +1,95 @@
+<!doctype html><html><head><title>Intangible by mulf</title><meta name="author" content="MadeUpLifeforms"><meta name="description" content="
+    Intangible
+
+    Let me take you places. Those are not in your town, not even on your planet. They're placed somewhere between reality and subconsciousness.
+    Enormous, peculiar structures emerge upon you, refusing to be ignored. They are your unfulfilled cravings or ever-lurking demons. They were always there, under your skin, intangible, now they've materialized.
+    You may not like them, they may seem too vast, too scary to tame. But ultimately, you have to face them, unless you enjoy living in their shadow.
+
+    ___
+    Inspirations
+
+    I've never truly realized that, but ever since I remember, the sight of gigantic objects or creatures evoked strong emotions within me.
+    It probably started with playing Shadow of Colossus (a video game) as a kid and seeing The Cathedral (short movie by Tomasz Bagiński). Years later, reading Solaris (by Stanisław Lem) aroused the same feeling (among others) of being mesmerized by the vastness. More recently, movies like Denis Villeneuve's Arrival (which also nudged my attraction to mystery) and Dune - have charmed me.
+
+    Earlier this year I have stumbled across Dawid Planeta (artist and yoga teacher) and began contemplating his visions of mini people in the jungle inhabited by giant animals. These works in particular, plus Hollow - generative series by Jacek Markusiewicz - were probably my final inspirations to make Intangible look the way it does.
+
+    Settling semi-random generative structures in some kind of reality, gave them a meaning - they may symbolize things much bigger than you - the ones you try to escape from or those you've been longing to experience for years. I have mine, don't you?
+
+    ___
+    Controls in live mode
+
+
+    Keyboard
+    [ space ] - toggle light animation
+    [ S ] - save image with current size (default is 120% of browser window's height; you may change browser's scale or check URL size param)
+    [ F ] - fullscreen
+    [ up / down ] - light intensity
+    [ left / right ] - base light position
+    [ 1..5 ] - aspect ratio: 10:16 („zero” ratio), 1:1.4142 (vertical A4), 1:1, 1.4142 (horizontal A4), 16:10
+    [ B ] - toggle border
+    [ Z ] - toggle canvas „raw” mode - no shadow / margin (auto applied in fullscreen mode)
+    [ N ] - toggle „that thing you may not want on print”
+
+
+    URL params
+    You may add any number of parameters to the URL to start it with particular settings.
+    [ animate ] ( 1/0 ) - toggle light animation
+    [ size] (number) - number of px for longer edge, i.e. 4000
+    [ ratio ] (number or ratio with format: 10/16, 10:16, 10_16) - aspect ratio
+    [ light ] (number 40..120, some palettes have slightly different limits for good results) - light intensity
+    [ lightShift] (number -100..100) - base light position
+    [ border ] (1/0) - toggle border
+    [ hddcy ] (0/1)
+
+    Example: [ &size=4000&border=1&light=100&animate=1 ]
+
+
+    Mobile
+    [hold 2 fingers for 2s] - save
+    [double tap] - fullscreen
+
+
+    ___
+    Note:
+    I encourage you to do some light adjustments before you save an image for print. I'm pretty sure you can do better than fxrand().
+
+    ___
+
+    Developed in Javascript, using p5.js (2D Canvas) and chroma.js.
+
+    © April-July 2022, MadeUpLifeforms (mulf)
+    "><meta charset="utf-8"><link rel="stylesheet" href="./style.css"><script id="fxhash-snippet">
+      let alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+      var fxhash = new URLSearchParams(window.location.search).get('fxhash')
+      let b58dec = str=>[...str].reduce((p,c)=>p*alphabet.length+alphabet.indexOf(c)|0, 0)
+      let fxhashTrunc = fxhash.slice(2)
+      let regex = new RegExp(".{" + ((fxhashTrunc.length/4)|0) + "}", 'g')
+      let hashes = fxhashTrunc.match(regex).map(h => b58dec(h))
+      let sfc32 = (a, b, c, d) => {
+        return () => {
+          a |= 0; b |= 0; c |= 0; d |= 0
+          var t = (a + b | 0) + d | 0
+          d = d + 1 | 0
+          a = b ^ b >>> 9
+          b = c + (c << 3) | 0
+          c = c << 21 | c >>> 11
+          c = c + t | 0
+          return (t >>> 0) / 4294967296
+        }
+      }
+      var fxrand = sfc32(...hashes)
+      // used to get features during token mint
+      window.addEventListener("message", (event) => {
+        if (event.data === "fxhash_getFeatures") {
+          parent.postMessage({
+            id: "fxhash_getFeatures",
+            data: window.$fxhashFeatures
+          }, "*")
+        }
+      })
+      var isFxpreview = new URLSearchParams(window.location.search).get('preview') === "1"
+      function fxpreview() {
+        window.dispatchEvent(new Event("fxhash-preview"))
+        setTimeout(() => fxpreview(), 500)
+      }
+</script><script src="./p5.min.js"></script><script src="./chroma.min.js"></script></head><body class="init"><div id="p5_loading"></div><div id="message" class="hide"><i></i></div><script defer="defer" src="./app.min.js" async></script></body></html>

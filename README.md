@@ -48,16 +48,25 @@ contract fxhash stopped deriving seeds from mint operations at token 46,890,
 and the **162,315 seeds after it, 9% of the archive, exist nowhere else**.
 Those are the ones that go when the pins do. All of it fits in 327 MB.
 
-**Generator code for 396 projects.** A generator plus a seed is everything
+**Generator code for 416 projects.** A generator plus a seed is everything
 needed to recreate a piece, so those projects work with no IPFS, no Tezos, and
 no internet at all — a copy of this repository is enough. The full catalog would
 run to 80–150 GB, so the selection is ranked by how much collectors engaged with
-each project: those 396 are about 1% of the catalog and account for **70.5%** of
-everything ever spent on the platform.
+each project: those 416 are about 1.5% of the catalog and account for **71.2%**
+of everything ever spent on the platform.
 
-Images and thumbnails are deliberately *not* saved. For an archived project they
-are redundant — the generator and the seed reproduce them at any resolution,
-which is better than a stored JPEG.
+One preview image per archived project is stored too (50 MB), so the grid still
+has something to show with IPFS unreachable. Everything else streams as before:
+for an archived project the generator and seed reproduce any image at any
+resolution, which is better than a stored JPEG.
+
+**Who made the work.** 553 projects were minted through fxhash's shared
+collaboration contracts, which meant the catalog recorded a KT1 address as the
+artist and no name at all. Each of those contracts names its members in its own
+on-chain storage, so all 427 were read out: 553 projects, 717 artists. Names came
+from fxhash's on-chain user registry, all 18,855 of them, which is also the only
+surviving source for anyone who collaborated without ever releasing work of their
+own. 41 addresses have no name recorded anywhere and are shown as addresses.
 
 ### Asking for work to be archived
 
@@ -88,13 +97,19 @@ Pushing to `master` builds and publishes to GitHub Pages automatically.
 - **The real long-term risk is IPFS, not fxhash.** The blockchain records who
   owns what, but the artwork itself lives on IPFS. If nobody keeps those files
   pinned, the chain will still say a piece exists while the artwork becomes
-  unretrievable. Every seed is now held here, and 396 projects have their code
+  unretrievable. Every seed is now held here, and 416 projects have their code
   here too; 372 more store their code on-chain and cannot be lost. The remaining
   ~26,600 projects still depend on IPFS staying alive.
-- **One small fxhash dependency remains.** Those same 372 on-chain projects need
-  an fxhash-run resolver to *run*. Their images work regardless, and the bytes
-  are on-chain, so nothing is lost — but live rendering for them depends on that
-  service.
+- **Public IPFS gateways are getting harder to use.** ipfs.io, dweb.link and
+  gateway.pinata.cloud now answer browsers with a Cloudflare challenge, which
+  cannot be framed — so artwork simply stopped running through them, while
+  answering scripts with a cheerful 200 the whole time. The site has moved to
+  three that still work; `npm run check:gateways` probes them the way a browser
+  does, and is the check that was missing.
+- **371 on-chain projects still need an fxhash resolver to run.** Their code is
+  stored on-chain via `onchfs://` rather than IPFS, so nothing can be lost, but
+  reading it back currently goes through a service fxhash runs. The archiver can
+  now fetch them, so any of them can be made fully local on request.
 - **Moderation is honored.** 2,692 projects (about 10%) were flagged by fxhash
   for plagiarism or abuse and are hidden, with no way to reveal them. One gap:
   a hand-crafted URL to an individual artwork of a flagged project can still
@@ -104,7 +119,7 @@ Pushing to `master` builds and publishes to GitHub Pages automatically.
   few dozen cards it needs, about 200 KB.
 - **Unofficial and unaffiliated.** Nothing here is endorsed by fxhash or by the
   artists. Most artwork is not stored here at all: images and programs stream
-  from IPFS and the Tezos chain as you view them. The exception is the 396
+  from IPFS and the Tezos chain as you view them. The exception is the 416
   archived generators described above, which are stored, and which any artist
   can have removed on request.
 
@@ -118,7 +133,8 @@ things:
 - **Record data** — ids, titles, tags, addresses, seeds, content hashes, market
   totals. Captured from public APIs and the Tezos chain, not authored here.
 - **Archived generator code** — `public/data/generators/` holds the actual
-  programs written by 396 artists, copied from IPFS so they survive it. These
+  programs written by the artists behind 416 projects, copied from IPFS and from
+  Tezos so they survive both. These
   are their work, under whatever terms they published it. They are kept here to
   preserve it, not to relicense it, and any artist can have their generator
   removed by opening an issue.

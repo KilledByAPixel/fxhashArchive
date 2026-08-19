@@ -1,0 +1,19 @@
+{
+  "icons": [
+    {
+      "src": "icon_512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icon_192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ],
+  "name": "monokai-draad",
+  "short_name": "monokai-draad",
+  "orientation": "portrait",
+  "display": "standalone",
+  "start_url": "."
+}

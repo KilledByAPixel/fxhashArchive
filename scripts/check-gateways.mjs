@@ -43,18 +43,38 @@ function getArg(name, fallback) {
 }
 
 /**
- * Read GATEWAYS out of the app rather than restating it. A checker with its own
- * copy of the list is a checker that passes while the app is broken.
+ * Read the lists out of the source rather than restating them. A checker with its
+ * own copy is a checker that passes while the app is broken.
+ *
+ * There are two: the app's, and the Node scripts'. They are checked against each
+ * other as well as probed, because drift is how this went wrong the first time —
+ * the thumbnail archiver kept fetching through gateways the site had already
+ * abandoned, and never complained, because Node is not browser-shaped.
  */
-async function loadGateways() {
-  const src = await readFile(new URL('../src/lib/ipfs.ts', import.meta.url), 'utf8')
-  const block = src.match(/export const GATEWAYS = \[([\s\S]*?)\n\]/)
-  if (!block) throw new Error('could not find GATEWAYS in src/lib/ipfs.ts')
+async function loadList(path, name) {
+  const src = await readFile(new URL(path, import.meta.url), 'utf8')
+  const block = src.match(new RegExp(`export const ${name} = \\[([\\s\\S]*?)\\n\\]`))
+  if (!block) throw new Error(`could not find ${name} in ${path}`)
   // Only quoted URLs, so an apostrophe in a comment inside the array ("fxhash's
   // own gateway") cannot be mistaken for a string delimiter.
   const found = [...block[1].matchAll(/'(https?:\/\/[^']+)'/g)].map((m) => m[1])
-  if (!found.length) throw new Error('GATEWAYS parsed as empty — check the format in src/lib/ipfs.ts')
+  if (!found.length) throw new Error(`${name} parsed as empty — check the format in ${path}`)
   return found
+}
+
+async function loadGateways() {
+  const app = await loadList('../src/lib/ipfs.ts', 'GATEWAYS')
+  const scripts = await loadList('../scripts/archive-lib.mjs', 'GATEWAY_ORIGINS')
+  const host = (u) => new URL(u).host
+  const appHosts = app.map(host).sort()
+  const scriptHosts = scripts.map(host).sort()
+  if (appHosts.join() !== scriptHosts.join()) {
+    console.log('MISMATCH: the app and the scripts do not use the same gateways.')
+    console.log(`  src/lib/ipfs.ts:          ${appHosts.join(', ')}`)
+    console.log(`  scripts/archive-lib.mjs:  ${scriptHosts.join(', ')}\n`)
+    process.exitCode = 1
+  }
+  return app
 }
 
 async function probe(gateway, cid) {

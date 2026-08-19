@@ -40,13 +40,11 @@
 // different fetch path than an IPFS gateway. They are reported and skipped.
 
 import { readFile, writeFile, rename, unlink, mkdir, readdir, rm, stat, cp } from 'node:fs/promises'
-import { join } from 'node:path'
+import { join, dirname } from 'node:path'
 import { execFileSync } from 'node:child_process'
+import { extractRefs, resolveRef, GATEWAY_ORIGINS } from './archive-lib.mjs'
 
-// Kept in step with src/lib/ipfs.ts — see the note there on why ipfs.io and
-// dweb.link had to go. This script would not have noticed on its own: Node is not
-// browser-shaped, so it still gets 200s from gateways a visitor cannot use.
-const GATEWAYS = ['https://gateway.fxhash.xyz', 'https://gateway.pinit.io', 'https://ipfs.raribleuserdata.com']
+const GATEWAYS = GATEWAY_ORIGINS
 const TOKENS_DIR = 'public/data/tokens'
 const MARKET_DIR = 'public/data/market'
 const PRESERVE_FILE = 'data/preserve.json'
@@ -266,8 +264,76 @@ async function findEntryPoint(dir) {
   return html ? html.name : files.length === 1 ? files[0].name : null
 }
 
+
+// ---------------------------------------------------------------- onchfs
+
+/**
+ * fxhash's on-chain filesystem. 372 projects store their code there instead of on
+ * IPFS, and the archiver used to skip all of them.
+ *
+ * Their code is on chain, so it cannot be lost — which made them the least urgent
+ * to archive, but not unimportant: a copy here is what lets a project run with no
+ * network at all, and that is the whole point of the archive. Entangled (85,193 tez)
+ * is one of these, and so is every fx(params) piece by an artist we were told to
+ * keep whole.
+ *
+ * There is no tar export, so the tree is walked from the entry point: fetch
+ * index.html, take every same-origin reference out of it, fetch those, and follow
+ * references out of any CSS that turns up. That is a static walk, so an asset a
+ * generator builds at runtime — a path assembled in JavaScript — is not found. The
+ * fetched set is reported so a project that came back suspiciously thin can be
+ * checked by hand rather than quietly shipped broken.
+ */
+const ONCHFS_GATEWAY = 'https://onchfs.fxhash2.xyz'
+/** Entry points are HTML, so give up if a walk somehow finds none. */
+const ONCHFS_MAX_FILES = 400
+
+async function fetchOnchfs(hash, staging, maxBytes) {
+  const root = `${ONCHFS_GATEWAY}/${hash}/`
+  const queue = ['index.html']
+  const seen = new Set(queue)
+  const written = []
+  let total = 0
+
+  while (queue.length) {
+    if (written.length >= ONCHFS_MAX_FILES) return { tooBig: true }
+    const path = queue.shift()
+    let res
+    try {
+      res = await fetch(root + path)
+    } catch {
+      continue
+    }
+    // A missed reference is normal — generators name files they never ship — so a
+    // 404 on anything but the entry point is not fatal.
+    if (!res.ok) {
+      if (path === 'index.html') throw new Error(`onchfs entry point: HTTP ${res.status}`)
+      continue
+    }
+    const body = Buffer.from(await res.arrayBuffer())
+    total += body.length
+    if (total > maxBytes) return { tooBig: true }
+
+    const dest = join(staging, path)
+    await mkdir(dirname(dest), { recursive: true })
+    await writeFile(dest, body)
+    written.push(path)
+
+    const type = res.headers.get('content-type') ?? ''
+    const isHtml = /html/i.test(type) || /\.html?$/i.test(path)
+    const isCss = /css/i.test(type) || /\.css$/i.test(path)
+    if (!isHtml && !isCss) continue
+    for (const ref of extractRefs(body.toString('utf8'), isCss)) {
+      const next = resolveRef(path, ref)
+      if (next && !seen.has(next)) { seen.add(next); queue.push(next) }
+    }
+  }
+  return { files: written, bytes: total }
+}
+
 async function archiveProject(project, tmpRoot, maxBytes) {
   const uri = String(project.generativeUri ?? '')
+  if (uri.startsWith('onchfs://')) return archiveOnchfsProject(project, tmpRoot, maxBytes)
   if (!uri.startsWith('ipfs://')) return { skipped: `unsupported scheme: ${uri.split(':')[0]}` }
   const cid = uri.slice(7).split('/')[0]
 
@@ -302,6 +368,30 @@ async function archiveProject(project, tmpRoot, maxBytes) {
   await rm(staging, { recursive: true, force: true })
 
   return { cid, entry, bytes: await dirSize(dest), strippedVcs }
+}
+
+async function archiveOnchfsProject(project, tmpRoot, maxBytes) {
+  const hash = String(project.generativeUri).slice('onchfs://'.length).split('/')[0]
+  if (!/^[0-9a-f]{64}$/i.test(hash)) return { skipped: `malformed onchfs hash: ${hash}` }
+
+  const staging = join(tmpRoot, `p${project.id}`)
+  await rm(staging, { recursive: true, force: true })
+  await mkdir(staging, { recursive: true })
+
+  const got = await fetchOnchfs(hash, staging, maxBytes)
+  if (got.tooBig) {
+    await rm(staging, { recursive: true, force: true })
+    return { skipped: `over size cap (>${(maxBytes / 1024 / 1024).toFixed(0)} MB)` }
+  }
+
+  const strippedVcs = await stripVcsMetadata(staging)
+  const dest = join(OUT, String(project.id))
+  await rm(dest, { recursive: true, force: true })
+  await mkdir(dest, { recursive: true })
+  await cp(staging, dest, { recursive: true })
+  await rm(staging, { recursive: true, force: true })
+
+  return { cid: hash, entry: 'index.html', bytes: await dirSize(dest), strippedVcs, files: got.files.length }
 }
 
 // -------------------------------------------------------------------- main
