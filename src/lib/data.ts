@@ -293,7 +293,13 @@ export async function loadProjectText(projectId: number): Promise<ProjectText> {
   try {
     const rows = await getJson<Record<string, DescriptionRow>>(`descriptions/${chunk}.json`)
     const row = rows[String(projectId)]
-    return { description: row?.d ?? null, iterationText: row?.c ?? null }
+    if (!row) return EMPTY_TEXT
+    const description = row.d ?? null
+    // Almost every project repeats its description as the per-iteration text, so
+    // the file stores only the exception: an absent `c` means "same as the
+    // description", an empty one means "there is none". See the snapshot script.
+    const iterationText = row.c === undefined ? description : row.c || null
+    return { description, iterationText }
   } catch {
     return EMPTY_TEXT
   }

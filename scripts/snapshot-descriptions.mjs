@@ -111,7 +111,17 @@ for (const r of rows) {
   if (!chunks.has(key)) chunks.set(key, {})
   // Short keys: this file is mostly text, and "description" repeated 27,430 times
   // is 300 KB of field names.
-  chunks.get(key)[r.id] = r.c ? { d: r.d, c: r.c } : { d: r.d }
+  //
+  // 25,768 of 27,403 projects set the per-iteration text to exactly their
+  // description — 9.7 MiB of the same strings stored twice. So `c` records only
+  // what differs, and the reader falls back:
+  //   c absent  -> the iteration text is the description
+  //   c === ''  -> there genuinely is none
+  //   otherwise -> its own text
+  const row = { d: r.d }
+  if (r.c === null) row.c = ''
+  else if (r.c !== r.d) row.c = r.c
+  chunks.get(key)[r.id] = row
 }
 
 await mkdir(OUT, { recursive: true })

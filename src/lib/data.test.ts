@@ -352,10 +352,11 @@ test('loadProjectText names its own file from the project id', async () => {
     description: 'About the work',
     iterationText: 'About this piece',
   })
-  // A project with no per-iteration text is normal, not an error.
+  // No stored 'c' means the artist reused the description as the per-iteration
+  // text, which is what 25,768 of them did. See the fallback test below.
   await expect(loadProjectText(1003)).resolves.toEqual({
     description: 'Only a description',
-    iterationText: null,
+    iterationText: 'Only a description',
   })
 })
 
@@ -367,4 +368,33 @@ test('a project with nothing written about it resolves empty, never rejects', as
   vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('offline') }))
   _resetCache()
   await expect(loadProjectText(7)).resolves.toEqual({ description: null, iterationText: null })
+})
+
+test('iteration text falls back to the description when the file omits it', async () => {
+  // 25,768 of 27,403 projects use their description verbatim as the per-iteration
+  // text. Storing both copies cost 9.7 MiB, so the file records only the exception.
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        '1000': { d: 'Shared text' },
+        '1001': { d: 'About the project', c: 'About this piece' },
+        '1002': { d: 'About the project', c: '' },
+      }),
+    }) as Response),
+  )
+
+  // Absent: the artist used the same words for both.
+  await expect(loadProjectText(1000)).resolves.toEqual({ description: 'Shared text', iterationText: 'Shared text' })
+  // Present and different: their own words for the individual piece.
+  await expect(loadProjectText(1001)).resolves.toEqual({
+    description: 'About the project',
+    iterationText: 'About this piece',
+  })
+  // Empty: there genuinely is none, which is not the same as "same as above".
+  await expect(loadProjectText(1002)).resolves.toEqual({
+    description: 'About the project',
+    iterationText: null,
+  })
 })

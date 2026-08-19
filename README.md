@@ -55,10 +55,12 @@ run to 80–150 GB, so the selection is ranked by how much collectors engaged wi
 each project: those 420 are about 1.5% of the catalog and account for **71.6%**
 of everything ever spent on the platform.
 
-One preview image per archived project is stored too (50 MB), so the grid still
-has something to show with IPFS unreachable. Everything else streams as before:
-for an archived project the generator and seed reproduce any image at any
-resolution, which is better than a stored JPEG.
+One 300x300 preview per archived project is stored too — WebP, 10 MB for all 420
+— so the grid still has something to show with IPFS unreachable. They are a
+convenience rather than a preservation artifact: for an archived project the
+generator and its seed reproduce the image at any resolution, exactly, which beats
+any stored file. They arrived as PNG and cost 52 MB until being recompressed,
+which is a lot of a 1 GB budget to spend on something reproducible.
 
 Artwork runs in a sandboxed iframe with no same-origin access, which is what
 keeps ~400 unaudited third-party programs away from this site. A side effect is
@@ -71,8 +73,9 @@ directly. See `scripts/cors-shim.mjs`.
 
 **What the artists said about it.** The description of every project — 27,422 of
 the 27,430 have one — plus the text fxhash showed on each individual iteration.
-382 bytes on average, 21.6 MB in total, and for most of this art the only prose
-anyone ever wrote about it. It survives in two places: fxhash's API, which is
+382 bytes on average and, for most of this art, the only prose anyone ever wrote
+about it. 11.6 MB: 25,768 projects reused their description verbatim as the
+per-iteration text, so only the 1,635 that differ are stored twice. It survives in two places: fxhash's API, which is
 still answering despite the site being switched off for non-payment, and the
 metadata JSON on IPFS, behind exactly the pins this archive exists to outlive.
 
