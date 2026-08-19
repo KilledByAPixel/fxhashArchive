@@ -1,0 +1,125 @@
+<!doctype html>
+<!--
+  Source for public/sandbox-check-frame.html.
+
+  scripts/build-runners.mjs runs this through buildRunner(), the same function that
+  generates every `_run.html`, so what gets tested is the real shim in the real
+  wrapper rather than a copy that can drift. Nothing here is loaded directly: the
+  harness at public/sandbox-check.html frames it with the viewer's exact sandbox
+  attribute, which is the only way to reproduce an opaque origin.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>sandbox check (framed)</title>
+</head>
+<body>
+<script>
+;(function () {
+  var results = []
+  var pending = 0
+  var done = false
+
+  function report(name, ok, detail) {
+    results.push({ name: name, ok: ok, detail: String(detail == null ? '' : detail) })
+  }
+
+  function finish() {
+    if (done) return
+    done = true
+    parent.postMessage({ sandboxCheck: true, origin: String(window.origin), results: results }, '*')
+  }
+
+  function settle() {
+    if (--pending <= 0) finish()
+  }
+
+  function sync(name, fn) {
+    try {
+      var detail = fn()
+      report(name, true, detail)
+    } catch (e) {
+      report(name, false, e && e.message)
+    }
+  }
+
+  sync('localStorage', function () {
+    localStorage.setItem('probe', 42)
+    if (localStorage.getItem('probe') !== '42') throw new Error('value did not round-trip')
+    if (localStorage.length !== 1) throw new Error('length is ' + localStorage.length)
+    localStorage.clear()
+    return 'set, read back, cleared'
+  })
+
+  sync('sessionStorage', function () {
+    sessionStorage.setItem('probe', 'x')
+    if (sessionStorage.getItem('probe') !== 'x') throw new Error('value did not round-trip')
+    return 'set and read back'
+  })
+
+  sync('document.cookie', function () {
+    document.cookie = 'probe=1; path=/'
+    if (document.cookie.indexOf('probe=1') < 0) throw new Error('not in the jar afterwards')
+    return document.cookie
+  })
+
+  sync('indexedDB (readable, not polyfilled)', function () {
+    return typeof indexedDB === 'undefined' ? 'undefined, as intended' : 'present: ' + indexedDB
+  })
+
+  // The original bug: a same-server image is cross-origin to an opaque origin, so
+  // drawing it taints the canvas and reading a pixel back throws.
+  pending++
+  ;(function () {
+    var img = new Image()
+    var canvas = document.createElement('canvas')
+    canvas.width = canvas.height = 8
+    img.onload = function () {
+      try {
+        var ctx = canvas.getContext('2d')
+        ctx.drawImage(img, 0, 0)
+        ctx.getImageData(0, 0, 1, 1)
+        report('canvas stays untainted', true, 'crossOrigin=' + img.crossOrigin)
+      } catch (e) {
+        report('canvas stays untainted', false, e && e.message)
+      }
+      settle()
+    }
+    img.onerror = function () {
+      report('canvas stays untainted', false, 'the probe image failed to load')
+      settle()
+    }
+    img.src = 'sandbox-check.png'
+  })()
+
+  pending++
+  ;(function () {
+    var timer = setTimeout(function () {
+      report('Worker', false, 'no reply within 5s')
+      settle()
+    }, 5000)
+    try {
+      var worker = new Worker('sandbox-check-worker.js')
+      worker.onmessage = function (e) {
+        clearTimeout(timer)
+        report('Worker', e.data && e.data.ok === true, e.data && e.data.detail)
+        worker.terminate()
+        settle()
+      }
+      worker.onerror = function (e) {
+        clearTimeout(timer)
+        report('Worker', false, (e && e.message) || 'worker error')
+        settle()
+      }
+    } catch (e) {
+      clearTimeout(timer)
+      report('Worker', false, e && e.message)
+      settle()
+    }
+  })()
+
+  if (pending === 0) finish()
+})()
+</script>
+</body>
+</html>

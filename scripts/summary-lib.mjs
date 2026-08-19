@@ -140,11 +140,10 @@ export function buildSummary({
     ranked,
     archived,
     /**
-     * Archived projects that must be run through their generated `_run.html`
-     * rather than the artist's own entry point, because they put their own images
-     * on a canvas and the viewer's sandbox would otherwise taint it. See
-     * scripts/cors-shim.mjs. A small list, so it rides along here instead of
-     * costing the client a second fetch.
+     * Archived projects that have a generated `_run.html` to be run through rather
+     * than the artist's own entry point, because the viewer's sandbox takes away
+     * APIs they need. See scripts/sandbox-shim.mjs. A short list of ids, so it
+     * rides along here instead of costing the client a second fetch.
      */
     runners: [...runnerIds].sort((a, b) => a - b),
     featured: buildFeatured(visibleTokens, ranked, archivedTokens, FEATURED_TOP, FEATURED_SAMPLE, collaborations),

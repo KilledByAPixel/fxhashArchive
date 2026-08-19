@@ -63,13 +63,24 @@ any stored file. They arrived as PNG and cost 52 MB until being recompressed,
 which is a lot of a 1 GB budget to spend on something reproducible.
 
 Artwork runs in a sandboxed iframe with no same-origin access, which is what
-keeps ~400 unaudited third-party programs away from this site. A side effect is
-that a piece cannot read its *own* images: the sandbox gives it an opaque origin,
-so its files count as cross-origin and taint any canvas they touch. 56 projects
-do exactly that. Each of those gets a generated `_run.html` — the artist's
-document with one script in front of it that makes those images request CORS.
-The artist's `index.html` is never modified, and the other 364 projects run it
-directly. See `scripts/cors-shim.mjs`.
+keeps ~420 unaudited third-party programs away from this site. The side effect is
+that the sandbox gives a piece an *opaque* origin — one that matches nothing, not
+even the server its own files came from — and four things stop working because of
+it. A piece cannot read its own images, so drawing one taints the canvas.
+`localStorage`, `sessionStorage`, `indexedDB` and `document.cookie` throw on being
+*read*, which kills p5.js during startup. And `new Worker()` is refused, because a
+worker's script has to be same-origin and nothing is same-origin with an opaque
+one. Between them these broke 272 of the 420.
+
+So every archived project gets a generated `_run.html`: the artist's document with
+one script in front of it that asks for CORS on the piece's own images, hands it
+in-memory storage and a cookie jar that last as long as the frame, and re-serves a
+worker's script through a `blob:` URL. The artist's `index.html` is never modified
+and sits beside it, exactly as they shipped it. This costs 15 MB of duplicated
+entry HTML — building only for projects that appear to need it would have saved
+about 1 MB of that and left a standing risk of a piece quietly broken because a
+scan missed it. See `scripts/sandbox-shim.mjs`, and open `/sandbox-check.html` to
+see which of these still work in a given browser.
 
 **What the artists said about it.** The description of every project — 27,422 of
 the 27,430 have one — plus the text fxhash showed on each individual iteration.

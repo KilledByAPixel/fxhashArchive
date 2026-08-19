@@ -1,20 +1,10 @@
 import { test, expect, beforeEach, afterEach, vi } from 'vitest'
-import { buildRunner, needsRunner, RUNNER_ENTRY } from './runner-lib.mjs'
-import { CORS_SHIM } from './cors-shim.mjs'
+import { buildRunner, RUNNER_ENTRY } from './runner-lib.mjs'
+import { SANDBOX_SHIM } from './sandbox-shim.mjs'
 
-// --- choosing which projects get a runner ------------------------------------
-
-test('a project that ships images needs a runner', () => {
-  expect(needsRunner(['index.html', 'sketch.js', 'landscape/image0.jpg'])).toBe(true)
-  expect(needsRunner(['index.html', 'tex.png'])).toBe(true)
-  expect(needsRunner(['index.html', 'clip.mp4'])).toBe(true)
-})
-
-test('a project that ships only code does not', () => {
-  // Nothing to taint, so the artist's own file is what runs — which is the
-  // preferred outcome wherever we can get away with it.
-  expect(needsRunner(['index.html', 'p5.min.js', 'style.css', 'LICENSE'])).toBe(false)
-})
+// What the shim itself does is covered in sandbox-shim.test.mjs, against a window
+// that throws the way a sandboxed one does. This file is about the wrapper: where
+// the script lands in the artist's document, and that the document survives it.
 
 // --- building the derived entry point ----------------------------------------
 
@@ -22,10 +12,10 @@ const DOC = '<!doctype html><html><head><meta charset="utf-8"><title>x</title></
 
 test('the shim is placed ahead of the generator own script', () => {
   const out = buildRunner(DOC)
-  // It works by patching prototypes, so anything that loads an image before it
-  // runs is not covered. Ordering is the whole contract.
-  expect(out.indexOf(CORS_SHIM)).toBeLessThan(out.indexOf('go()'))
-  expect(out.indexOf(CORS_SHIM)).toBeGreaterThan(out.indexOf('<head>'))
+  // It works by patching prototypes and globals, so anything that runs before it
+  // is not covered. Ordering is the whole contract.
+  expect(out.indexOf(SANDBOX_SHIM)).toBeLessThan(out.indexOf('go()'))
+  expect(out.indexOf(SANDBOX_SHIM)).toBeGreaterThan(out.indexOf('<head>'))
 })
 
 test('the original document survives intact', () => {
@@ -46,23 +36,29 @@ test('it says in the file that it is not the artwork', () => {
 
 test('a document with no <head> still gets the shim before its script', () => {
   const out = buildRunner('<html><body><script>go()</script></body></html>')
-  expect(out.indexOf(CORS_SHIM)).toBeLessThan(out.indexOf('go()'))
+  expect(out.indexOf(SANDBOX_SHIM)).toBeLessThan(out.indexOf('go()'))
 })
 
 test('a bare fragment with no <html> still gets the shim first', () => {
   const out = buildRunner('<script>go()</script>')
-  expect(out.indexOf(CORS_SHIM)).toBeLessThan(out.indexOf('go()'))
+  expect(out.indexOf(SANDBOX_SHIM)).toBeLessThan(out.indexOf('go()'))
 })
 
 test('an unusual <head> attribute does not defeat the match', () => {
   const out = buildRunner('<html><head lang="en" data-x><script>go()</script></head></html>')
-  expect(out.indexOf(CORS_SHIM)).toBeLessThan(out.indexOf('go()'))
+  expect(out.indexOf(SANDBOX_SHIM)).toBeLessThan(out.indexOf('go()'))
+})
+
+test('the inserted script has no closing tag that would end it early', () => {
+  // A literal "</script>" anywhere in the shim source would terminate the block
+  // the HTML parser is reading and dump the rest of it into the page as markup.
+  expect(SANDBOX_SHIM.toLowerCase()).not.toContain('</script')
 })
 
 // --- what the shim does once it runs -----------------------------------------
 // Executed for real against jsdom's DOM rather than asserted about as a string.
 
-const runShim = () => new Function(CORS_SHIM)()
+const runShim = () => new Function(SANDBOX_SHIM)()
 
 let saved
 beforeEach(() => {
@@ -71,6 +67,12 @@ beforeEach(() => {
 afterEach(() => {
   // Restore the prototype so one test's patch cannot leak into the next.
   for (const [p, d] of saved) if (d) Object.defineProperty(HTMLImageElement.prototype, p, d)
+  // jsdom's origin decides whether the storage half of the shim installs itself
+  // at all, so clear anything it may have shadowed onto this process's globals.
+  for (const name of ['localStorage', 'sessionStorage', 'indexedDB']) {
+    delete globalThis.window[name]
+  }
+  delete globalThis.document.cookie
   vi.restoreAllMocks()
 })
 

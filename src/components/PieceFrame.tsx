@@ -14,11 +14,13 @@ import { ipfsToHttp } from '../lib/ipfs'
 const ENTRY = 'index.html'
 
 /**
- * The derived entry point, generated for the 54 projects that put their own
- * images on a canvas. Identical to the artist's document apart from a script that
- * makes those images request CORS, without which the sandbox's opaque origin
- * taints the canvas and the piece throws instead of rendering. Built by
- * scripts/build-runners.mjs; the artist's file is never modified.
+ * The derived entry point, generated for every archived project. Identical to the
+ * artist's document apart from one script in front of it, which puts back the
+ * handful of browser APIs the sandbox's opaque origin takes away — CORS on the
+ * piece's own images, storage, cookies and workers — without which 272 of the 420
+ * throw instead of rendering. Built by scripts/build-runners.mjs; the artist's
+ * file is never modified, and index.html beside it is still exactly what they
+ * shipped.
  */
 const RUNNER_ENTRY = '_run.html'
 

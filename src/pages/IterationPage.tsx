@@ -70,7 +70,7 @@ export default function IterationPage() {
   const [archived, setArchived] = useState<LocalIteration | null>(null)
   // See archivedSrc: a few projects must run through a generated entry point,
   // because their own images would otherwise taint the canvas inside the sandbox.
-  const [needsRunner, setNeedsRunner] = useState(false)
+  const [hasRunner, setHasRunner] = useState(false)
 
   /**
    * Decorative only: the project's slug and this piece's iteration number, both
@@ -114,17 +114,17 @@ export default function IterationPage() {
   const localTitle = projectName && hasIterNo ? `${projectName} #${iterNo}` : null
 
   useEffect(() => {
-    if (!hasProject) { setArchived(null); setNeedsRunner(false); return }
+    if (!hasProject) { setArchived(null); setHasRunner(false); return }
     let cancelled = false
     setArchived(null)
-    setNeedsRunner(false)
+    setHasRunner(false)
     // Both halves have to hold: the project's code must be archived here, and this
     // token must have a seed. Either missing means there is nothing local to run.
     Promise.all([loadSummary(), loadProjectIteration(projectId, Number(tokenId))]).then(
       ([summary, local]) => {
         if (cancelled) return
         setArchived(summary.archived.includes(projectId) && local.seed ? local : null)
-        setNeedsRunner(summary.runners?.includes(projectId) ?? false)
+        setHasRunner(summary.runners?.includes(projectId) ?? false)
       },
       () => { if (!cancelled) setArchived(null) },
     )
@@ -188,7 +188,7 @@ export default function IterationPage() {
         </p>
         <div className="iteration-view">
           <PieceFrame
-            src={archivedSrc(projectId, archived.seed, archived.query, needsRunner)}
+            src={archivedSrc(projectId, archived.seed, archived.query, hasRunner)}
             label={localTitle ?? `#${tokenId}`}
             source="archived"
           />
@@ -231,7 +231,7 @@ export default function IterationPage() {
       <h2>{it.name ?? localTitle ?? `#${it.tokenId}`}</h2>
       <div className="iteration-view">
         {frame.view === 'archived' && archived?.seed
-          ? <PieceFrame src={archivedSrc(projectId, archived.seed, archived.query, needsRunner)} label={title} source="archived" />
+          ? <PieceFrame src={archivedSrc(projectId, archived.seed, archived.query, hasRunner)} label={title} source="archived" />
           : running && liveSrc
           ? (frame.view === 'fetching'
             ? <p>Preparing live view…</p>

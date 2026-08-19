@@ -68,14 +68,16 @@ export interface Summary {
   /** Project ids whose generator code is archived in this repo. */
   archived: number[]
   /**
-   * Archived projects that must be run through their generated `_run.html`
-   * instead of the artist's own entry point.
+   * Archived projects that have a generated `_run.html` to be run through instead
+   * of the artist's own entry point — in practice all of them, but read from the
+   * manifest rather than assumed, so a project whose entry could not be derived
+   * still falls back to the original.
    *
-   * Those pieces draw their own images onto a canvas, which the viewer's sandbox
-   * turns into a SecurityError: the iframe has an opaque origin, so the
-   * generator's own files are cross-origin to it and taint anything they touch.
-   * The runner is the artist's document with a small script in front of it that
-   * makes those images ask for CORS. See scripts/cors-shim.mjs.
+   * The viewer's sandbox gives a piece an opaque origin, and four things break
+   * because of it: its own images taint any canvas they touch, storage and cookies
+   * throw on being read, and `new Worker()` is refused. The runner is the artist's
+   * document with a small script in front of it that puts those back. See
+   * scripts/sandbox-shim.mjs.
    */
   runners: number[]
   /**

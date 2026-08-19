@@ -60,7 +60,7 @@ export default function TokenPage() {
   const [isArchived, setIsArchived] = useState(false)
   // Whether this project runs through its generated runner rather than the
   // artist's own entry point; see archivedSrc.
-  const [needsRunner, setNeedsRunner] = useState(false)
+  const [hasRunner, setHasRunner] = useState(false)
   // Set only when the author is a collaboration contract; see loadProjectArtists.
   const [collaborators, setCollaborators] = useState<Collaborator[] | null>(null)
   // The artist's own words about the work. Present for every project, and held
@@ -81,7 +81,7 @@ export default function TokenPage() {
     setDone(false)
     setMarket(null)
     setIsArchived(false)
-    setNeedsRunner(false)
+    setHasRunner(false)
     setCollaborators(null)
     setText(null)
     findTokenBySlug(slug!).then(
@@ -175,9 +175,9 @@ export default function TokenPage() {
       (s) => {
         if (cancelled) return
         setIsArchived(s.archived.includes(token.id))
-        setNeedsRunner(s.runners?.includes(token.id) ?? false)
+        setHasRunner(s.runners?.includes(token.id) ?? false)
       },
-      () => { if (!cancelled) { setIsArchived(false); setNeedsRunner(false) } },
+      () => { if (!cancelled) { setIsArchived(false); setHasRunner(false) } },
     )
     return () => { cancelled = true }
   }, [token])
@@ -285,7 +285,7 @@ export default function TokenPage() {
           projectName={project.name}
           iterationIds={objktIds}
           archived={isArchived}
-          needsRunner={needsRunner}
+          hasRunner={hasRunner}
         />
       )}
 

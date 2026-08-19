@@ -165,7 +165,7 @@ test('a project that taints its canvas runs through the generated runner', async
   // origin turns into a SecurityError. _run.html is the artist's document with a
   // script in front of it that makes those images request CORS.
   vi.spyOn(data, 'loadProjectIteration').mockResolvedValue(local())
-  render(player({ needsRunner: true }))
+  render(player({ hasRunner: true }))
 
   const frame = (await screen.findByTitle(/archived copy/i)) as HTMLIFrameElement
   expect(frame.getAttribute('src')).toContain('data/generators/42/_run.html?fxhash=ooSEED')
@@ -188,7 +188,7 @@ test('the runner keeps the exact invocation, fragment included', async () => {
   vi.spyOn(data, 'loadProjectIteration').mockResolvedValue(
     local({ query: '?fxhash=ooSEED&fxiteration=3&fxminter=tz1abc#0x4031' }),
   )
-  render(player({ needsRunner: true }))
+  render(player({ hasRunner: true }))
 
   const src = (await screen.findByTitle(/archived copy/i)).getAttribute('src') ?? ''
   expect(src).toContain('_run.html?fxhash=ooSEED&fxiteration=3')

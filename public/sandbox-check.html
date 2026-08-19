@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Sandbox check — fxhash viewer</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font: 15px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    max-width: 46rem; margin: 2rem auto; padding: 0 1rem;
+  }
+  h1 { font-size: 1.2rem; }
+  p { max-width: 42rem; }
+  .muted { opacity: .7; }
+  table { border-collapse: collapse; width: 100%; margin: 1.5rem 0; }
+  th, td { text-align: left; padding: .4rem .6rem; border-bottom: 1px solid rgba(128,128,128,.35); vertical-align: top; }
+  th { font-weight: 600; }
+  .pass { color: #0a7d28; }
+  .fail { color: #c02626; }
+  @media (prefers-color-scheme: dark) {
+    .pass { color: #4ade80; }
+    .fail { color: #f87171; }
+  }
+  iframe { display: none; }
+</style>
+</head>
+<body>
+<h1>Sandbox check</h1>
+
+<p>
+  Archived artwork runs in <code>&lt;iframe sandbox="allow-scripts"&gt;</code> with no
+  <code>allow-same-origin</code>, which gives it an <em>opaque</em> origin — one that
+  matches nothing, not even the server the files came from. Storage, cookies and
+  workers are all keyed to an origin, so in that frame they throw rather than work,
+  and a piece's own images taint any canvas they touch.
+</p>
+<p>
+  <a href="https://github.com/KilledByAPixel/fxhashViewer/blob/master/scripts/sandbox-shim.mjs">A shim</a>
+  restores them, and this page frames a document under the identical sandbox to check
+  that it still does. Everything below should say <strong>pass</strong> in a current
+  browser; a <strong>fail</strong> means some archived pieces are broken here, and
+  which line failed says which ones.
+</p>
+
+<p class="muted" id="status">Running…</p>
+<table id="results" hidden>
+  <thead><tr><th>Check</th><th>Result</th><th>Detail</th></tr></thead>
+  <tbody></tbody>
+</table>
+<p class="muted" id="origin"></p>
+
+<iframe src="./sandbox-check-frame.html" sandbox="allow-scripts" title="sandbox probe"></iframe>
+
+<script>
+  var timeout = setTimeout(function () {
+    document.getElementById('status').textContent =
+      'The framed document never reported back. It may have failed to load at all — check the console.'
+  }, 10000)
+
+  window.addEventListener('message', function (event) {
+    var data = event.data
+    if (!data || data.sandboxCheck !== true) return
+    clearTimeout(timeout)
+
+    var body = document.querySelector('#results tbody')
+    var failures = 0
+    data.results.forEach(function (r) {
+      if (!r.ok) failures++
+      var tr = document.createElement('tr')
+      var name = document.createElement('td')
+      name.textContent = r.name
+      var verdict = document.createElement('td')
+      verdict.textContent = r.ok ? 'pass' : 'fail'
+      verdict.className = r.ok ? 'pass' : 'fail'
+      var detail = document.createElement('td')
+      detail.textContent = r.detail
+      detail.className = 'muted'
+      tr.append(name, verdict, detail)
+      body.append(tr)
+    })
+
+    document.getElementById('results').hidden = false
+    document.getElementById('status').textContent =
+      failures === 0
+        ? data.results.length + ' checks, all passing.'
+        : failures + ' of ' + data.results.length + ' checks failing.'
+    // Worth showing: if this is not "null" the frame was never opaque, and the
+    // whole page proved nothing.
+    document.getElementById('origin').textContent = 'Frame origin reported as: ' + data.origin
+  })
+</script>
+</body>
+</html>
