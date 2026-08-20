@@ -13,7 +13,7 @@ import { liveWrapperSrc } from '../components/PieceFrame'
 const iteration: Iteration = {
   contract: 'KT1x', tokenId: '9', name: 'Piece #9', iterationHash: 'oo9',
   artifactUri: 'ipfs://QmGen/?fxhash=oo9', displayUri: 'ipfs://QmDisp', thumbnailUri: null,
-  attributes: [{ name: 'Palette', value: 'Warm' }], minter: 'Minter',
+  attributes: [{ name: 'Palette', value: 'Warm' }], minter: 'Minter', minterAddress: null,
 }
 
 beforeEach(() => {
@@ -65,7 +65,7 @@ test('resets iteration and live state when the route param changes on an already
   const iterB: Iteration = {
     contract: 'KT1y', tokenId: '3', name: 'Piece #3', iterationHash: 'oo3',
     artifactUri: 'ipfs://QmGenB/?fxhash=oo3', displayUri: 'ipfs://QmDispB', thumbnailUri: null,
-    attributes: [{ name: 'Palette', value: 'Cool' }], minter: 'Minter B',
+    attributes: [{ name: 'Palette', value: 'Cool' }], minter: 'Minter B', minterAddress: null,
   }
 
   vi.spyOn(tzkt, 'fetchIteration').mockImplementation((contract: string, tokenId: string) =>
@@ -97,7 +97,7 @@ test('an in-flight fetch for a superseded param cannot overwrite the newer itera
   const iterB: Iteration = {
     contract: 'KT1y', tokenId: '3', name: 'Piece #3', iterationHash: 'oo3',
     artifactUri: null, displayUri: 'ipfs://QmDispB', thumbnailUri: null,
-    attributes: [], minter: 'Minter B',
+    attributes: [], minter: 'Minter B', minterAddress: null,
   }
 
   let resolveA!: (v: Iteration | null) => void
@@ -272,4 +272,63 @@ test('without the project hint the page behaves exactly as before', async () => 
   // archived copy — the button is present, it simply has one source to choose from.
   expect(screen.getByRole('button', { name: /run artwork/i })).toBeTruthy()
   expect(screen.queryByText(/stream the original/i)).toBeNull()
+})
+
+// --- current ownership -------------------------------------------------------
+
+const OWNER = 'tz1givSC8YvFAc8tcKSL38JW5B54CpsfiVac'
+const MINTER = 'tz1gH5qBndFDibwQ1jyZ3QDGcm35qYD7ndru'
+
+test('shows who holds the piece now, beside who minted it', async () => {
+  // Usually two different people, which is the interesting part: minting is a fact
+  // about 2022 and ownership is a fact about today.
+  vi.spyOn(tzkt, 'fetchIteration').mockResolvedValue({
+    ...iteration, minter: 'Minter', minterAddress: MINTER,
+  })
+  vi.spyOn(tzkt, 'fetchOwner').mockResolvedValue({ address: OWNER, alias: 'Holder' })
+
+  renderPage()
+
+  expect(await screen.findByText('Owned by')).toBeTruthy()
+  const owner = await screen.findByRole('link', { name: 'Holder' })
+  expect(owner.getAttribute('href')).toBe(`https://tzkt.io/${OWNER}`)
+  expect(screen.getByRole('link', { name: 'Minter' }).getAttribute('href')).toBe(
+    `https://tzkt.io/${MINTER}`,
+  )
+})
+
+test('an unreachable indexer costs the row, and nothing else', async () => {
+  // The whole premise of the site is that it works without one. Ownership is the
+  // single live-only fact on the page, so it is the single thing that may vanish.
+  vi.spyOn(tzkt, 'fetchIteration').mockResolvedValue({ ...iteration, minterAddress: MINTER })
+  vi.spyOn(tzkt, 'fetchOwner').mockRejectedValue(new Error('TzKT: HTTP 503'))
+
+  renderPage()
+
+  expect(await screen.findByRole('heading', { name: 'Piece #9' })).toBeTruthy()
+  expect(screen.getByText('oo9')).toBeTruthy()
+  expect(screen.getByText(/Palette/)).toBeTruthy()
+  expect(screen.queryByText('Owned by')).toBeNull()
+  // No error, no retry prompt: a missing enrichment is not a broken page.
+  expect(screen.queryByText(/could not load/i)).toBeNull()
+})
+
+test('a token nobody holds says nothing rather than guessing', async () => {
+  vi.spyOn(tzkt, 'fetchIteration').mockResolvedValue({ ...iteration, minterAddress: MINTER })
+  vi.spyOn(tzkt, 'fetchOwner').mockResolvedValue(null)
+
+  renderPage()
+
+  expect(await screen.findByRole('heading', { name: 'Piece #9' })).toBeTruthy()
+  expect(screen.queryByText('Owned by')).toBeNull()
+})
+
+test('a minter with no address on file is still named, just not linked', async () => {
+  vi.spyOn(tzkt, 'fetchIteration').mockResolvedValue({ ...iteration, minter: 'Minter', minterAddress: null })
+  vi.spyOn(tzkt, 'fetchOwner').mockResolvedValue(null)
+
+  renderPage()
+
+  expect(await screen.findByText('Minter')).toBeTruthy()
+  expect(screen.queryByRole('link', { name: 'Minter' })).toBeNull()
 })

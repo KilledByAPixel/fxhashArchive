@@ -5,6 +5,7 @@ import {
   fetchIterationsByIds,
   MAX_IDS_PER_QUERY,
   GENTK_CONTRACTS,
+  fetchOwner,
 } from './tzkt'
 
 const row = (tokenId: string) => ({
@@ -215,4 +216,55 @@ test('fetchIterationsByIds guards against unbounded page sizes blowing up the UR
   // The documented maximum is still allowed.
   await fetchIterationsByIds(all, GENTK_CONTRACTS[1], 0, MAX_IDS_PER_QUERY)
   expect(urlsCalled()).toHaveLength(1)
+})
+
+// --- current ownership -------------------------------------------------------
+// The only fact on an iteration page that this repository cannot supply. Every
+// test here is therefore also a test that its absence costs nothing.
+
+test('fetchOwner asks for live holders of exactly one token', async () => {
+  const calls: string[] = []
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    calls.push(String(url))
+    return { ok: true, json: async () => [{ account: { address: 'tz1owner', alias: 'Holder' }, balance: '1' }] } as Response
+  }))
+
+  const owner = await fetchOwner(GENTK_CONTRACTS[1], '1592717')
+
+  expect(owner).toEqual({ address: 'tz1owner', alias: 'Holder' })
+  // balance.gt=0 is what makes this "who holds it now" rather than "who ever did":
+  // TzKT keeps a zero-balance row for every past holder.
+  expect(calls[0]).toContain('balance.gt=0')
+  expect(calls[0]).toContain(`token.contract=${GENTK_CONTRACTS[1]}`)
+  expect(calls[0]).toContain('token.tokenId=1592717')
+})
+
+test('an unheld token has no owner, which is not an error', async () => {
+  // Burned, or a supply that never settled. Reporting null lets the page leave the
+  // row out; throwing would make it look like the lookup failed.
+  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => [] }) as Response))
+  expect(await fetchOwner(GENTK_CONTRACTS[1], '1')).toBe(null)
+})
+
+test('an owner with no registered alias still reports its address', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => ({
+    ok: true,
+    json: async () => [{ account: { address: 'tz1anon' }, balance: '1' }],
+  }) as Response))
+  expect(await fetchOwner(GENTK_CONTRACTS[1], '1')).toEqual({ address: 'tz1anon', alias: null })
+})
+
+test('a failed lookup rejects rather than claiming nobody owns it', async () => {
+  // The caller drops the row either way, but "we could not ask" and "nobody holds
+  // it" are different facts and conflating them is how this archive tells lies.
+  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 503 }) as Response))
+  await expect(fetchOwner(GENTK_CONTRACTS[1], '1')).rejects.toThrow(/503/)
+})
+
+test('the minter address survives alongside the alias', async () => {
+  // It was already in every response and thrown away by `alias ?? address`, so
+  // linking the minter costs no extra request.
+  const it = await fetchIteration(GENTK_CONTRACTS[1], '7')
+  expect(it?.minter).toBe('Minter')
+  expect(it?.minterAddress).toBe('tz1minter')
 })

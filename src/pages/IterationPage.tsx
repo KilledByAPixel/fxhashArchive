@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
-import { fetchIteration, GENTK_V1_CONTRACT, type Iteration } from '../lib/tzkt'
+import { fetchIteration, fetchOwner, GENTK_V1_CONTRACT, type Iteration, type Owner } from '../lib/tzkt'
 import { ipfsToHttp } from '../lib/ipfs'
 import { artifactBaseHref, injectLegacyPatch, needsLegacyPatch } from '../lib/legacyPatch'
 import {
@@ -11,6 +11,7 @@ import {
   type LocalIteration,
 } from '../lib/data'
 import PieceFrame, { archivedSrc, liveArtifactSrc, liveWrapperSrc, FRAME_ALLOW } from '../components/PieceFrame'
+import TzktLink from '../components/TzktLink'
 import IpfsImage from '../components/IpfsImage'
 import LoadError from '../components/LoadError'
 import NotFoundPage from './NotFoundPage'
@@ -74,6 +75,12 @@ export default function IterationPage() {
   // See archivedSrc: a few projects must run through a generated entry point,
   // because their own images would otherwise taint the canvas inside the sandbox.
   const [hasRunner, setHasRunner] = useState(false)
+  /**
+   * Who holds this piece right now — the one fact on this page that is not in this
+   * repository, and therefore the one that may be missing. Null covers both "nobody
+   * holds it" and "we could not ask"; the row is left out either way.
+   */
+  const [owner, setOwner] = useState<Owner | null>(null)
 
   /**
    * Decorative only: the project's slug and this piece's iteration number, both
@@ -145,6 +152,21 @@ export default function IterationPage() {
       (result) => { if (!cancelled) setState(result ? { status: 'ok', iteration: result } : { status: 'notfound' }) },
       // A rejected fetch says nothing about whether the iteration exists.
       () => { if (!cancelled) setState({ status: 'error' }) },
+    )
+    return () => { cancelled = true }
+  }, [contract, tokenId, attempt])
+
+  // Fetched apart from the iteration itself, deliberately. This is an enrichment,
+  // and letting it share the request that gates the artwork would mean a slow
+  // indexer delaying a piece that is sitting in this repository, or a failing one
+  // taking down a page that has everything it needs without it.
+  useEffect(() => {
+    let cancelled = false
+    setOwner(null)
+    fetchOwner(contract!, tokenId!).then(
+      (result) => { if (!cancelled) setOwner(result) },
+      // Silent on purpose: the row simply does not appear.
+      () => {},
     )
     return () => { cancelled = true }
   }, [contract, tokenId, attempt])
@@ -280,7 +302,18 @@ export default function IterationPage() {
       {iterationText && <p className="project-description">{iterationText}</p>}
       <dl className="iteration-meta">
         <dt>Hash</dt><dd><code>{it.iterationHash ?? 'unknown'}</code></dd>
-        <dt>Minted by</dt><dd>{it.minter ?? 'unknown'}</dd>
+        <dt>Minted by</dt>
+        <dd>
+          {it.minterAddress
+            ? <TzktLink address={it.minterAddress} alias={it.minter} />
+            : it.minter ?? 'unknown'}
+        </dd>
+        {owner && (
+          <>
+            <dt>Owned by</dt>
+            <dd><TzktLink address={owner.address} alias={owner.alias} /></dd>
+          </>
+        )}
         {it.attributes.map((a) => (
           <Fragment key={a.name}>
             <dt>{a.name}</dt><dd>{String(a.value)}</dd>

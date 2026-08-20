@@ -68,6 +68,11 @@ img { max-width: 100%; }
    characters with no spaces in it, so the value column has to be able to break. */
 .iteration-meta dd { color: #eee; overflow-wrap: anywhere; }
 .iteration-meta code { font-size: 0.9em; }
+/* The only links on the site that leave it. Marked with a rule that firms up on
+   hover rather than a permanent underline, so a table of facts does not become a
+   row of blue. */
+.tzkt-link { border-bottom: 1px solid rgba(158, 203, 255, 0.3); }
+.tzkt-link:hover { border-bottom-color: #9ecbff; }
 
 .artist-list { display: flex; flex-direction: column; gap: 0.5rem; }
 .artist-row { display: flex; gap: 1rem; align-items: center; padding: 0.5rem; border-radius: 8px; background: #1a1a1a; }

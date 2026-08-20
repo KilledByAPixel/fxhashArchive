@@ -16,7 +16,7 @@ const token: LeanToken = {
 
 const iter = (over: Partial<Iteration> = {}): Iteration => ({
   contract: 'KT1x', tokenId: '9', name: 'Tok 5 #1', iterationHash: 'oo9',
-  artifactUri: null, displayUri: null, thumbnailUri: 'ipfs://t', attributes: [], minter: 'M', ...over,
+  artifactUri: null, displayUri: null, thumbnailUri: 'ipfs://t', attributes: [], minter: 'M', minterAddress: null, ...over,
 })
 
 /** The middle gentk contract — the one that used to be unreachable entirely. */

@@ -32,6 +32,20 @@ export interface Iteration {
   thumbnailUri: string | null
   attributes: { name: string; value: unknown }[]
   minter: string | null
+  /**
+   * The minter's address, kept beside the display name rather than collapsed into
+   * it. `alias ?? address` threw this away, which meant the one field that could
+   * be linked to an explorer was the one field we discarded — and it arrives in
+   * every response already, so keeping it costs nothing.
+   */
+  minterAddress: string | null
+}
+
+/** Whoever holds a token right now. */
+export interface Owner {
+  address: string
+  /** A name TzKT has on file. Display only — never build a URL out of it. */
+  alias: string | null
 }
 
 interface TzktRow {
@@ -52,7 +66,36 @@ function toIteration(contract: string, row: TzktRow): Iteration {
     thumbnailUri: md.thumbnailUri ?? null,
     attributes: Array.isArray(md.attributes) ? md.attributes : [],
     minter: row.firstMinter?.alias ?? row.firstMinter?.address ?? null,
+    minterAddress: row.firstMinter?.address ?? null,
   }
+}
+
+/**
+ * Who holds this token now.
+ *
+ * The only fact on an iteration page that this repository cannot supply. Everything
+ * else — the artwork, its seed, its traits, its artist — is a file in this repo and
+ * survives the chain going quiet; ownership is true only at the moment it is asked,
+ * so it is fetched on its own and the page is built to be complete without it.
+ *
+ * `balance.gt=0` is what makes this *current* ownership: TzKT keeps a zero-balance
+ * row for every account that ever held the token, so without it the newest row is
+ * not necessarily the holder.
+ *
+ * Returns null when nobody holds it — burned, or a supply that never settled — and
+ * rejects when the question could not be asked. Those are different facts and the
+ * caller is entitled to tell them apart, even though it drops the row either way.
+ */
+export async function fetchOwner(contract: string, tokenId: string): Promise<Owner | null> {
+  const url =
+    `${TZKT}/tokens/balances?token.contract=${encodeURIComponent(contract)}` +
+    `&token.tokenId=${encodeURIComponent(tokenId)}&balance.gt=0&limit=1&select=account`
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`TzKT: HTTP ${res.status}`)
+  const rows = (await res.json()) as { account?: { address?: string; alias?: string } }[]
+  const account = rows?.[0]?.account
+  if (!account?.address) return null
+  return { address: account.address, alias: account.alias ?? null }
 }
 
 async function getRows(url: string): Promise<TzktRow[]> {

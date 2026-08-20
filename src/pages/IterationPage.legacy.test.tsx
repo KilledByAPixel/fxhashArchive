@@ -36,11 +36,13 @@ let b58dec = (str) => str.split('').reduce((p,c,i) => p + alphabet.indexOf(c) * 
 const base = (contract: string): Iteration => ({
   contract, tokenId: '9', name: 'Piece #9', iterationHash: 'oo9',
   artifactUri: 'ipfs://QmGen', displayUri: 'ipfs://QmDisp', thumbnailUri: null,
-  attributes: [], minter: 'Minter',
+  attributes: [], minter: 'Minter', minterAddress: 'tz1minter',
 })
 
+// Takes the url even though it ignores it: the tests assert *which* URLs were
+// requested, and an argument-less mock gives them no typed call record to read.
 const mockFetchText = (body: string, ok = true) =>
-  vi.fn(() => Promise.resolve({ ok, text: () => Promise.resolve(body) } as Response))
+  vi.fn((_url: string) => Promise.resolve({ ok, text: () => Promise.resolve(body) } as Response))
 
 beforeEach(() => {
   vi.spyOn(tzkt, 'fetchIteration').mockResolvedValue(base(V1))
@@ -102,7 +104,10 @@ test('a v2 iteration never fetches and keeps using src — srcdoc would strip it
   expect(frame.getAttribute('src')).toBe(liveWrapperSrc(`${GATEWAYS[0]}QmGen/?fxhash=oo9`))
   expect(frame.getAttribute('src')).toContain('fxhash=oo9')
   expect(frame.getAttribute('srcdoc')).toBeNull()
-  expect(fetchMock).not.toHaveBeenCalled()
+  // The *artifact* is never downloaded — that is the srcdoc path, and taking it
+  // for a v2 piece would strip the seed out of the URL. Other requests through
+  // the same stubbed fetch (the ownership lookup) are not what this asserts.
+  expect(fetchMock.mock.calls.filter((c) => String(c[0]).includes('QmGen'))).toEqual([])
 })
 
 test('a middle-contract iteration keeps using src — its seed lives in the URL', async () => {
@@ -123,7 +128,10 @@ test('a middle-contract iteration keeps using src — its seed lives in the URL'
   expect(frame.getAttribute('src')).toBe(liveWrapperSrc(`${GATEWAYS[0]}QmGen/?fxhash=oo9`))
   expect(frame.getAttribute('src')).toContain('fxhash=oo9')
   expect(frame.getAttribute('srcdoc')).toBeNull()
-  expect(fetchMock).not.toHaveBeenCalled()
+  // The *artifact* is never downloaded — that is the srcdoc path, and taking it
+  // for a v2 piece would strip the seed out of the URL. Other requests through
+  // the same stubbed fetch (the ownership lookup) are not what this asserts.
+  expect(fetchMock.mock.calls.filter((c) => String(c[0]).includes('QmGen'))).toEqual([])
 })
 
 test('the legacy patch is gated on the v1 contract address itself, not a list position', async () => {
@@ -138,7 +146,10 @@ test('the legacy patch is gated on the v1 contract address itself, not a list po
 
   expect(document.querySelector('iframe')!.getAttribute('src')).toBe(liveWrapperSrc(LIVE))
   expect(document.querySelector('iframe')!.getAttribute('srcdoc')).toBeNull()
-  expect(fetchMock).not.toHaveBeenCalled()
+  // The *artifact* is never downloaded — that is the srcdoc path, and taking it
+  // for a v2 piece would strip the seed out of the URL. Other requests through
+  // the same stubbed fetch (the ownership lookup) are not what this asserts.
+  expect(fetchMock.mock.calls.filter((c) => String(c[0]).includes('QmGen'))).toEqual([])
   expect(V1).toBe('KT1KEa8z6vWXDJrVqtMrAeDVzsvxat3kHaCE')
 })
 
