@@ -30,9 +30,40 @@ img { max-width: 100%; }
 .live-frame { width: 100%; height: 70vh; border: 1px solid #333; border-radius: 8px; background: #000; }
 .legacy-note { text-align: center; font-size: 0.8rem; margin: 0.5rem 0 0; }
 .link-button { background: none; border: 0; padding: 0; color: #aaa; font: inherit; text-decoration: underline; cursor: pointer; }
-.iteration-meta { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 1rem; }
-.iteration-meta dt { color: #888; }
-.iteration-meta dd { margin: 0; }
+/* The piece's own facts — seed, token, minter, and whatever traits the generator
+ * assigned. Drawn as a ruled table rather than loose rows: it sits directly under
+ * the artist's description, and as plain text the two ran together into one block
+ * of prose when the data is the part a visitor came to read.
+ *
+ * The 1px gap is the rule. Letting the container's colour show through the grid
+ * gaps gives hairlines that stay exactly 1px whatever the row heights are, which
+ * per-cell borders would double up on every shared edge. */
+.iteration-meta {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 1px;
+  background: #333;
+  border: 1px solid #333;
+  border-radius: 8px;
+  /* Clips the corner cells to the radius; without it their square backgrounds
+     paint over the rounded border. */
+  overflow: hidden;
+  max-width: 48rem;
+  margin: 1.25rem 0 0;
+}
+.iteration-meta dt,
+.iteration-meta dd {
+  margin: 0;
+  padding: 0.5rem 0.85rem;
+  background: #1a1a1a;
+}
+/* The label column reads as the quieter half: darker, dimmer, and it never wraps
+   mid-word, so the value column keeps a straight left edge. */
+.iteration-meta dt { color: #999; background: #161616; white-space: nowrap; }
+/* Trait values are arbitrary artist-supplied strings and a seed is 50-odd
+   characters with no spaces in it, so the value column has to be able to break. */
+.iteration-meta dd { color: #eee; overflow-wrap: anywhere; }
+.iteration-meta code { font-size: 0.9em; }
 
 .artist-list { display: flex; flex-direction: column; gap: 0.5rem; }
 .artist-row { display: flex; gap: 1rem; align-items: center; padding: 0.5rem; border-radius: 8px; background: #1a1a1a; }
