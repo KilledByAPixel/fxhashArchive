@@ -82,6 +82,13 @@ function toIteration(contract: string, row: TzktRow): Iteration {
  * row for every account that ever held the token, so without it the newest row is
  * not necessarily the holder.
  *
+ * A single `select` field comes back **unwrapped** — `select=account` returns
+ * `[{address, alias}]`, where `select=account,balance` would return
+ * `[{account: {…}, balance}]`. Reading the nested shape from the single-field query
+ * is why this silently returned null for every token on first release: it parsed,
+ * it just found nothing, so the row quietly never appeared. The test below pins the
+ * URL and the real response together for that reason.
+ *
  * Returns null when nobody holds it — burned, or a supply that never settled — and
  * rejects when the question could not be asked. Those are different facts and the
  * caller is entitled to tell them apart, even though it drops the row either way.
@@ -92,8 +99,8 @@ export async function fetchOwner(contract: string, tokenId: string): Promise<Own
     `&token.tokenId=${encodeURIComponent(tokenId)}&balance.gt=0&limit=1&select=account`
   const res = await fetch(url)
   if (!res.ok) throw new Error(`TzKT: HTTP ${res.status}`)
-  const rows = (await res.json()) as { account?: { address?: string; alias?: string } }[]
-  const account = rows?.[0]?.account
+  const rows = (await res.json()) as { address?: string; alias?: string }[]
+  const account = rows?.[0]
   if (!account?.address) return null
   return { address: account.address, alias: account.alias ?? null }
 }

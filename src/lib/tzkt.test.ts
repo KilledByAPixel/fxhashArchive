@@ -226,7 +226,12 @@ test('fetchOwner asks for live holders of exactly one token', async () => {
   const calls: string[] = []
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
     calls.push(String(url))
-    return { ok: true, json: async () => [{ account: { address: 'tz1owner', alias: 'Holder' }, balance: '1' }] } as Response
+    // Verbatim from the live API for this exact URL. A single `select` field comes
+    // back unwrapped: select=account gives [{address, alias}], where
+    // select=account,balance would give [{account: {…}, balance}]. Mocking the
+    // nested shape while the code asked for the flat one is how ownership shipped
+    // silently returning null for every token.
+    return { ok: true, json: async () => [{ address: 'tz1owner', alias: 'Holder' }] } as Response
   }))
 
   const owner = await fetchOwner(GENTK_CONTRACTS[1], '1592717')
@@ -237,6 +242,10 @@ test('fetchOwner asks for live holders of exactly one token', async () => {
   expect(calls[0]).toContain('balance.gt=0')
   expect(calls[0]).toContain(`token.contract=${GENTK_CONTRACTS[1]}`)
   expect(calls[0]).toContain('token.tokenId=1592717')
+  // Pinned, because the response shape depends on it. Ask for two fields and every
+  // assertion above still passes while the parser reads undefined.
+  expect(calls[0]).toContain('select=account')
+  expect(calls[0]).not.toContain('select=account,')
 })
 
 test('an unheld token has no owner, which is not an error', async () => {
@@ -249,7 +258,7 @@ test('an unheld token has no owner, which is not an error', async () => {
 test('an owner with no registered alias still reports its address', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => ({
     ok: true,
-    json: async () => [{ account: { address: 'tz1anon' }, balance: '1' }],
+    json: async () => [{ address: 'tz1anon' }],
   }) as Response))
   expect(await fetchOwner(GENTK_CONTRACTS[1], '1')).toEqual({ address: 'tz1anon', alias: null })
 })
