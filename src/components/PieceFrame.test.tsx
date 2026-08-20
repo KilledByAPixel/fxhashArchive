@@ -1,8 +1,12 @@
-import { test, expect } from 'vitest'
-import { liveArtifactSrc, liveWrapperSrc, archivedSrc } from './PieceFrame'
+import { render, cleanup } from '@testing-library/react'
+import { test, expect, afterEach } from 'vitest'
+import PieceFrame, { liveArtifactSrc, liveWrapperSrc, archivedSrc, FRAME_ALLOW } from './PieceFrame'
 import { GATEWAYS, ONCHFS_GATEWAY } from '../lib/ipfs'
 
 const G = GATEWAYS[0]
+
+// globals: false, so cleanup is registered here rather than arriving for free.
+afterEach(cleanup)
 
 // The three shapes actually present in the capture, with the share of all
 // 1,802,387 seeded iterations each accounts for.
@@ -104,6 +108,30 @@ test('an artifact with no query still names itself in fxsrc', () => {
 
 test('nothing to wrap stays nothing', () => {
   expect(liveWrapperSrc(null)).toBe(null)
+})
+
+// --- what a running piece is and is not allowed to do ------------------------
+
+test('audio is delegated, and nothing that weakens the sandbox is', () => {
+  // Permissions Policy is a separate system from sandboxing, and its default
+  // allowlist for autoplay is `self` — an opaque-origin frame is not self, so
+  // without this a music-driven piece is silent and, if its visuals follow the
+  // transport, motionless.
+  expect(FRAME_ALLOW).toContain('autoplay')
+  // Sensors stay off: p5 asks for them at startup on every piece, they are a
+  // fingerprinting surface, and nothing needs them to render.
+  for (const denied of ['accelerometer', 'gyroscope', 'magnetometer', 'camera', 'microphone', 'geolocation']) {
+    expect(FRAME_ALLOW).not.toContain(denied)
+  }
+})
+
+test('the frame is sandboxed with scripts only, and never same-origin', () => {
+  // The standing rule: all ~30 of this account's Pages sites share one origin, so
+  // allow-same-origin would hand 420 unaudited programs the rest of them.
+  const { container } = render(<PieceFrame src="/x.html" label="Piece #1" source="archived" />)
+  const frame = container.querySelector('iframe')!
+  expect(frame.getAttribute('sandbox')).toBe('allow-scripts')
+  expect(frame.getAttribute('allow')).toBe(FRAME_ALLOW)
 })
 
 test('archivedSrc prefers the captured query and can select the runner', () => {

@@ -119,6 +119,28 @@ export function liveWrapperSrc(gatewayUrl: string | null): string | null {
   return `${import.meta.env.BASE_URL}live.html?${query ? `${query}&` : ''}${fxsrc}${fragment}`
 }
 
+/**
+ * Permissions granted to a running piece.
+ *
+ * Sandboxing and Permissions Policy are separate systems, and only one of them was
+ * being set. `autoplay`'s default allowlist is `self`; an opaque-origin frame is
+ * not `self`, so audio was blocked outright — not "blocked until a click", but
+ * unavailable, since the permission was never delegated. Klangteppich is driven by
+ * its own soundtrack (`Music(config, bpm, changeView)`), so with the Transport
+ * unable to start, nothing moved and the piece read as broken.
+ *
+ * This grants nothing that weakens the sandbox: the origin stays opaque, storage
+ * stays unreachable, and a piece still cannot see anything of ours. Sound is part
+ * of the work for a good number of these, and an archive that silences them is
+ * preserving the wrong thing.
+ *
+ * Deliberately not granted: the motion and orientation sensors, which p5 asks for
+ * on every startup. Those are a fingerprinting surface, they only matter on a
+ * phone, and no piece needs them to render — unlike audio, which for some of these
+ * *is* the piece.
+ */
+export const FRAME_ALLOW = 'autoplay'
+
 interface Props {
   src: string
   /** The piece's name, e.g. "fxVase #12". */
@@ -142,6 +164,7 @@ export default function PieceFrame({ src, label, source }: Props) {
       // origin rather than a gateway, which makes withholding allow-same-origin
       // matter more than it did when every piece was remote.
       sandbox="allow-scripts"
+      allow={FRAME_ALLOW}
     />
   )
 }

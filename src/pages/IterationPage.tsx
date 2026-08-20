@@ -10,7 +10,7 @@ import {
   loadSummary,
   type LocalIteration,
 } from '../lib/data'
-import PieceFrame, { archivedSrc, liveArtifactSrc, liveWrapperSrc } from '../components/PieceFrame'
+import PieceFrame, { archivedSrc, liveArtifactSrc, liveWrapperSrc, FRAME_ALLOW } from '../components/PieceFrame'
 import IpfsImage from '../components/IpfsImage'
 import LoadError from '../components/LoadError'
 import NotFoundPage from './NotFoundPage'
@@ -239,8 +239,8 @@ export default function IterationPage() {
           ? (frame.view === 'fetching'
             ? <p>Preparing live view…</p>
             : frame.view === 'patched'
-              ? <iframe srcDoc={frame.html} sandbox="allow-scripts" className="live-frame" title={title} />
-              : <iframe src={(frame.view === 'wrapped' && liveWrapperSrc(liveSrc)) || liveSrc} sandbox="allow-scripts" className="live-frame" title={title} />)
+              ? <iframe srcDoc={frame.html} sandbox="allow-scripts" allow={FRAME_ALLOW} className="live-frame" title={title} />
+              : <iframe src={(frame.view === 'wrapped' && liveWrapperSrc(liveSrc)) || liveSrc} sandbox="allow-scripts" allow={FRAME_ALLOW} className="live-frame" title={title} />)
           : <IpfsImage uri={it.displayUri ?? it.thumbnailUri} alt={title} className="iteration-img" />}
       </div>
       {(canArchived || liveSrc) && (
