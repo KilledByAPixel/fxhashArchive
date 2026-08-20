@@ -14,6 +14,18 @@ is here. Its Tezos and EVM sides are served by different backends, and only the
 Tezos one was reachable while this was built. Everything below is about the
 Tezos catalog: 27,430 projects and 5,407 artists.
 
+## What you can do here
+
+- **Browse and search** the whole Tezos catalog, by project, tag or artist.
+- **Run the artwork** — not a picture of it. Every piece is the artist's own
+  program, re-run with the seed that produced the edition you are looking at, so
+  what you see is the piece as it was minted.
+- **Step through an edition** with next/previous, on any project, whether or not
+  its code is stored here.
+- **Follow a piece to the chain.** Each artwork links to its token, its minter and
+  its current owner on [tzkt.io](https://tzkt.io) — often not the same person who
+  minted it — and to [objkt.com](https://objkt.com) for what it has sold for.
+
 ## Why it still works
 
 The catalog is captured into this repository as plain JSON, so browsing never
@@ -27,82 +39,67 @@ stop. A weekly job tries to refresh the catalog and will start failing loudly
 the day that API is finally switched off.
 
 Artwork runs in a locked-down sandbox, since these are arbitrary third-party
-programs.
+programs. That takes away a few things a piece may need — reading its own images,
+storing settings, starting a worker — so a small compatibility script puts them
+back without ever modifying what the artist wrote. The details, and why each
+choice was made, are in [`scripts/sandbox-shim.mjs`](scripts/sandbox-shim.mjs);
+[`/sandbox-check.html`](https://killedbyapixel.github.io/fxhashViewer/sandbox-check.html)
+reports which of them still work in your browser.
+
+## For artists
+
+**To have your work archived:** there is room for more, and most generators are
+under 1 MB. Open a
+[preservation request](../../issues/new?template=preserve-request.yml).
+
+Artists' own requests are honored regardless of trading volume — the ranking below
+is just a way to choose when nobody has asked — and regardless of size. Automatic
+selection skips anything over 10 MB so a few large outliers cannot quietly eat the
+budget, but a request is a request: Brutal Nature is 29 MB, almost all of it the
+photographs it collages, and those are the artwork. If space ever runs out, that
+will be said out loud rather than applied as a silent size limit.
+
+**To have your work removed:** open an issue and it will be taken out. Removals
+are recorded so they stick, rather than being undone the next time the archive is
+rebuilt.
+
+**Nothing here is endorsed by fxhash or by any artist.** Most artwork is not
+stored here at all — images and programs stream from IPFS and the Tezos chain as
+you view them. The exception is the 420 archived generators described below.
 
 ## What is preserved
 
 fxhash is not coming back, so this repository also keeps the parts that would
 otherwise be lost with it.
 
-**Every seed.** All 1,802,387 of them. A seed is what turns a project's
-generator into one specific artwork. Tezos stores only a pointer to a JSON file
-on IPFS, and the seed lives inside that file — that is where these were read
-from, and the only place a seed can simply be looked up.
+**Every seed.** All 1,802,387 of them. A seed is what turns a project's generator
+into one specific artwork. Tezos stores only a pointer to a JSON file on IPFS, and
+the seed lives inside that file — that is where these were read from, and the only
+place a seed can simply be looked up.
 
 Most have a second, harder home: an fxhash seed is usually the hash of the
-operation that minted the piece, so the value does survive on chain — as the
-*name* of an operation, not as data inside one. Recovering seeds that way means
-indexing the chain and joining every token to its mint operation. That is a
-rebuild, not a lookup, and it does not cover everything: on the newest gentk
-contract fxhash stopped deriving seeds from mint operations at token 46,890,
-and the **162,315 seeds after it, 9% of the archive, exist nowhere else**.
-Those are the ones that go when the pins do. All of it fits in 327 MB.
+operation that minted the piece, so the value does survive on chain — as the *name*
+of an operation, not as data inside one. Recovering seeds that way means indexing
+the chain and joining every token to its mint operation, which is a rebuild rather
+than a lookup. And it does not cover everything: on the newest gentk contract
+fxhash stopped deriving seeds from mint operations at token 46,890, and the
+**162,315 seeds after it, 9% of the archive, exist nowhere else**. Those are the
+ones that go when the pins do.
 
-**Generator code for 420 projects.** A generator plus a seed is everything
-needed to recreate a piece, so those projects work with no IPFS, no Tezos, and
-no internet at all — a copy of this repository is enough. The full catalog would
-run to 80–150 GB, so the selection is ranked by how much collectors engaged with
-each project: those 420 are about 1.5% of the catalog and account for **71.9%**
-of everything ever spent on the platform.
-
-One 300x300 preview per archived project is stored too — WebP, 10 MB for all 420
-— so the grid still has something to show with IPFS unreachable. They are a
-convenience rather than a preservation artifact: for an archived project the
-generator and its seed reproduce the image at any resolution, exactly, which beats
-any stored file. They arrived as PNG and cost 52 MB until being recompressed,
-which is a lot of a 1 GB budget to spend on something reproducible.
-
-Artwork runs in a sandboxed iframe with no same-origin access, which is what
-keeps ~420 unaudited third-party programs away from this site. The side effect is
-that the sandbox gives a piece an *opaque* origin — one that matches nothing, not
-even the server its own files came from — and four things stop working because of
-it. A piece cannot read its own images, so drawing one taints the canvas.
-`localStorage`, `sessionStorage`, `indexedDB` and `document.cookie` throw on being
-*read*, which kills p5.js during startup. And `new Worker()` is refused, because a
-worker's script has to be same-origin and nothing is same-origin with an opaque
-one. Between them these broke 272 of the 420.
-
-So every archived project gets a generated `_run.html`: the artist's document with
-one script in front of it that asks for CORS on the piece's own images, hands it
-in-memory storage and a cookie jar that last as long as the frame, and re-serves a
-worker's script through a `blob:` URL. The artist's `index.html` is never modified
-and sits beside it, exactly as they shipped it. This costs 15 MB of duplicated
-entry HTML — building only for projects that appear to need it would have saved
-about 1 MB of that and left a standing risk of a piece quietly broken because a
-scan missed it. See `scripts/sandbox-shim.mjs`, and open `/sandbox-check.html` to
-see which of these still work in a given browser.
-
-A piece that is *not* archived streams from an IPFS gateway, hits the identical
-four faults, and cannot be given a runner — the file is on somebody else's server,
-and reaching into a cross-origin sandboxed document is exactly what the origin
-boundary forbids. `public/live.html` is the answer: a page at **our** origin that
-fetches the artifact, splices the shim in ahead of the artist's scripts, and writes
-the result into itself. The obvious approach, `srcdoc`, cannot work here — a
-generator reads `?fxhash=` out of `window.location.search`, and `about:srcdoc` has
-no query, so the seed would be lost and the piece would render as a crash. The
-wrapper is a real URL carrying the real query, which is the entire reason for its
-shape. It loads artifacts only from the known gateways, and every failure falls
-back to the plain gateway URL. Rewriting somebody else's document is not risk-free
-and nothing outside the sandbox can report whether it worked, so every streamed
-piece also offers **load the original directly**.
+**Generator code for 420 projects.** A generator plus a seed is everything needed
+to recreate a piece, so those projects work with no IPFS, no Tezos, and no internet
+at all — a copy of this repository is enough. The full catalog would run to
+80–150 GB, so the selection is ranked by how much collectors engaged with each
+project: those 420 are about 1.5% of the catalog and account for **71.9%** of
+everything ever spent on the platform. One small preview per archived project is
+stored alongside, so the grid still shows something when IPFS is unreachable.
 
 **What the artists said about it.** The description of every project — 27,422 of
 the 27,430 have one — plus the text fxhash showed on each individual iteration.
 382 bytes on average and, for most of this art, the only prose anyone ever wrote
-about it. 11.6 MB: 25,768 projects reused their description verbatim as the
-per-iteration text, so only the 1,635 that differ are stored twice. It survives in two places: fxhash's API, which is
-still answering despite the site being switched off for non-payment, and the
-metadata JSON on IPFS, behind exactly the pins this archive exists to outlive.
+about it. It survives in two places: fxhash's API, which is still answering despite
+the site being switched off, and the metadata on IPFS, behind exactly the pins this
+archive exists to outlive.
 
 **Who made the work.** 553 projects were minted through fxhash's shared
 collaboration contracts, which meant the catalog recorded a KT1 address as the
@@ -112,27 +109,34 @@ from fxhash's on-chain user registry, all 18,855 of them, which is also the only
 surviving source for anyone who collaborated without ever releasing work of their
 own. 41 addresses have no name recorded anywhere and are shown as addresses.
 
-### Asking for work to be archived
+## Honest limitations
 
-There is room for more. Most generators are under 1 MB, so if you would like a
-project included, open a
-[preservation request](../../issues/new?template=preserve-request.yml).
+- **This is a frozen archive, not a mirror.** The catalog was captured at a point
+  in time and won't grow. Nothing new is being minted on a dead platform.
+- **The real long-term risk is IPFS, not fxhash.** The blockchain records who owns
+  what, but the artwork itself lives on IPFS. If nobody keeps those files pinned,
+  the chain will still say a piece exists while the artwork becomes unretrievable.
+  Every seed is now held here, and 420 projects have their code here too; 372 more
+  store their code on-chain and cannot be lost. The remaining ~26,600 projects
+  still depend on IPFS staying alive.
+- **370 on-chain projects still need an fxhash service to run.** Their code is
+  stored on chain via `onchfs://` rather than IPFS, so nothing can be lost, but
+  reading it back currently goes through a resolver fxhash runs. Any of them can be
+  made fully local on request.
+- **Public IPFS gateways are getting harder to use.** Several large ones now answer
+  browsers with a challenge page that cannot be framed, so artwork silently stopped
+  running through them. The site has moved to three that still work, and there is a
+  check (`npm run check:gateways`) that probes them the way a browser does.
+- **Moderation is honored.** 2,692 projects (about 10%) were flagged by fxhash for
+  plagiarism or abuse and are hidden, with no way to reveal them, and their code is
+  not archived either. One gap: a hand-crafted URL to an individual artwork of a
+  flagged project can still reach it. Nothing in the site links there, and it still
+  runs sandboxed.
+- **Browsing all 27,430 projects is a heavy page load** (~16.5 MB), because search
+  covers the whole catalog at once. The front page is not — it ships the few dozen
+  cards it needs, about 200 KB.
 
-Artists' own requests are honored regardless of trading volume — the ranking is
-just a way to choose when nobody has asked — and regardless of size. Automatic
-selection skips anything over 10 MB, so that a few large outliers cannot eat the
-budget while nobody has asked for them, but a request is a request: Brutal Nature
-is 29 MB, almost all of it the photographs it collages, and those are the artwork.
-If space ever runs out the answer will be said out loud rather than applied as a
-silent size limit.
-
-The same applies in reverse: if your generator is archived here and you would
-rather it were not, open an issue and it will be removed. Removals are recorded in
-`data/preserve.json` under `exclude`, which is what makes them stick — deleting
-the files alone would not, since the selection rules would pick the project up
-again on the next run.
-
-## Running it locally
+## For developers
 
 ```bash
 npm install
@@ -143,39 +147,11 @@ npm run build     # production build
 
 Pushing to `master` builds and publishes to GitHub Pages automatically.
 
-## Honest limitations
-
-- **This is a frozen archive, not a mirror.** The catalog was captured at a
-  point in time and won't grow. Nothing new is being minted on a dead platform.
-- **The real long-term risk is IPFS, not fxhash.** The blockchain records who
-  owns what, but the artwork itself lives on IPFS. If nobody keeps those files
-  pinned, the chain will still say a piece exists while the artwork becomes
-  unretrievable. Every seed is now held here, and 420 projects have their code
-  here too; 372 more store their code on-chain and cannot be lost. The remaining
-  ~26,600 projects still depend on IPFS staying alive.
-- **Public IPFS gateways are getting harder to use.** ipfs.io, dweb.link and
-  gateway.pinata.cloud now answer browsers with a Cloudflare challenge, which
-  cannot be framed — so artwork simply stopped running through them, while
-  answering scripts with a cheerful 200 the whole time. The site has moved to
-  three that still work; `npm run check:gateways` probes them the way a browser
-  does, and is the check that was missing.
-- **370 on-chain projects still need an fxhash resolver to run.** Their code is
-  stored on-chain via `onchfs://` rather than IPFS, so nothing can be lost, but
-  reading it back currently goes through a service fxhash runs. The archiver can
-  now fetch them, so any of them can be made fully local on request.
-- **Moderation is honored.** 2,692 projects (about 10%) were flagged by fxhash
-  for plagiarism or abuse and are hidden, with no way to reveal them, and the
-  archiver will not store their code either. One gap: a hand-crafted URL to an
-  individual artwork of a flagged project can still reach it. Nothing in the site
-  links there, and it still runs sandboxed.
-- **Browsing all 27,430 projects is a heavy page load** (~16.5 MB), because
-  search covers the whole catalog at once. The front page is not — it ships the
-  few dozen cards it needs, about 200 KB.
-- **Unofficial and unaffiliated.** Nothing here is endorsed by fxhash or by the
-  artists. Most artwork is not stored here at all: images and programs stream
-  from IPFS and the Tezos chain as you view them. The exception is the 420
-  archived generators described above, which are stored, and which any artist
-  can have removed on request.
+The interesting parts are documented where they live rather than here:
+`scripts/` holds the capture and archiving tools, each explaining what it captures
+and why that source is the one that matters; `scripts/sandbox-shim.mjs` covers
+running untrusted art safely; and `data/preserve.json` records which projects are
+archived, which are excluded, and the reason for each.
 
 ## License
 
@@ -186,11 +162,10 @@ things:
 
 - **Record data** — ids, titles, tags, addresses, seeds, content hashes, market
   totals. Captured from public APIs and the Tezos chain, not authored here.
-- **Archived generator code** — `public/data/generators/` holds the actual
-  programs written by the artists behind 420 projects, copied from IPFS and from
-  Tezos so they survive both. These
-  are their work, under whatever terms they published it. They are kept here to
-  preserve it, not to relicense it, and any artist can have their generator
-  removed by opening an issue.
+- **Archived generator code** — `public/data/generators/` holds the actual programs
+  written by the artists behind 420 projects, copied from IPFS and from Tezos so
+  they survive both. These are their work, under whatever terms they published it.
+  They are kept here to preserve it, not to relicense it, and any artist can have
+  their generator removed by opening an issue.
 
 Rights to all of the artwork remain with the artists who made it.
