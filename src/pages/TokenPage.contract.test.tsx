@@ -102,7 +102,12 @@ test('iteration links point at the project\'s real contract, not one guessed fro
 
   renderPage()
 
-  const link = await screen.findByRole('link', { name: /Century XXX #100/ })
-  expect(link.getAttribute('href')).toContain(`/gentk/${MIDDLE}/100`)
-  expect(link.getAttribute('href')).not.toContain(V1)
+  // Found by its text and walked up, not by role+name. `findByRole` with a name
+  // filter recomputes the accessible name of every element on every poll, which put
+  // this one right on the 1s default timeout — it failed roughly one run in five,
+  // always at ~1.2s, and always passed when re-run. The assertion is the same.
+  const link = (await screen.findByText('Century XXX #100')).closest('a')
+  expect(link).not.toBeNull()
+  expect(link!.getAttribute('href')).toContain(`/gentk/${MIDDLE}/100`)
+  expect(link!.getAttribute('href')).not.toContain(V1)
 })

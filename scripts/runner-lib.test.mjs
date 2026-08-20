@@ -62,11 +62,11 @@ const runShim = () => new Function(SANDBOX_SHIM)()
 
 let saved
 beforeEach(() => {
-  saved = ['src'].map((p) => [p, Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, p)])
+  saved = [HTMLImageElement, HTMLMediaElement].map((t) => [t, Object.getOwnPropertyDescriptor(t.prototype, 'src')])
 })
 afterEach(() => {
   // Restore the prototype so one test's patch cannot leak into the next.
-  for (const [p, d] of saved) if (d) Object.defineProperty(HTMLImageElement.prototype, p, d)
+  for (const [t, d] of saved) if (d) Object.defineProperty(t.prototype, 'src', d)
   // jsdom's origin decides whether the storage half of the shim installs itself
   // at all, so clear anything it may have shadowed onto this process's globals.
   for (const name of ['localStorage', 'sessionStorage', 'indexedDB']) {
@@ -83,6 +83,20 @@ test('an image from this server is switched to a CORS load', () => {
   // This is the fix: a CORS-approved image does not taint the canvas, so
   // texImage2D and getImageData work.
   expect(img.crossOrigin).toBe('anonymous')
+})
+
+test('video and audio get the property patch, not only setAttribute', () => {
+  // Regression: these were patched via HTMLVideoElement/HTMLAudioElement, which do
+  // not declare 'src' — it is on HTMLMediaElement — so the descriptor lookup came
+  // back undefined and the patch was a no-op for every piece with a video in it.
+  runShim()
+  const video = document.createElement('video')
+  video.src = 'clip.mp4'
+  expect(video.crossOrigin).toBe('anonymous')
+
+  const audio = document.createElement('audio')
+  audio.src = 'track.mp3'
+  expect(audio.crossOrigin).toBe('anonymous')
 })
 
 test('setAttribute is covered too, not just the property', () => {

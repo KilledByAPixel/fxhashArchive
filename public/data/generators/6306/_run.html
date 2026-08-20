@@ -105,10 +105,14 @@
     }
   }
 
+  // HTMLMediaElement, not HTMLVideoElement and HTMLAudioElement: 'src' is declared
+  // on the shared base, so asking the two subclasses for its descriptor returned
+  // undefined and patchSrc quietly did nothing. Video and audio have been going
+  // through without crossOrigin ever since this shim was written — setAttribute
+  // was covered, the property was not.
   var mediaTypes = [
     typeof HTMLImageElement !== 'undefined' ? HTMLImageElement : null,
-    typeof HTMLVideoElement !== 'undefined' ? HTMLVideoElement : null,
-    typeof HTMLAudioElement !== 'undefined' ? HTMLAudioElement : null,
+    typeof HTMLMediaElement !== 'undefined' ? HTMLMediaElement : null,
   ]
   for (var i = 0; i < mediaTypes.length; i++) {
     if (!mediaTypes[i]) continue

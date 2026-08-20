@@ -164,11 +164,11 @@ test('the wrapper can be stepped out of, back to the untouched artifact', async 
   const wrapped = (await screen.findByTitle(/streamed from IPFS/i)) as HTMLIFrameElement
   expect(wrapped.getAttribute('src')).toContain('live.html')
 
-  fireEvent.click(screen.getByRole('button', { name: /load the original directly/i }))
+  fireEvent.click(screen.getByRole('button', { name: /run the artist's file untouched/i }))
   const direct = (await screen.findByTitle(/streamed from IPFS/i)) as HTMLIFrameElement
   expect(direct.getAttribute('src')).toBe(`${GATEWAYS[0]}QmA/?fxhash=ooFIRST`)
 
-  fireEvent.click(screen.getByRole('button', { name: /use the wrapper/i }))
+  fireEvent.click(screen.getByRole('button', { name: /put the compatibility script back/i }))
   const again = (await screen.findByTitle(/streamed from IPFS/i)) as HTMLIFrameElement
   expect(again.getAttribute('src')).toContain('live.html')
 })
@@ -179,7 +179,13 @@ test('an archived piece is never wrapped — it has the shim built in', async ()
   const frame = (await screen.findByTitle(/archived copy/i)) as HTMLIFrameElement
   expect(frame.getAttribute('src')).toContain('_run.html')
   expect(frame.getAttribute('src')).not.toContain('live.html')
-  expect(screen.queryByRole('button', { name: /load the original directly/i })).toBeNull()
+
+  // The same escape hatch, because the shim is just as unverifiable from out here.
+  // It drops to the artist's own index.html rather than to a gateway.
+  fireEvent.click(screen.getByRole('button', { name: /run the artist's file untouched/i }))
+  const original = (await screen.findByTitle(/archived copy/i)) as HTMLIFrameElement
+  expect(original.getAttribute('src')).toContain('index.html')
+  expect(original.getAttribute('src')).not.toContain('_run.html')
 })
 
 test('an archived project never falls back to the gateway', async () => {

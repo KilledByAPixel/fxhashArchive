@@ -42,7 +42,15 @@ export default function IterationPlayer({
 }: Props) {
   const [index, setIndex] = useState(0)
   const [local, setLocal] = useState<LocalIteration | null | undefined>(undefined)
-  /** Escape hatch: stream the artifact untouched, without the compatibility wrapper. */
+  /**
+   * Escape hatch: run the artist's file with nothing of ours in front of it.
+   *
+   * Both sources get something added — an archived piece gets the shim spliced into
+   * `_run.html`, a streamed one goes through the wrapper — and nothing outside the
+   * sandbox can report whether that helped or hurt. So the toggle is offered rather
+   * than inferred, and it is also the only way to answer "is it our doing?" about a
+   * piece that will not run.
+   */
   const [raw, setRaw] = useState(false)
 
   const current = iterationIds[index]
@@ -82,11 +90,14 @@ export default function IterationPlayer({
   const src = !playable
     ? null
     : useArchived
-    ? archivedSrc(projectId, local!.seed!, local!.query, hasRunner)
+    ? archivedSrc(projectId, local!.seed!, local!.query, hasRunner && !raw)
     : // Streamed pieces go through the wrapper by default, since without it every
       // fault the shim exists for is back. `raw` is the way out for anything the
       // wrapper itself breaks — see liveWrapperSrc.
       (raw ? liveSrc : liveWrapperSrc(liveSrc))
+
+  /** Whether anything of ours is in front of this piece, and can be stepped out of. */
+  const modified = useArchived ? hasRunner : Boolean(liveSrc)
 
   return (
     <section className="archived-player">
@@ -152,15 +163,15 @@ export default function IterationPlayer({
         {local?.seed && <> · seed <code>{local.seed}</code></>}
       </p>
 
-      {/* Nothing outside the sandbox can tell whether a wrapped piece rendered
-          correctly, so leave a way back to the untouched artifact. */}
-      {!useArchived && liveSrc && (
+      {modified && (
         <p className="muted legacy-note">
           {raw
-            ? 'Streaming the artifact untouched.'
+            ? "Running the artist's file with nothing added."
+            : useArchived
+            ? 'Running with a script that restores what the sandbox removes.'
             : 'Streamed through a wrapper that lets the piece read its own files.'}{' '}
           <button className="link-button" onClick={() => setRaw((r) => !r)}>
-            {raw ? 'use the wrapper' : 'load the original directly'}
+            {raw ? 'put the compatibility script back' : "run the artist's file untouched"}
           </button>
         </p>
       )}
