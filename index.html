@@ -7,6 +7,42 @@
          subpath, where an absolute path would resolve off the site root. -->
     <link rel="icon" type="image/png" href="./favicon.png" />
     <title>fxhash viewer</title>
+    <meta
+      name="description"
+      content="An unofficial, read-only way to browse the art from fxhash while fxhash itself is down. 27,430 Tezos projects, 5,407 artists, and every seed."
+    />
+
+    <!-- Social cards.
+         These URLs are absolute, unlike the favicon above, and deliberately so: a
+         scraper fetches them without a document to resolve against, so a relative
+         path is simply dropped and the card renders bare. That makes the site's
+         address a hardcoded string in one place — scripts/social-meta.test.mjs
+         checks it against the deployed base, the file on disk, and its real
+         dimensions, because a wrong value here fails silently on somebody else's
+         server where nobody sees it.
+
+         One limitation worth knowing: the app is hash-routed, and scrapers ignore
+         the fragment, so every shared link — a project, an artwork, an artist —
+         previews as the site rather than as that page. Per-page cards would need
+         the pages to exist as real URLs, which is a different build. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="fxhash viewer" />
+    <meta property="og:title" content="fxhash viewer" />
+    <meta
+      property="og:description"
+      content="An unofficial, read-only way to browse the art from fxhash while fxhash itself is down. 27,430 Tezos projects, 5,407 artists, and every seed."
+    />
+    <meta property="og:url" content="https://killedbyapixel.github.io/fxhashViewer/" />
+    <meta property="og:image" content="https://killedbyapixel.github.io/fxhashViewer/social.jpg" />
+    <meta property="og:image:width" content="1280" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="fxhash viewer — browse the catalog, run the artwork, step through editions, follow to the chain. Beside a grid of archived generative artworks."
+    />
+    <!-- X reads the og: tags above for everything else, so this is the only
+         twitter: tag needed. Without it the card renders as a small square. -->
+    <meta name="twitter:card" content="summary_large_image" />
   </head>
   <body>
     <div id="root"></div>
