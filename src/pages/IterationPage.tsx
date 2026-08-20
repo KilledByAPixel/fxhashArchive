@@ -11,7 +11,7 @@ import {
   type LocalIteration,
 } from '../lib/data'
 import PieceFrame, { archivedSrc, liveArtifactSrc, liveWrapperSrc, FRAME_ALLOW } from '../components/PieceFrame'
-import TzktLink from '../components/TzktLink'
+import TzktLink, { TokenLinks } from '../components/ChainLinks'
 import IpfsImage from '../components/IpfsImage'
 import LoadError from '../components/LoadError'
 import NotFoundPage from './NotFoundPage'
@@ -220,7 +220,7 @@ export default function IterationPage() {
         </div>
         <dl className="iteration-meta">
           <dt>Hash</dt><dd><code>{archived.seed}</code></dd>
-          <dt>Token</dt><dd><code>#{tokenId}</code></dd>
+          <dt>Token</dt><dd><TokenLinks contract={contract!} tokenId={tokenId!} /></dd>
         </dl>
       </div>
     )
@@ -302,6 +302,7 @@ export default function IterationPage() {
       {iterationText && <p className="project-description">{iterationText}</p>}
       <dl className="iteration-meta">
         <dt>Hash</dt><dd><code>{it.iterationHash ?? 'unknown'}</code></dd>
+        <dt>Token</dt><dd><TokenLinks contract={it.contract} tokenId={it.tokenId} /></dd>
         <dt>Minted by</dt>
         <dd>
           {it.minterAddress
