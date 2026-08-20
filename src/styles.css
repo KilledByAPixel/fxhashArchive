@@ -1,4 +1,13 @@
-:root { color-scheme: dark; font-family: system-ui, sans-serif; }
+:root {
+  color-scheme: dark;
+  font-family: system-ui, sans-serif;
+  /* The artwork column. The frame, the buttons under it and the notes under those
+     all take their width from here, because "centred under the artwork" is only
+     meaningful if they agree on how wide the artwork is. They did not: an archived
+     piece was 640px while a streamed one filled the page, and the buttons centred
+     across the full 1200px content area regardless — so they sat under nothing. */
+  --artwork: 720px;
+}
 body { margin: 0; background: #111; color: #eee; }
 a { color: #9ecbff; text-decoration: none; }
 img { max-width: 100%; }
@@ -30,9 +39,16 @@ img { max-width: 100%; }
 .hero-img { width: 320px; border-radius: 8px; }
 .muted { color: #888; }
 
-.iteration-img { max-height: 70vh; border-radius: 8px; }
-.live-frame { width: 100%; height: 70vh; border: 1px solid #333; border-radius: 8px; background: #000; }
-.legacy-note { text-align: center; font-size: 0.8rem; margin: 0.5rem 0 0; }
+.iteration-view { max-width: var(--artwork); }
+.iteration-img { max-width: var(--artwork); max-height: 70vh; border-radius: 8px; }
+/* Identical geometry to .archived-frame: whether a piece is rebuilt from this
+   repository or streamed from a gateway is our distinction, not the viewer's, and
+   it should not change the size of the art. */
+.live-frame {
+  width: 100%; max-width: var(--artwork); aspect-ratio: 1 / 1;
+  border: 1px solid #333; border-radius: 8px; background: #000;
+}
+.legacy-note { max-width: var(--artwork); text-align: center; font-size: 0.8rem; margin: 0.5rem 0 0; }
 .link-button { background: none; border: 0; padding: 0; color: #aaa; font: inherit; text-decoration: underline; cursor: pointer; }
 /* The piece's own facts — seed, token, minter, and whatever traits the generator
  * assigned. Drawn as a ruled table rather than loose rows: it sits directly under
@@ -77,7 +93,7 @@ img { max-width: 100%; }
 /* Running the piece and going to see what it sold for, side by side above the
    facts. `.load-more` centres itself with auto margins, which stacks two of them
    on separate lines, so the row owns the spacing instead. */
-.iteration-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: center; align-items: center; margin: 1.5rem 0; }
+.iteration-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: center; align-items: center; max-width: var(--artwork); margin: 1.5rem 0; }
 .iteration-actions .load-more { margin: 0; }
 /* Looks like a button, is an anchor — so it needs the button's colour back, which
    the global `a` rule would otherwise override. Quieter than Run artwork, since
@@ -123,11 +139,11 @@ img { max-width: 100%; }
 .archived-player { margin: 1.5rem 0; }
 /* The stage and everything that can occupy it share one geometry, so an unsigned
    mint or a seed still loading leaves the page exactly as tall as a rendered piece. */
-.archived-stage { max-width: 640px; }
+.archived-stage { max-width: var(--artwork); }
 /* Sized by the children, not the stage: IterationPage renders an ArchivedFrame on
    its own, with no stage around it. */
 .archived-frame, .archived-blank {
-  width: 100%; max-width: 640px; aspect-ratio: 1 / 1;
+  width: 100%; max-width: var(--artwork); aspect-ratio: 1 / 1;
   border: 1px solid #333; border-radius: 8px; background: #000; display: block;
 }
 .archived-blank {
@@ -136,14 +152,14 @@ img { max-width: 100%; }
 }
 .archived-blank p { margin: 0; max-width: 26rem; }
 .archived-nav {
-  display: flex; align-items: center; gap: 0.75rem;
-  flex-wrap: wrap; margin: 0.75rem 0 0; max-width: 640px;
+  display: flex; align-items: center; justify-content: center; gap: 0.75rem;
+  flex-wrap: wrap; margin: 0.75rem 0 0; max-width: var(--artwork);
 }
 .archived-nav .load-more { margin: 0; }
 .archived-counter { font-size: 0.9rem; }
 /* Two lines' worth: the seed wraps on narrow screens and the caption must not
    change height under the controls when it does. */
-.archived-caption { min-height: 2.6em; margin: 0.5rem 0 0; }
+.archived-caption { max-width: var(--artwork); text-align: center; min-height: 2.6em; margin: 0.5rem 0 0; }
 .archived-player code { font-size: 0.85em; opacity: 0.85; word-break: break-all; }
 .img-fallback {
   display: flex; align-items: center; justify-content: center;
