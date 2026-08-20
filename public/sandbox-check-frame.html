@@ -297,6 +297,31 @@
     return typeof indexedDB === 'undefined' ? 'undefined, as intended' : 'present: ' + indexedDB
   })
 
+  // Sound is part of the work for a fair number of these pieces, and some drive
+  // their visuals from the audio transport — so a frame that cannot play is not
+  // just quiet, it is still. Permissions Policy is separate from sandboxing and
+  // has to be delegated with allow=; its default allowlist for autoplay is `self`,
+  // which an opaque origin is not.
+  sync('AudioContext', function () {
+    var Ctx = window.AudioContext || window.webkitAudioContext
+    if (!Ctx) throw new Error('no constructor')
+    var ctx = new Ctx()
+    var detail = 'state=' + ctx.state + ', sampleRate=' + ctx.sampleRate
+    var rate = ctx.sampleRate
+    if (ctx.close) ctx.close()
+    // A zero sample rate is the failure that matters: every offline render sizes
+    // its buffer by multiplying against it.
+    if (!rate) throw new Error(detail)
+    return detail
+  })
+
+  sync('autoplay delegated to this frame', function () {
+    var policy = document.featurePolicy || document.permissionsPolicy
+    if (!policy || !policy.allowsFeature) return 'cannot be queried in this browser'
+    if (!policy.allowsFeature('autoplay')) throw new Error('blocked — audio pieces will be silent')
+    return 'allowed'
+  })
+
   // The original bug: a same-server image is cross-origin to an opaque origin, so
   // drawing it taints the canvas and reading a pixel back throws.
   pending++

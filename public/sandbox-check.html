@@ -51,7 +51,13 @@
 </table>
 <p class="muted" id="origin"></p>
 
-<iframe src="./sandbox-check-frame.html" sandbox="allow-scripts" title="sandbox probe"></iframe>
+<!--
+  These two attributes must mirror PieceFrame exactly — `sandbox` and `allow` are
+  separate systems and the page proves nothing if it probes a frame configured
+  differently from the one artwork actually runs in. See FRAME_ALLOW in
+  src/components/PieceFrame.tsx.
+-->
+<iframe src="./sandbox-check-frame.html" sandbox="allow-scripts" allow="autoplay" title="sandbox probe"></iframe>
 
 <script>
   var timeout = setTimeout(function () {
