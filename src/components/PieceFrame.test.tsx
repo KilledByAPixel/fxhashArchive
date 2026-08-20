@@ -1,5 +1,5 @@
 import { test, expect } from 'vitest'
-import { liveArtifactSrc, archivedSrc } from './PieceFrame'
+import { liveArtifactSrc, liveWrapperSrc, archivedSrc } from './PieceFrame'
 import { GATEWAYS, ONCHFS_GATEWAY } from '../lib/ipfs'
 
 const G = GATEWAYS[0]
@@ -67,6 +67,43 @@ test('onchfs artifacts go through the same repair', () => {
 test('refuses a scheme ipfsToHttp will not resolve', () => {
   expect(liveArtifactSrc('javascript:alert(1)', 'ooSeed')).toBe(null)
   expect(liveArtifactSrc('', 'ooSeed')).toBe(null)
+})
+
+// --- the live wrapper -------------------------------------------------------
+
+test('the wrapper keeps the seed in the query, which is why it is not srcdoc', () => {
+  // A generator reads `?fxhash=` out of window.location.search. An srcdoc document
+  // is at `about:srcdoc` and has no query at all, so the snippet reads null and the
+  // piece crashes before drawing — the whole reason the wrapper is a real page.
+  const src = liveWrapperSrc(`${G}QmAbC/?fxhash=ooSeed`)!
+  const url = new URL(src, 'https://example.test/')
+  expect(url.pathname.endsWith('live.html')).toBe(true)
+  expect(url.searchParams.get('fxhash')).toBe('ooSeed')
+  expect(url.searchParams.get('fxsrc')).toBe(`${G}QmAbC/`)
+})
+
+test('the whole captured query is passed through, with fxsrc appended last', () => {
+  // Last, so `fxhash` stays the first parameter for anything parsing it loosely.
+  const src = liveWrapperSrc(`${G}QmAbC/?fxhash=ooSeed&fxiteration=42&fxminter=tz1abc`)!
+  expect(src).toContain('?fxhash=ooSeed&fxiteration=42&fxminter=tz1abc&fxsrc=')
+  const url = new URL(src, 'https://example.test/')
+  expect(url.searchParams.get('fxiteration')).toBe('42')
+  expect(url.searchParams.get('fxminter')).toBe('tz1abc')
+})
+
+test('the fx(params) fragment survives, still last in the URL', () => {
+  const src = liveWrapperSrc(`${G}QmAbC/?fxhash=ooSeed#0xdeadbeef`)!
+  expect(src.endsWith('#0xdeadbeef')).toBe(true)
+  expect(new URL(src, 'https://example.test/').searchParams.get('fxsrc')).toBe(`${G}QmAbC/`)
+})
+
+test('an artifact with no query still names itself in fxsrc', () => {
+  const src = liveWrapperSrc(`${G}QmAbC/`)!
+  expect(new URL(src, 'https://example.test/').searchParams.get('fxsrc')).toBe(`${G}QmAbC/`)
+})
+
+test('nothing to wrap stays nothing', () => {
+  expect(liveWrapperSrc(null)).toBe(null)
 })
 
 test('archivedSrc prefers the captured query and can select the runner', () => {

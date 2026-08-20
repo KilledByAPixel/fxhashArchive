@@ -8,6 +8,7 @@ import type { Iteration } from '../lib/tzkt'
 // Asserted against the configured primary rather than a literal host: which gateway
 // is usable changes (ipfs.io now serves a Cloudflare challenge), the contract does not.
 import { GATEWAYS } from '../lib/ipfs'
+import { liveWrapperSrc } from '../components/PieceFrame'
 
 const V1 = GENTK_CONTRACTS[0]
 /** The middle gentk contract: v2-style pieces, seeded from `?fxhash=` in the URL. */
@@ -96,7 +97,10 @@ test('a v2 iteration never fetches and keeps using src — srcdoc would strip it
   await runLive()
 
   const frame = document.querySelector('iframe')!
-  expect(frame.getAttribute('src')).toBe(`${GATEWAYS[0]}QmGen/?fxhash=oo9`)
+  // Not srcdoc, which is the point of the test: the seed is in the URL and
+  // srcdoc has no URL. The wrapper is a real page precisely so it still is.
+  expect(frame.getAttribute('src')).toBe(liveWrapperSrc(`${GATEWAYS[0]}QmGen/?fxhash=oo9`))
+  expect(frame.getAttribute('src')).toContain('fxhash=oo9')
   expect(frame.getAttribute('srcdoc')).toBeNull()
   expect(fetchMock).not.toHaveBeenCalled()
 })
@@ -114,7 +118,10 @@ test('a middle-contract iteration keeps using src — its seed lives in the URL'
   await runLive()
 
   const frame = document.querySelector('iframe')!
-  expect(frame.getAttribute('src')).toBe(`${GATEWAYS[0]}QmGen/?fxhash=oo9`)
+  // Not srcdoc, which is the point of the test: the seed is in the URL and
+  // srcdoc has no URL. The wrapper is a real page precisely so it still is.
+  expect(frame.getAttribute('src')).toBe(liveWrapperSrc(`${GATEWAYS[0]}QmGen/?fxhash=oo9`))
+  expect(frame.getAttribute('src')).toContain('fxhash=oo9')
   expect(frame.getAttribute('srcdoc')).toBeNull()
   expect(fetchMock).not.toHaveBeenCalled()
 })
@@ -129,7 +136,7 @@ test('the legacy patch is gated on the v1 contract address itself, not a list po
   renderPage('KT1SomeOtherContract')
   await runLive()
 
-  expect(document.querySelector('iframe')!.getAttribute('src')).toBe(LIVE)
+  expect(document.querySelector('iframe')!.getAttribute('src')).toBe(liveWrapperSrc(LIVE))
   expect(document.querySelector('iframe')!.getAttribute('srcdoc')).toBeNull()
   expect(fetchMock).not.toHaveBeenCalled()
   expect(V1).toBe('KT1KEa8z6vWXDJrVqtMrAeDVzsvxat3kHaCE')

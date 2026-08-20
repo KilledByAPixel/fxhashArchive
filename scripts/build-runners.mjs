@@ -30,7 +30,8 @@
 
 import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { buildRunner, RUNNER_ENTRY } from './runner-lib.mjs'
+import { buildRunner, buildLiveWrapper, RUNNER_ENTRY } from './runner-lib.mjs'
+import { GATEWAY_ORIGINS } from './archive-lib.mjs'
 
 const OUT = 'public/data/generators'
 const MANIFEST = join(OUT, 'manifest.json')
@@ -41,6 +42,12 @@ const DRY = process.argv.includes('--dry-run')
 // shipped wrapper rather than a copy that quietly drifts out of date.
 const CHECK_SRC = 'scripts/sandbox-check.src.html'
 const CHECK_OUT = 'public/sandbox-check-frame.html'
+
+// The live wrapper carries the shim as a *string*, since it splices it into an
+// artifact fetched at run time rather than having it inline. Same reason for
+// generating it here: one shim, one place it is produced from.
+const LIVE_SRC = 'scripts/live-wrapper.src.html'
+const LIVE_OUT = 'public/live.html'
 
 const manifest = JSON.parse(await readFile(MANIFEST, 'utf8'))
 let built = 0
@@ -74,6 +81,9 @@ for (const [id, entry] of Object.entries(manifest)) {
 
 if (!DRY) await writeFile(MANIFEST, JSON.stringify(manifest, null, 2) + '\n')
 if (!DRY) await writeFile(CHECK_OUT, buildRunner(await readFile(CHECK_SRC, 'utf8')))
+if (!DRY) {
+  await writeFile(LIVE_OUT, buildLiveWrapper(await readFile(LIVE_SRC, 'utf8'), GATEWAY_ORIGINS))
+}
 
 const mb = (n) => (n / 1048576).toFixed(1)
 console.log(

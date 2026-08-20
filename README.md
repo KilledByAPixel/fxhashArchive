@@ -82,6 +82,20 @@ about 1 MB of that and left a standing risk of a piece quietly broken because a
 scan missed it. See `scripts/sandbox-shim.mjs`, and open `/sandbox-check.html` to
 see which of these still work in a given browser.
 
+A piece that is *not* archived streams from an IPFS gateway, hits the identical
+four faults, and cannot be given a runner — the file is on somebody else's server,
+and reaching into a cross-origin sandboxed document is exactly what the origin
+boundary forbids. `public/live.html` is the answer: a page at **our** origin that
+fetches the artifact, splices the shim in ahead of the artist's scripts, and writes
+the result into itself. The obvious approach, `srcdoc`, cannot work here — a
+generator reads `?fxhash=` out of `window.location.search`, and `about:srcdoc` has
+no query, so the seed would be lost and the piece would render as a crash. The
+wrapper is a real URL carrying the real query, which is the entire reason for its
+shape. It loads artifacts only from the known gateways, and every failure falls
+back to the plain gateway URL. Rewriting somebody else's document is not risk-free
+and nothing outside the sandbox can report whether it worked, so every streamed
+piece also offers **load the original directly**.
+
 **What the artists said about it.** The description of every project — 27,422 of
 the 27,430 have one — plus the text fxhash showed on each individual iteration.
 382 bytes on average and, for most of this art, the only prose anyone ever wrote

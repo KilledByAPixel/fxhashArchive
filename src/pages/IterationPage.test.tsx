@@ -8,6 +8,7 @@ import type { Iteration } from '../lib/tzkt'
 // Asserted against the configured primary rather than a literal host: which gateway
 // is usable changes (ipfs.io now serves a Cloudflare challenge), the contract does not.
 import { GATEWAYS } from '../lib/ipfs'
+import { liveWrapperSrc } from '../components/PieceFrame'
 
 const iteration: Iteration = {
   contract: 'KT1x', tokenId: '9', name: 'Piece #9', iterationHash: 'oo9',
@@ -41,7 +42,7 @@ test('running the artwork swaps in sandboxed iframe pointing at artifactUri', as
   fireEvent.click(await screen.findByRole('button', { name: /run artwork/i }))
   const frame = document.querySelector('iframe')!
   expect(frame.getAttribute('sandbox')).toBe('allow-scripts')
-  expect(frame.getAttribute('src')).toBe(`${GATEWAYS[0]}QmGen/?fxhash=oo9`)
+  expect(frame.getAttribute('src')).toBe(liveWrapperSrc(`${GATEWAYS[0]}QmGen/?fxhash=oo9`))
 })
 
 test('the run button toggles back to the static image', async () => {
@@ -241,7 +242,7 @@ test('the IPFS original stays reachable, as a link rather than a rival button', 
 
   fireEvent.click(screen.getByRole('button', { name: /stream the original/i }))
   const frame = (await screen.findByTitle('Piece #9')) as HTMLIFrameElement
-  expect(frame.getAttribute('src')).toBe(`${GATEWAYS[0]}QmGen/?fxhash=oo9`)
+  expect(frame.getAttribute('src')).toBe(liveWrapperSrc(`${GATEWAYS[0]}QmGen/?fxhash=oo9`))
 })
 
 test('an unarchived project runs the original from IPFS under the same button', async () => {
@@ -253,7 +254,7 @@ test('an unarchived project runs the original from IPFS under the same button', 
 
   // Not archived, so there is nothing local to prefer — but the button still runs it.
   const frame = (await screen.findByTitle('Piece #9')) as HTMLIFrameElement
-  expect(frame.getAttribute('src')).toBe(`${GATEWAYS[0]}QmGen/?fxhash=oo9`)
+  expect(frame.getAttribute('src')).toBe(liveWrapperSrc(`${GATEWAYS[0]}QmGen/?fxhash=oo9`))
   expect(screen.queryByTitle(/archived copy/i)).toBeNull()
 })
 

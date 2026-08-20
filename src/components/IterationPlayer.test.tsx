@@ -3,6 +3,7 @@ import { test, expect, vi, afterEach } from 'vitest'
 import IterationPlayer from './IterationPlayer'
 import * as data from '../lib/data'
 import { GATEWAYS } from '../lib/ipfs'
+import { liveWrapperSrc } from './PieceFrame'
 
 afterEach(() => {
   cleanup()
@@ -140,13 +141,45 @@ test('an unarchived project still plays and steps, streamed from IPFS', async ()
   render(player({ archived: false }))
 
   const frame = (await screen.findByTitle(/streamed from IPFS/i)) as HTMLIFrameElement
-  expect(frame.getAttribute('src')).toBe(`${GATEWAYS[0]}QmA/?fxhash=ooFIRST`)
+  // Through the wrapper now, since a streamed piece hits every fault the shim
+  // exists for. What has to survive that indirection is the seed.
+  expect(frame.getAttribute('src')).toBe(liveWrapperSrc(`${GATEWAYS[0]}QmA/?fxhash=ooFIRST`))
+  expect(frame.getAttribute('src')).toContain('fxhash=ooFIRST')
   // Hiding these controls for unarchived projects made a fact about our storage
   // look like a missing feature.
   fireEvent.click(screen.getByRole('button', { name: /next/i }))
   const next = (await screen.findByTitle(/^Tok #2 /)) as HTMLIFrameElement
-  expect(next.getAttribute('src')).toBe(`${GATEWAYS[0]}QmB/?fxhash=ooSECOND`)
+  expect(next.getAttribute('src')).toBe(liveWrapperSrc(`${GATEWAYS[0]}QmB/?fxhash=ooSECOND`))
   expect(seed).toHaveBeenLastCalledWith(42, 101)
+})
+
+test('the wrapper can be stepped out of, back to the untouched artifact', async () => {
+  // Wrapping is a rewrite of somebody else's document, and nothing outside the
+  // sandbox can report whether it rendered. So the way back is offered rather than
+  // inferred — and it has to land on the plain gateway URL, not another wrapper.
+  vi.spyOn(data, 'loadProjectIteration')
+    .mockResolvedValue(local({ seed: 'ooFIRST', artifact: 'ipfs://QmA/?fxhash=ooFIRST' }))
+  render(player({ archived: false }))
+
+  const wrapped = (await screen.findByTitle(/streamed from IPFS/i)) as HTMLIFrameElement
+  expect(wrapped.getAttribute('src')).toContain('live.html')
+
+  fireEvent.click(screen.getByRole('button', { name: /load the original directly/i }))
+  const direct = (await screen.findByTitle(/streamed from IPFS/i)) as HTMLIFrameElement
+  expect(direct.getAttribute('src')).toBe(`${GATEWAYS[0]}QmA/?fxhash=ooFIRST`)
+
+  fireEvent.click(screen.getByRole('button', { name: /use the wrapper/i }))
+  const again = (await screen.findByTitle(/streamed from IPFS/i)) as HTMLIFrameElement
+  expect(again.getAttribute('src')).toContain('live.html')
+})
+
+test('an archived piece is never wrapped — it has the shim built in', async () => {
+  vi.spyOn(data, 'loadProjectIteration').mockResolvedValue(local({ artifact: 'ipfs://QmA/' }))
+  render(player({ archived: true, hasRunner: true }))
+  const frame = (await screen.findByTitle(/archived copy/i)) as HTMLIFrameElement
+  expect(frame.getAttribute('src')).toContain('_run.html')
+  expect(frame.getAttribute('src')).not.toContain('live.html')
+  expect(screen.queryByRole('button', { name: /load the original directly/i })).toBeNull()
 })
 
 test('an archived project never falls back to the gateway', async () => {

@@ -10,7 +10,7 @@ import {
   loadSummary,
   type LocalIteration,
 } from '../lib/data'
-import PieceFrame, { archivedSrc, liveArtifactSrc } from '../components/PieceFrame'
+import PieceFrame, { archivedSrc, liveArtifactSrc, liveWrapperSrc } from '../components/PieceFrame'
 import IpfsImage from '../components/IpfsImage'
 import LoadError from '../components/LoadError'
 import NotFoundPage from './NotFoundPage'
@@ -34,6 +34,9 @@ type Frame =
   | { view: 'image' }
   | { view: 'fetching' }
   | { view: 'patched'; html: string }
+  /** Through public/live.html, which gives a streamed piece the sandbox shim. */
+  | { view: 'wrapped' }
+  /** The artifact URL untouched — what the escape hatch drops back to. */
   | { view: 'direct' }
   /** The copy stored in this repo, run from local files. */
   | { view: 'archived' }
@@ -223,7 +226,7 @@ export default function IterationPage() {
    * button, since it only matters to someone checking our work.
    */
   const canArchived = Boolean(archived?.seed)
-  const liveView: Frame = { view: isLegacy ? 'fetching' : 'direct' }
+  const liveView: Frame = { view: isLegacy ? 'fetching' : 'wrapped' }
   const runView: Frame = canArchived ? { view: 'archived' } : liveView
 
   return (
@@ -237,7 +240,7 @@ export default function IterationPage() {
             ? <p>Preparing live view…</p>
             : frame.view === 'patched'
               ? <iframe srcDoc={frame.html} sandbox="allow-scripts" className="live-frame" title={title} />
-              : <iframe src={liveSrc} sandbox="allow-scripts" className="live-frame" title={title} />)
+              : <iframe src={(frame.view === 'wrapped' && liveWrapperSrc(liveSrc)) || liveSrc} sandbox="allow-scripts" className="live-frame" title={title} />)
           : <IpfsImage uri={it.displayUri ?? it.thumbnailUri} alt={title} className="iteration-img" />}
       </div>
       {(canArchived || liveSrc) && (
@@ -250,6 +253,17 @@ export default function IterationPage() {
           Running the copy archived in this repository.{' '}
           <button className="link-button" onClick={() => setFrame(liveView)}>
             stream the original from IPFS
+          </button>
+        </p>
+      )}
+      {frame.view === 'wrapped' && (
+        // Same reasoning as the legacy note below: nothing outside the sandbox can
+        // report whether the piece rendered, so the way back has to be offered, not
+        // inferred.
+        <p className="muted legacy-note">
+          Streamed through a wrapper that lets the piece read its own files.{' '}
+          <button className="link-button" onClick={() => setFrame({ view: 'direct' })}>
+            load the original directly
           </button>
         </p>
       )}

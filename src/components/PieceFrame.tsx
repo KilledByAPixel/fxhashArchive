@@ -88,6 +88,37 @@ export function liveArtifactSrc(artifact: string, seed: string | null): string |
   return `${path}${query ? `?${query}` : ''}${fragment}`
 }
 
+/**
+ * The same repair, wrapped so the piece also gets the sandbox shim.
+ *
+ * A streamed piece runs in the identical opaque origin as an archived one and
+ * breaks in the identical ways — tainted canvas, storage that throws, workers
+ * refused — but the fix for an archived piece is a script we put in a file we own,
+ * and a gateway's document is not ours to edit. `public/live.html` is a file we do
+ * own: it fetches the artifact, splices the shim in ahead of the artist's scripts,
+ * and writes the result into itself.
+ *
+ * The seed is why this is a page at a real URL rather than an `srcdoc` document.
+ * A generator reads `?fxhash=` out of `window.location.search`, and `about:srcdoc`
+ * has no query at all — so the wrapper carries the piece's own query, and only
+ * appends `fxsrc` for itself. Last in the string, so `fxhash` stays first for
+ * anything parsing it loosely.
+ */
+export function liveWrapperSrc(gatewayUrl: string | null): string | null {
+  if (!gatewayUrl) return null
+
+  const hashAt = gatewayUrl.indexOf('#')
+  const fragment = hashAt >= 0 ? gatewayUrl.slice(hashAt) : ''
+  const rest = hashAt >= 0 ? gatewayUrl.slice(0, hashAt) : gatewayUrl
+
+  const queryAt = rest.indexOf('?')
+  const artifact = queryAt >= 0 ? rest.slice(0, queryAt) : rest
+  const query = queryAt >= 0 ? rest.slice(queryAt + 1) : ''
+
+  const fxsrc = `fxsrc=${encodeURIComponent(artifact)}`
+  return `${import.meta.env.BASE_URL}live.html?${query ? `${query}&` : ''}${fxsrc}${fragment}`
+}
+
 interface Props {
   src: string
   /** The piece's name, e.g. "fxVase #12". */

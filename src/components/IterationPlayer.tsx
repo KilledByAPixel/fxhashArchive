@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { loadProjectIteration, type LocalIteration } from '../lib/data'
-import PieceFrame, { archivedSrc, liveArtifactSrc } from './PieceFrame'
+import PieceFrame, { archivedSrc, liveArtifactSrc, liveWrapperSrc } from './PieceFrame'
 
 /**
  * Steps through a project's edition, playing each piece.
@@ -42,6 +42,8 @@ export default function IterationPlayer({
 }: Props) {
   const [index, setIndex] = useState(0)
   const [local, setLocal] = useState<LocalIteration | null | undefined>(undefined)
+  /** Escape hatch: stream the artifact untouched, without the compatibility wrapper. */
+  const [raw, setRaw] = useState(false)
 
   const current = iterationIds[index]
   const tokenId = current ? Number(current.split('-')[1]) : NaN
@@ -81,7 +83,10 @@ export default function IterationPlayer({
     ? null
     : useArchived
     ? archivedSrc(projectId, local!.seed!, local!.query, hasRunner)
-    : liveSrc
+    : // Streamed pieces go through the wrapper by default, since without it every
+      // fault the shim exists for is back. `raw` is the way out for anything the
+      // wrapper itself breaks — see liveWrapperSrc.
+      (raw ? liveSrc : liveWrapperSrc(liveSrc))
 
   return (
     <section className="archived-player">
@@ -146,6 +151,19 @@ export default function IterationPlayer({
         <code>{current}</code>
         {local?.seed && <> · seed <code>{local.seed}</code></>}
       </p>
+
+      {/* Nothing outside the sandbox can tell whether a wrapped piece rendered
+          correctly, so leave a way back to the untouched artifact. */}
+      {!useArchived && liveSrc && (
+        <p className="muted legacy-note">
+          {raw
+            ? 'Streaming the artifact untouched.'
+            : 'Streamed through a wrapper that lets the piece read its own files.'}{' '}
+          <button className="link-button" onClick={() => setRaw((r) => !r)}>
+            {raw ? 'use the wrapper' : 'load the original directly'}
+          </button>
+        </p>
+      )}
     </section>
   )
 }

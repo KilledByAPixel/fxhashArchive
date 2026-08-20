@@ -45,3 +45,32 @@ export function buildRunner(html) {
 
 /** The name of the derived entry point, alongside the artist's own. */
 export const RUNNER_ENTRY = '_run.html'
+
+/**
+ * Substitute the shim and the gateway allow-list into the live wrapper.
+ *
+ * A streamed piece cannot be given a runner — the file is on a gateway, not here —
+ * so public/live.html carries the shim as a *string* and splices it into whatever
+ * it fetches. The placeholders are written as quoted string literals in the source
+ * so that file stays valid and editable on its own; replacing the quotes along
+ * with them is what turns each into a real literal.
+ *
+ * Throws rather than shipping a wrapper with a placeholder unfilled, since the
+ * result would be a page that loads, looks fine, and silently protects nothing.
+ * Both directions are checked: a placeholder that is missing (renamed in the
+ * source, so the substitution quietly does nothing) and one that appears twice
+ * (only the first would be filled).
+ */
+export function buildLiveWrapper(src, origins) {
+  let out = src
+  for (const [token, value] of [
+    ['__SANDBOX_SHIM__', SANDBOX_SHIM],
+    ['__GATEWAY_ORIGINS__', origins],
+  ]) {
+    const placeholder = `'${token}'`
+    if (!out.includes(placeholder)) throw new Error(`live wrapper: no ${token} to substitute`)
+    out = out.replace(placeholder, JSON.stringify(value))
+    if (out.includes(token)) throw new Error(`live wrapper: ${token} appears more than once`)
+  }
+  return out
+}
