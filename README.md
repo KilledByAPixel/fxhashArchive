@@ -2,12 +2,17 @@
 
 **→ [killedbyapixel.github.io/fxhashViewer](https://killedbyapixel.github.io/fxhashViewer/)**
 
-An unofficial, read-only way to browse the art from [fxhash](https://fxhash.xyz)
-while fxhash itself is down. Its site currently returns a billing error, which
-took public access to ~27,000 generative art projects offline with it.
+An unofficial effort to preserve the art from [fxhash](https://fxhash.xyz), and a
+viewer for what has been preserved.
 
-This is a stopgap. You can browse the catalog, look through artists, and run the
-original artworks again — no wallet, no minting, no marketplace.
+fxhash's site returns a billing error and nothing is being re-pinned, so the
+assumption here is that it is not coming back — and that this art outlives the
+platform only if somebody keeps a copy. This repository holds its Tezos catalog:
+every project, every artist, all 1,802,387 seeds, the artists' own words, and the
+code for the projects people engaged with most. You can browse all of it and run
+the original artworks again — no wallet, no minting, no marketplace.
+
+If fxhash does come back, nothing here was wasted.
 
 **Tezos only.** fxhash also published work on Ethereum and Base, and none of that
 is here. Its Tezos and EVM sides are served by different backends, and only the
@@ -26,7 +31,7 @@ Tezos catalog: 27,430 projects and 5,407 artists.
   its current owner on [tzkt.io](https://tzkt.io) — often not the same person who
   minted it — and to [objkt.com](https://objkt.com) for what it has sold for.
 
-## Why it still works
+## Why it keeps working
 
 The catalog is captured into this repository as plain JSON, so browsing never
 touches fxhash. Individual artworks are looked up live on [TzKT](https://tzkt.io),
@@ -69,8 +74,8 @@ you view them. The exception is the 420 archived generators described below.
 
 ## What is preserved
 
-fxhash is not coming back, so this repository also keeps the parts that would
-otherwise be lost with it.
+Browsing would survive fxhash on its own. These are the parts that would not —
+each of them held in one place that is going away, and now held in two.
 
 **Every seed.** All 1,802,387 of them. A seed is what turns a project's generator
 into one specific artwork. Tezos stores only a pointer to a JSON file on IPFS, and
