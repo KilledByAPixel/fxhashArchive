@@ -16,7 +16,9 @@
     "summary": "node scripts/build-summary.mjs",
     "check:gateways": "node scripts/check-gateways.mjs",
     "build:runners": "node scripts/build-runners.mjs",
-    "thumbs:compress": "node scripts/compress-thumbnails.mjs"
+    "thumbs:compress": "node scripts/compress-thumbnails.mjs",
+    "build:release": "node scripts/build-release.mjs",
+    "verify:release": "node scripts/verify-release.mjs"
   },
   "dependencies": {
     "react": "^19.2.8",

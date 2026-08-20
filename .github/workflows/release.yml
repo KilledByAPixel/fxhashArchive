@@ -1,0 +1,52 @@
+name: Attach the archive to a release
+# The downloadable archive is ~500 MB, so building it here rather than uploading it
+# from somebody's laptop is the difference between a release being reproducible and
+# being whatever happened to be on one machine that day. Tag a version and the asset
+# appears on the release.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to build and attach the archive to'
+        required: true
+permissions:
+  contents: write
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - run: npm ci
+      # The same gates the deploy has. An archive is a worse thing to ship broken
+      # than a site is, because it is the copy people keep.
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build:release -- --version ${{ inputs.tag || github.ref_name }}
+      # Open the archive and read bytes back out of it before it goes anywhere.
+      - run: npm run verify:release
+
+      - name: Attach it
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+          NOTES: >-
+            The whole archive in one file: the viewer, the catalog, every seed, and
+            the generator code for every project archived so far. Unzip it, serve the
+            folder over HTTP, and it runs with no internet. README.txt inside explains
+            how — in short, do not open index.html directly, because browsers block
+            fetch() on file:// and the page will look broken when it is not.
+        # Upload into a release already drafted by hand, or create one if the tag was
+        # pushed on its own. --clobber so re-running replaces the asset rather than
+        # failing on one that is already there.
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" release/*.zip --clobber
+          else
+            gh release create "$TAG" release/*.zip --title "$TAG" --notes "$NOTES"
+          fi
