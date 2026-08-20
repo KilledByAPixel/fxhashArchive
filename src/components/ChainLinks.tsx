@@ -11,10 +11,15 @@
  * stored on chain, every transfer, who holds it. objkt.com is a marketplace — it
  * says what a thing is *worth*: listings, offers, what it last sold for.
  *
- * Preferring the explorer is deliberate, since this archive exists because a
- * marketplace switched off and the chain did not. But a link is only a link: it
- * fetches nothing, and if objkt goes the way of fxhash the cost is a dead
- * href rather than a broken page. So both are offered and the explorer goes first.
+ * They are placed by how often they are wanted, not by preference. The explorer
+ * links sit inline in the facts table, where somebody checking a claim will look.
+ * The market link is a button beside "Run artwork", because a collector arriving
+ * at a piece wants it immediately and should not have to read a table to find it.
+ *
+ * Preferring the explorer as a *source* is still deliberate — this archive exists
+ * because a marketplace switched off and the chain did not — but a link is only a
+ * link: it fetches nothing, and if objkt goes the way of fxhash the cost is a dead
+ * href rather than a broken page.
  */
 
 import { shortAddress } from './Byline'
@@ -48,9 +53,8 @@ export function isTokenId(value: string): boolean {
   return /^[0-9]+$/.test(value)
 }
 
-/** Shared by both links: open away, tell the destination nothing. */
+/** Shared by every outbound link: open away, tell the destination nothing. */
 const EXTERNAL = {
-  className: 'tzkt-link',
   target: '_blank',
   // noreferrer as well as noopener: which piece someone is looking at is theirs to
   // share, not ours to announce to a third party.
@@ -76,42 +80,38 @@ export function TzktTokenLink({ contract, tokenId }: TokenProps) {
   const label = `#${tokenId}`
   if (!isTezosAddress(contract) || !isTokenId(tokenId)) return <>{label}</>
   return (
-    <a {...EXTERNAL} href={`${TZKT_EXPLORER}${contract}/tokens/${tokenId}`} title="View this token on tzkt.io">
+    <a {...EXTERNAL} className="tzkt-link" href={`${TZKT_EXPLORER}${contract}/tokens/${tokenId}`} title="View this token on tzkt.io">
       {label}
     </a>
   )
 }
 
 /**
- * The same token on the marketplace.
+ * The same token on the marketplace, as a button.
  *
  * What it sold for, whether it is listed, what has been offered — none of which
- * the ledger records in a readable form, and all of which a collector wants. Same
- * validation as the explorer link: nothing unchecked reaches a URL.
+ * the ledger records in a readable form, and all of which is the first thing a
+ * collector wants. It began life as small print in the facts table, which put the
+ * most-wanted link in the least-looked-at place.
+ *
+ * An anchor rather than a button element, because it navigates: middle-click,
+ * copy-link and open-in-new-tab all have to keep working. It only looks like a
+ * button.
+ *
+ * Same validation as the explorer link — nothing unchecked reaches a URL — and
+ * nothing at all when it cannot be built, since a dead button is worse than none.
  */
-export function ObjktLink({ contract, tokenId }: TokenProps) {
+export function ObjktButton({ contract, tokenId }: TokenProps) {
   if (!isTezosAddress(contract) || !isTokenId(tokenId)) return null
   return (
-    <a {...EXTERNAL} href={`${OBJKT_MARKET}${contract}/${tokenId}`} title="View this token on objkt.com">
-      objkt
+    <a
+      {...EXTERNAL}
+      className="load-more objkt-button"
+      href={`${OBJKT_MARKET}${contract}/${tokenId}`}
+      title="Listings and sale history on objkt.com"
+    >
+      View on objkt
     </a>
-  )
-}
-
-/**
- * Both destinations for one token, with the separator only where it separates.
- *
- * Rendering the two links and a `·` between them at the call site leaves a dangling
- * bullet whenever the market link cannot be built — which is every piece on a
- * contract we could not verify, and the no-indexer view besides.
- */
-export function TokenLinks({ contract, tokenId }: TokenProps) {
-  const market = ObjktLink({ contract, tokenId })
-  return (
-    <>
-      <TzktTokenLink contract={contract} tokenId={tokenId} />
-      {market && <> · {market}</>}
-    </>
   )
 }
 
@@ -130,7 +130,7 @@ export default function TzktLink({ address, alias }: Props) {
   if (!isTezosAddress(address)) return <>{label}</>
 
   return (
-    <a {...EXTERNAL} href={`${TZKT_EXPLORER}${address}`} title={address}>
+    <a {...EXTERNAL} className="tzkt-link" href={`${TZKT_EXPLORER}${address}`} title={address}>
       {label}
     </a>
   )

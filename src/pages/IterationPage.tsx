@@ -11,7 +11,7 @@ import {
   type LocalIteration,
 } from '../lib/data'
 import PieceFrame, { archivedSrc, liveArtifactSrc, liveWrapperSrc, FRAME_ALLOW } from '../components/PieceFrame'
-import TzktLink, { TokenLinks } from '../components/ChainLinks'
+import TzktLink, { TzktTokenLink, ObjktButton } from '../components/ChainLinks'
 import IpfsImage from '../components/IpfsImage'
 import LoadError from '../components/LoadError'
 import NotFoundPage from './NotFoundPage'
@@ -220,7 +220,7 @@ export default function IterationPage() {
         </div>
         <dl className="iteration-meta">
           <dt>Hash</dt><dd><code>{archived.seed}</code></dd>
-          <dt>Token</dt><dd><TokenLinks contract={contract!} tokenId={tokenId!} /></dd>
+          <dt>Token</dt><dd><TzktTokenLink contract={contract!} tokenId={tokenId!} /></dd>
         </dl>
       </div>
     )
@@ -265,11 +265,16 @@ export default function IterationPage() {
               : <iframe src={(frame.view === 'wrapped' && liveWrapperSrc(liveSrc)) || liveSrc} sandbox="allow-scripts" allow={FRAME_ALLOW} className="live-frame" title={title} />)
           : <IpfsImage uri={it.displayUri ?? it.thumbnailUri} alt={title} className="iteration-img" />}
       </div>
-      {(canArchived || liveSrc) && (
-        <button className="load-more" onClick={() => setFrame(running ? { view: 'image' } : runView)}>
-          {running ? 'Show image' : 'Run artwork'}
-        </button>
-      )}
+      {/* Running the piece and going to see what it sold for are the two things
+          people arrive wanting, so they sit together above everything else. */}
+      <div className="iteration-actions">
+        {(canArchived || liveSrc) && (
+          <button className="load-more" onClick={() => setFrame(running ? { view: 'image' } : runView)}>
+            {running ? 'Show image' : 'Run artwork'}
+          </button>
+        )}
+        <ObjktButton contract={it.contract} tokenId={it.tokenId} />
+      </div>
       {frame.view === 'archived' && liveSrc && (
         <p className="muted legacy-note">
           Running the copy archived in this repository.{' '}
@@ -302,7 +307,7 @@ export default function IterationPage() {
       {iterationText && <p className="project-description">{iterationText}</p>}
       <dl className="iteration-meta">
         <dt>Hash</dt><dd><code>{it.iterationHash ?? 'unknown'}</code></dd>
-        <dt>Token</dt><dd><TokenLinks contract={it.contract} tokenId={it.tokenId} /></dd>
+        <dt>Token</dt><dd><TzktTokenLink contract={it.contract} tokenId={it.tokenId} /></dd>
         <dt>Minted by</dt>
         <dd>
           {it.minterAddress

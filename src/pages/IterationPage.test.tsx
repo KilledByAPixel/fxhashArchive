@@ -332,3 +332,26 @@ test('a minter with no address on file is still named, just not linked', async (
   expect(await screen.findByText('Minter')).toBeTruthy()
   expect(screen.queryByRole('link', { name: 'Minter' })).toBeNull()
 })
+
+test('the marketplace link is a button by the artwork, not small print in the table', () => {
+  // Where a link sits is most of whether it gets used. A collector arriving at a
+  // piece wants the market immediately; someone checking a claim reads the table.
+  const CONTRACT = 'KT1U6EHmNxJTkvaWJ4ThczG4FSDaHC21ssvi'
+  vi.spyOn(tzkt, 'fetchIteration').mockResolvedValue({ ...iteration, contract: CONTRACT })
+  vi.spyOn(tzkt, 'fetchOwner').mockResolvedValue(null)
+
+  render(
+    <MemoryRouter initialEntries={[`/gentk/${CONTRACT}/9`]}>
+      <Routes><Route path="/gentk/:contract/:tokenId" element={<IterationPage />} /></Routes>
+    </MemoryRouter>,
+  )
+
+  return screen.findByRole('link', { name: /objkt/i }).then((objkt) => {
+    expect(objkt.closest('.iteration-actions')).not.toBeNull()
+    expect(objkt.closest('.iteration-meta')).toBeNull()
+    // The explorer link stays in the table, where it belongs.
+    const token = screen.getByRole('link', { name: '#9' })
+    expect(token.closest('.iteration-meta')).not.toBeNull()
+    expect(token.getAttribute('href')).toContain('tzkt.io')
+  })
+})

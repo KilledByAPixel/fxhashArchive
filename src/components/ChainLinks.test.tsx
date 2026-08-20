@@ -1,6 +1,6 @@
 import { render, screen, cleanup } from '@testing-library/react'
 import { test, expect, afterEach } from 'vitest'
-import TzktLink, { TzktTokenLink, ObjktLink, TokenLinks, isTezosAddress } from './ChainLinks'
+import TzktLink, { TzktTokenLink, ObjktButton, isTezosAddress } from './ChainLinks'
 
 afterEach(cleanup)
 
@@ -88,29 +88,22 @@ test('a contract that is not an address gets no link', () => {
   expect(screen.getByText('#9')).toBeTruthy()
 })
 
-test('links the same token to the marketplace, which answers a different question', () => {
-  // The explorer says what it is; objkt says what it sold for. Neither fetches
-  // anything — a link is a link, and a dead marketplace costs a click, not a page.
-  render(<ObjktLink contract={CONTRACT} tokenId="1592717" />)
-  const link = screen.getByRole('link', { name: 'objkt' })
+test('the marketplace link is a button, and still a real link', () => {
+  // An anchor styled as a button, deliberately: it navigates, so middle-click,
+  // copy-link and open-in-new-tab all have to keep working.
+  render(<ObjktButton contract={CONTRACT} tokenId="1592717" />)
+  const link = screen.getByRole('link', { name: /objkt/i })
   expect(link.getAttribute('href')).toBe(`https://objkt.com/tokens/${CONTRACT}/1592717`)
   expect(link.getAttribute('rel')).toContain('noopener')
+  expect(link.className).toContain('load-more')
 })
 
-test('the market link is omitted entirely when it cannot be built', () => {
-  // Unlike the token link, there is no useful text to fall back to: "objkt" as
-  // plain words tells a reader nothing.
-  const { container } = render(<ObjktLink contract="javascript:alert(1)" tokenId="9" />)
+test('nothing is rendered when the market link cannot be built', () => {
+  // A dead button is worse than no button: it looks like something you can press.
+  const { container } = render(<ObjktButton contract="javascript:alert(1)" tokenId="9" />)
   expect(container.textContent).toBe('')
-})
-
-test('the separator appears only when there are two things to separate', () => {
-  // A dangling bullet is what you get from writing `link · link` at the call site,
-  // and the market link is absent on every contract that does not validate.
-  const both = render(<TokenLinks contract={CONTRACT} tokenId="1592717" />)
-  expect(both.container.textContent).toBe('#1592717 · objkt')
   cleanup()
 
-  const one = render(<TokenLinks contract="KT1x" tokenId="1592717" />)
-  expect(one.container.textContent).toBe('#1592717')
+  const bad = render(<ObjktButton contract={CONTRACT} tokenId="../../evil" />)
+  expect(bad.container.textContent).toBe('')
 })
