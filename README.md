@@ -5,12 +5,12 @@
 An unofficial effort to preserve the art from [fxhash](https://fxhash.xyz), and a
 viewer for what has been preserved.
 
-fxhash's site returns a billing error and nothing is being re-pinned, so the
-assumption here is that it is not coming back — and that this art outlives the
-platform only if somebody keeps a copy. This repository holds its Tezos catalog:
-every project, every artist, all 1,802,387 seeds, the artists' own words, and the
-code for the projects people engaged with most. You can browse all of it and run
-the original artworks again — no wallet, no minting, no marketplace.
+fxhash appears to be gone indefinitely, and the assumption here is that it is not
+coming back. The art outlives the platform only if somebody keeps a copy. This
+repository holds its Tezos catalog: every project, every artist, all 1,802,387
+seeds, the artists' own words, and the code for the projects people engaged with
+most. You can browse all of it and run the original artworks again — no wallet, no
+minting, no marketplace.
 
 If fxhash does come back, nothing here was wasted.
 
@@ -40,8 +40,8 @@ IPFS. None of those need fxhash to be online.
 
 fxhash's own API was used only to *build* the snapshot, offline. If it disappears
 tomorrow the site keeps working exactly as it does today — only future refreshes
-stop. A weekly job tries to refresh the catalog and will start failing loudly
-the day that API is finally switched off.
+stop. A weekly job tries to refresh the catalog and will start failing loudly the
+day that API stops answering.
 
 Artwork runs in a locked-down sandbox, since these are arbitrary third-party
 programs. That takes away a few things a piece may need — reading its own images,
@@ -102,9 +102,9 @@ stored alongside, so the grid still shows something when IPFS is unreachable.
 **What the artists said about it.** The description of every project — 27,422 of
 the 27,430 have one — plus the text fxhash showed on each individual iteration.
 382 bytes on average and, for most of this art, the only prose anyone ever wrote
-about it. It survives in two places: fxhash's API, which is still answering despite
-the site being switched off, and the metadata on IPFS, behind exactly the pins this
-archive exists to outlive.
+about it. It survived in two places, neither of them a safe bet: fxhash's own API,
+which still answered when this was captured, and the metadata on IPFS, behind
+exactly the pins this archive exists to outlive.
 
 **Who made the work.** 553 projects were minted through fxhash's shared
 collaboration contracts, which meant the catalog recorded a KT1 address as the
@@ -117,7 +117,7 @@ own. 41 addresses have no name recorded anywhere and are shown as addresses.
 ## Honest limitations
 
 - **This is a frozen archive, not a mirror.** The catalog was captured at a point
-  in time and won't grow. Nothing new is being minted on a dead platform.
+  in time and won't grow. Nothing new is being minted.
 - **The real long-term risk is IPFS, not fxhash.** The blockchain records who owns
   what, but the artwork itself lives on IPFS. If nobody keeps those files pinned,
   the chain will still say a piece exists while the artwork becomes unretrievable.
@@ -126,8 +126,9 @@ own. 41 addresses have no name recorded anywhere and are shown as addresses.
   still depend on IPFS staying alive.
 - **370 on-chain projects still need an fxhash service to run.** Their code is
   stored on chain via `onchfs://` rather than IPFS, so nothing can be lost, but
-  reading it back currently goes through a resolver fxhash runs. Any of them can be
-  made fully local on request.
+  reading it back currently goes through a resolver on fxhash's own infrastructure,
+  which there is no reason to expect will outlast the rest of it. Any of them can be
+  archived locally on request.
 - **Public IPFS gateways are getting harder to use.** Several large ones now answer
   browsers with a challenge page that cannot be framed, so artwork silently stopped
   running through them. The site has moved to three that still work, and there is a
@@ -137,7 +138,7 @@ own. 41 addresses have no name recorded anywhere and are shown as addresses.
   not archived either. One gap: a hand-crafted URL to an individual artwork of a
   flagged project can still reach it. Nothing in the site links there, and it still
   runs sandboxed.
-- **Browsing all 27,430 projects is a heavy page load** (~16.5 MB), because search
+- **Browsing all 27,430 projects is a heavy page load** (~16 MB), because search
   covers the whole catalog at once. The front page is not — it ships the few dozen
   cards it needs, about 200 KB.
 

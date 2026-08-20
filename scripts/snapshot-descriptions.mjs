@@ -3,9 +3,10 @@
 // The catalog snapshot kept names, tags and authorship but not the artist's own
 // words about the work — 382 bytes on average, present for every one of the 27,430
 // projects, and the only prose anyone wrote about most of this art. It exists in
-// two places: fxhash's API, and the project metadata JSON on IPFS. The API is
-// running today despite the site being switched off for non-payment, and the IPFS
-// copy sits behind exactly the pins this archive exists to outlive.
+// two places: fxhash's API, and the project metadata JSON on IPFS. The API still
+// answered when this was captured, outliving the platform's own site, and the IPFS
+// copy sits behind exactly the pins this archive exists to outlive. Neither is a
+// reason to leave the text where it is.
 //
 // Two fields, both irreplaceable:
 //   description          what the project is, shown on its page

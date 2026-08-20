@@ -83,15 +83,16 @@ export default function LandingPage() {
           page only makes sense once someone knows it. */}
       <div className="landing-intro">
         <p>
-          fxhash was a platform for generative art. An artist publishes a program
-          rather than a picture, and every mint runs that program with a different
-          random seed — so each collector ends up with a piece nobody, the artist
-          included, had seen before. It opened on Tezos in 2021.
+          fxhash was a platform for generative art that opened on Tezos in 2021. An
+          artist publishes a program rather than a picture, and every mint runs that
+          program with a different random seed. So each collector ends up with a
+          unique piece that nobody, the artist included, had seen before.
         </p>
         <p>
-          It is offline now. This is an unofficial, read-only archive of the work made
-          there: every project, every artist, and the seed behind every piece ever
-          minted, which is what lets any of them be drawn again. Nothing is for sale.
+          This is an unofficial, read-only archive of the work made on fxhash: every
+          project, every artist, and every seed ever minted is preserved here. It also
+          includes over 400 fully archived projects that can be regenerated without
+          any network access. Nothing here is for sale.
         </p>
       </div>
 
