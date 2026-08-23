@@ -25,6 +25,10 @@ Tezos catalog: 27,430 projects and 5,407 artists.
 - **Run the artwork** — not a picture of it. Every piece is the artist's own
   program, re-run with the seed that produced the edition you are looking at, so
   what you see is the piece as it was minted.
+- **Walk the gallery.** The 420 archived projects hang in a museum you can walk
+  through — halls by era, rooms for the artists with the most archived work. Step
+  up to a painting and it runs, from its real seed, and you can page through the
+  edition without leaving the wall.
 - **Step through an edition** with next/previous, on any project, whether or not
   its code is stored here.
 - **Follow a piece to the chain.** Each artwork links to its token, its minter and
@@ -149,9 +153,13 @@ npm install
 npm run dev       # dev server
 npm test          # tests
 npm run build     # production build
+npm run gallery   # rebuild public/data/gallery.json and its atlases after an archive change
 ```
 
 Pushing to `master` builds and publishes to GitHub Pages automatically.
+
+`npm run summary` and `npm run gallery` both read the archived set off disk, so
+both go stale when a generator is added or withdrawn; rerun them together.
 
 The interesting parts are documented where they live rather than here:
 `scripts/` holds the capture and archiving tools, each explaining what it captures

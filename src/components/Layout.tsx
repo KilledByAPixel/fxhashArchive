@@ -8,6 +8,7 @@ export default function Layout() {
         <nav>
           <Link to="/artwork">Artwork</Link>
           <Link to="/artists">Artists</Link>
+          <Link to="/gallery">Gallery</Link>
         </nav>
       </header>
       <main className="site-main">

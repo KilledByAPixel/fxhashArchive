@@ -522,3 +522,24 @@ test('missing thumbnails say why rather than leaving a blank tile', async () => 
   // gateways, and this one is about not having reached the indexer at all.
   expect(screen.getAllByTitle(/preview unavailable/i).length).toBeGreaterThan(0)
 })
+
+test('an archived project links to its place in the gallery', async () => {
+  vi.spyOn(tzkt, 'fetchIterations').mockResolvedValue([iter()])
+  vi.spyOn(data, 'loadSummary').mockResolvedValue({
+    generatedAt: 'T', counts: { projects: 1, artists: 1, iterations: 1, seeds: 1, archived: 1, archivedShareOfVolume: 1 },
+    ranked: [5], archived: [5], runners: [5], featured: { top: [], sample: [] }, thumbs: {},
+  })
+  renderAt('/token/tok-5')
+  expect((await screen.findByRole('link', { name: /see it in the gallery/i })).getAttribute('href')).toBe('/gallery?project=5')
+})
+
+test('an unarchived project has no gallery link', async () => {
+  vi.spyOn(tzkt, 'fetchIterations').mockResolvedValue([iter()])
+  vi.spyOn(data, 'loadSummary').mockResolvedValue({
+    generatedAt: 'T', counts: { projects: 1, artists: 1, iterations: 1, seeds: 1, archived: 0, archivedShareOfVolume: 0 },
+    ranked: [5], archived: [], runners: [], featured: { top: [], sample: [] }, thumbs: {},
+  })
+  renderAt('/token/tok-5')
+  await screen.findByRole('heading', { name: 'Tok 5' })
+  expect(screen.queryByRole('link', { name: /see it in the gallery/i })).toBeNull()
+})

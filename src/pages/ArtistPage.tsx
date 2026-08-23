@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import {
   loadArtists,
   loadTokensMap,
   loadAllTokens,
   loadSummary,
+  loadGallery,
   loadCollaborations,
   isVisible,
   type Collaborator,
@@ -41,6 +42,8 @@ export default function ArtistPage() {
    * and none of its actual artists could find it here — including on their own page.
    */
   const [collabs, setCollabs] = useState<Record<number, Collaborator[]>>({})
+  // Whether this artist has a solo room in the gallery. Not fatal: no file, no link.
+  const [hasRoom, setHasRoom] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -52,6 +55,10 @@ export default function ArtistPage() {
     loadSummary().then(
       (s) => { if (!cancelled) { setArchivedIds(new Set(s.archived)); setThumbs(s.thumbs) } },
       () => { if (!cancelled) { setArchivedIds(new Set()); setThumbs({}) } },
+    )
+    loadGallery().then(
+      (g) => { if (!cancelled) setHasRoom(g.rooms.some((r) => r.kind === 'solo' && r.id === id)) },
+      () => { if (!cancelled) setHasRoom(false) },
     )
     ;(async () => {
       try {
@@ -117,6 +124,11 @@ export default function ArtistPage() {
           <h2>{artist.name ?? artist.id}</h2>
           <p className="muted"><code>{artist.id}</code></p>
           {artist.description && <p>{artist.description}</p>}
+          {hasRoom && (
+            <p className="muted">
+              <Link to={`/gallery?room=${id}`}>This artist has a room in the gallery →</Link>
+            </p>
+          )}
         </div>
       </div>
       <h3>{tokens.length} projects</h3>

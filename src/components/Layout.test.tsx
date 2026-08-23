@@ -31,3 +31,8 @@ test('repository link opens in a new tab without exposing window.opener', () => 
   expect(link.getAttribute('target')).toBe('_blank')
   expect(link.getAttribute('rel')).toContain('noopener')
 })
+
+test('header links to the gallery', () => {
+  renderLayout()
+  expect(screen.getByRole('link', { name: 'Gallery' }).getAttribute('href')).toBe('/gallery')
+})

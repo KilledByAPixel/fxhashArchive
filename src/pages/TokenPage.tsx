@@ -260,6 +260,11 @@ export default function TokenPage() {
             {Array.isArray(objktIds) && ` · ${objktIds.length} minted`}
           </p>
           {project.tags.length > 0 && <p className="muted">{project.tags.join(', ')}</p>}
+          {isArchived && (
+            <p className="muted">
+              <Link to={`/gallery?project=${project.id}`}>See it in the gallery →</Link>
+            </p>
+          )}
           {market && market.pv + market.sv > 0 && (
             <p className="muted">
               {tez(market.pv + market.sv)} traded
