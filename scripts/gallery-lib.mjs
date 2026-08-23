@@ -89,13 +89,7 @@ export function assignRooms(tokens, collaborations = {}) {
     perArtist.get(t.author.id).projects.push(t)
   }
   // Map insertion order is the order of each artist's first piece.
-  const solo = [...perArtist.values()]
-    .filter((a) => a.projects.length >= SOLO_MIN)
-    .filter((a) => {
-      // All projects must be in the same era
-      const eras = new Set(a.projects.map((t) => eraOf(t.createdAt)))
-      return eras.size === 1
-    })
+  const solo = [...perArtist.values()].filter((a) => a.projects.length >= SOLO_MIN)
   const soloIds = new Set(solo.flatMap((a) => a.projects.map((t) => t.id)))
 
   const halls = new Map(ERAS.map((e) => [e.id, []]))
