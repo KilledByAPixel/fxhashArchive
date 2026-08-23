@@ -133,10 +133,11 @@ members included). Spawn is the lobby centre, eye height, facing +z.
 **Solo room.** Square. Its side `s` is the smallest integer ≥ `ROOM_MIN` for which
 all `n` paintings fit on its four inside walls at pitch `SPACING`, keeping `CORNER`
 (1 m) clear of every corner and skipping the door span — found by growing `s`
-until they do. For 31 pieces that comes out around 25 m. It sits flush against the
+until they do. For 31 pieces that comes out at 24 m. It sits flush against the
 hall's outer wall, its door centred on the shared wall. Paintings hang on the four
-inside walls in order, starting to the left of the door and going clockwise. A name
-sign hangs beside the door on the hall side and on the wall facing the door inside.
+inside walls in order, door wall first, then around. A name sign hangs above the
+door on the hall side — in the lintel band, where it cannot crowd a painting — and
+on the wall facing the door inside.
 
 **Hall.** Width `HALL_W`, length `L`. Solo rooms consume spans of its outer walls:
 room `i` on a side occupies `s_i + ROOM_GAP` along that wall, packed from the
@@ -147,10 +148,13 @@ each side fits and every shared painting has a slot; found by growing `L` until 
 does. The hall's near wall has the `OPENING_W` opening from the previous hall (or
 lobby) with the era sign above it; the far wall of the last hall is solid.
 
-**Signs.** Four kinds, each a quad on a wall: the lobby title (3 × 1), era signs
-(over openings, 3 × 0.6), room signs (0.12 text height beside doors), and a plaque
-under every painting's lower-right corner (0.5 × 0.12: "Name — Artist, Year").
-Their text and placement are in the JSON; they are rasterised on the client.
+**Signs.** Four kinds, each a quad on a wall: the lobby title above the lobby's
+opening ("fxhash", 3 × 0.5, with the counts line under it, 3 × 0.25); an era sign
+on the pier to the right of each opening, facing the visitor about to walk through
+(1.8 × 0.5, centred 2.2 m up); room signs (2.4 × 0.4, above the door and inside);
+and a plaque under every painting's lower-right corner (0.5 × 0.12: "Name —
+Artist, Year"). Their text and placement are in the JSON; they are rasterised on
+the client.
 
 **Invariants** (these are the tests):
 
@@ -250,9 +254,10 @@ until the scene's first frame.
 ### Scene
 
 - Walls: one box per `Wall` segment (length × (y1 − y0) × WALL_T), merged into one
-  geometry. Floor and ceiling: one plane per room, merged. `MeshLambertMaterial`,
-  dark neutral — walls around `#2a2a2a`, floor `#1a1a1a`, ceiling `#151515` — so the
-  pictures are the light in the room, as on the rest of the site.
+  geometry. Floor and ceiling: one plane each per room, merged. `MeshLambertMaterial`,
+  dark neutral — walls around `#2a2a2a`, floor and ceiling `#1a1a1a`, the hemisphere
+  light telling them apart — so the pictures are the light in the room, as on the
+  rest of the site.
 - Paintings: one quad per painting with UVs into its atlas tile, merged into one
   mesh per atlas — two draw calls for all 420. `MeshBasicMaterial` (unlit) with the
   atlas as map, `toneMapped: false`: the art must look like the art. A frame: a
