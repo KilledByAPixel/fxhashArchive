@@ -52,6 +52,7 @@ export default function ArtistPage() {
     // or project grid visible while the new one loads.
     setState({ status: 'loading' })
     setTokens([])
+    setHasRoom(false)
     loadSummary().then(
       (s) => { if (!cancelled) { setArchivedIds(new Set(s.archived)); setThumbs(s.thumbs) } },
       () => { if (!cancelled) { setArchivedIds(new Set()); setThumbs({}) } },
