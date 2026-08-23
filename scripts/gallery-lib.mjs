@@ -105,3 +105,69 @@ export function assignRooms(tokens, collaborations = {}) {
 
   return { solo, halls, artistCount: people.size }
 }
+
+/**
+ * The solid pieces of one straight wall, with doors cut out of it.
+ *
+ * A wall runs from `from` to `to` along `axis`, sitting at `fixed` on the other
+ * axis. Each gap becomes a header segment from `gap.top` up to the ceiling, so the
+ * renderer draws the lintel and the collider, which ignores anything with y0 > 0,
+ * lets people through.
+ */
+export function wallSegments(axis, fixed, from, to, gaps = []) {
+  const seg = (a, b, y0, y1) =>
+    axis === 'x'
+      ? { x1: a, z1: fixed, x2: b, z2: fixed, y0, y1 }
+      : { x1: fixed, z1: a, x2: fixed, z2: b, y0, y1 }
+  const out = []
+  let cursor = from
+  for (const g of [...gaps].sort((p, q) => p.from - q.from)) {
+    if (g.from > cursor) out.push(seg(cursor, g.from, 0, WALL_H))
+    out.push(seg(g.from, g.to, g.top, WALL_H))
+    cursor = g.to
+  }
+  if (to > cursor) out.push(seg(cursor, to, 0, WALL_H))
+  return out
+}
+
+/**
+ * Where a painting's centre may go on a wall from `from` to `to`: CORNER clear of
+ * each end and of each door gap. Returns intervals; an interval of zero length is
+ * one legal position, a negative one is dropped.
+ */
+export function freeRuns(from, to, gaps = []) {
+  const runs = []
+  let cursor = from + CORNER
+  for (const g of [...gaps].sort((p, q) => p.from - q.from)) {
+    runs.push([cursor, g.from - CORNER])
+    cursor = g.to + CORNER
+  }
+  runs.push([cursor, to - CORNER])
+  return runs.filter(([a, b]) => b >= a)
+}
+
+/** Painting centres at pitch SPACING, as many as fit, centred within the run. */
+export function slotsOnRun(a, b) {
+  const len = b - a
+  if (len < 0) return []
+  const n = Math.floor(len / SPACING) + 1
+  const start = a + (len - (n - 1) * SPACING) / 2
+  return Array.from({ length: n }, (_, i) => start + i * SPACING)
+}
+
+/** Door gap centred on a wall of length `len`. No `top` — callers add it. */
+export const doorGap = (len) => ({ from: len / 2 - DOOR_W / 2, to: len / 2 + DOOR_W / 2 })
+
+/** How many paintings a square solo room of side `s` can hang, door wall included. */
+export function soloRoomSlots(s) {
+  const doorWall = freeRuns(0, s, [doorGap(s)]).flatMap(([a, b]) => slotsOnRun(a, b)).length
+  const plainWall = freeRuns(0, s).flatMap(([a, b]) => slotsOnRun(a, b)).length
+  return doorWall + 3 * plainWall
+}
+
+/** The smallest side ≥ ROOM_MIN whose four walls hold `n` paintings. */
+export function soloRoomSide(n) {
+  let s = ROOM_MIN
+  while (soloRoomSlots(s) < n) s += 1
+  return s
+}

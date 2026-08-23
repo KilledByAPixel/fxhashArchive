@@ -1,5 +1,5 @@
 import { test, expect } from 'vitest'
-import { ERAS, eraOf, isCollab, creditOf, assignRooms, SOLO_MIN } from './gallery-lib.mjs'
+import { ERAS, eraOf, isCollab, creditOf, assignRooms, SOLO_MIN, wallSegments, freeRuns, slotsOnRun, soloRoomSlots, soloRoomSide, WALL_H, DOOR_H, SPACING, CORNER, ROOM_MIN } from './gallery-lib.mjs'
 
 const tok = (id, createdAt, author = { id: 'tz1a', name: 'Alice' }, extra = {}) => ({
   id, slug: `p${id}`, name: `P${id}`, flag: 'NONE', createdAt, author, ...extra,
@@ -78,4 +78,40 @@ test('an artist with 5+ projects spanning multiple eras still gets a solo room w
   expect(halls.get('2022-q1').length).toBe(0)
   expect(halls.get('2022-q2').length).toBe(0)
   expect(halls.get('2023-on').length).toBe(0)
+})
+
+test('wallSegments cuts a door gap and leaves a header above it', () => {
+  const segs = wallSegments('z', -4, 0, 10, [{ from: 4, to: 6, top: DOOR_H }])
+  expect(segs).toEqual([
+    { x1: -4, z1: 0, x2: -4, z2: 4, y0: 0, y1: WALL_H },
+    { x1: -4, z1: 4, x2: -4, z2: 6, y0: DOOR_H, y1: WALL_H },
+    { x1: -4, z1: 6, x2: -4, z2: 10, y0: 0, y1: WALL_H },
+  ])
+})
+
+test('wallSegments along x with no gaps is one solid piece', () => {
+  expect(wallSegments('x', 8, -4, 4)).toEqual([{ x1: -4, z1: 8, x2: 4, z2: 8, y0: 0, y1: WALL_H }])
+})
+
+test('freeRuns keeps CORNER clear of the ends and of each gap', () => {
+  expect(freeRuns(0, 10)).toEqual([[CORNER, 10 - CORNER]])
+  expect(freeRuns(0, 10, [{ from: 4, to: 6 }])).toEqual([[CORNER, 4 - CORNER], [6 + CORNER, 10 - CORNER]])
+  expect(freeRuns(0, 2.5, [{ from: 1, to: 2 }])).toEqual([])   // nothing fits either side
+})
+
+test('slotsOnRun places centres at pitch SPACING, centred in the run', () => {
+  expect(slotsOnRun(1, 7)).toEqual([1, 4, 7])
+  expect(slotsOnRun(1, 8)).toEqual([1.5, 4.5, 7.5])
+  expect(slotsOnRun(1, 1)).toEqual([1])
+  expect(slotsOnRun(3, 1)).toEqual([])
+})
+
+test('soloRoomSide grows the room until its four walls hold every painting', () => {
+  expect(soloRoomSide(1)).toBe(ROOM_MIN)
+  expect(soloRoomSlots(ROOM_MIN)).toBeGreaterThanOrEqual(SOLO_MIN)
+  const s = soloRoomSide(31)
+  expect(soloRoomSlots(s)).toBeGreaterThanOrEqual(31)
+  expect(soloRoomSlots(s - 1)).toBeLessThan(31)
+  expect(s).toBeGreaterThan(20)
+  expect(s).toBeLessThan(30)
 })
