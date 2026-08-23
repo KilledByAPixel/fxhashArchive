@@ -28,8 +28,10 @@ test('every sign gets a rect inside the atlas, none overlapping, in input order'
       // aspect preserved: a 0.5 × 0.12 plaque is a 25:6 rect
       expect(r.w / r.h).toBeCloseTo(realistic[i].w / realistic[i].h, 1)
     })
+    let overlapping = 0
     for (let i = 0; i < rects.length; i++)
-      for (let j = i + 1; j < rects.length; j++) expect(overlaps(rects[i], rects[j])).toBe(false)
+      for (let j = i + 1; j < rects.length; j++) if (overlaps(rects[i], rects[j])) overlapping++
+    expect(overlapping).toBe(0)
     // uvs address the same pixels, top row at v = 1
     expect(uvs[0]).toEqual({
       u0: rects[0].x / size, u1: (rects[0].x + rects[0].w) / size,
