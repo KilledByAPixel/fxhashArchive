@@ -24,6 +24,7 @@ const routes: Record<string, unknown> = {
     contracts: ['KT1v1', 'KT1v2', 'KT1v3'],
     byProject: { '1': 0, '2': 1, '3': 2 },
   },
+  'gallery.json': { generatedAt: 'T', counts: { paintings: 1 }, rooms: [], walls: [], paintings: [], signs: [] },
 }
 
 beforeEach(() => {
@@ -397,4 +398,9 @@ test('iteration text falls back to the description when the file omits it', asyn
     description: 'About the project',
     iterationText: null,
   })
+})
+
+test('loadGallery fetches the baked museum', async () => {
+  const { loadGallery } = await import('./data')
+  expect((await loadGallery()).counts.paintings).toBe(1)
 })

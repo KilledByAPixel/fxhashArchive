@@ -1,4 +1,5 @@
 import type { LeanToken, Artist, SnapshotMeta, Summary, MarketStats } from './types'
+import type { Gallery } from '../gallery/types'
 
 const BASE = `${import.meta.env.BASE_URL}data/`
 const HIDDEN_FLAGS = new Set(['MALICIOUS', 'HIDDEN', 'REPORTED', 'AUTO_DETECT_COPY'])
@@ -324,3 +325,10 @@ export async function loadProjectMarketStats(
   const shard = await loadMarketShard(shardIdx)
   return shard[String(projectId)] ?? null
 }
+
+/**
+ * The museum: rooms, walls, and every archived painting's place and atlas tile.
+ * Built by scripts/build-gallery.mjs, so rerun `npm run gallery` after any archive
+ * change or the building goes stale.
+ */
+export const loadGallery = () => getJson<Gallery>('gallery.json')
