@@ -1,0 +1,40 @@
+// scripts/gallery-inputs.mjs
+// The I/O half of the gallery build: what buildGallery needs, read off disk. Separate
+// from build-gallery.mjs so a test can run the layout over the real archive without
+// importing a script whose top level does work.
+
+import { readFile, readdir } from 'node:fs/promises'
+import { join } from 'node:path'
+
+/**
+ * Every catalog entry for an archived project, the collaboration credits, and a
+ * map of project id → thumbnail path. The archived set is the manifest's keys —
+ * the same source build-summary.mjs uses — so the gallery cannot disagree with the
+ * grid's badges about what is archived.
+ */
+export async function readArchiveInputs(dataDir = 'public/data') {
+  const manifest = JSON.parse(await readFile(join(dataDir, 'generators', 'manifest.json'), 'utf8'))
+  const archived = new Set(Object.keys(manifest).map(Number))
+
+  const shards = (await readdir(join(dataDir, 'tokens')))
+    .filter((f) => /^index-\d+\.json$/.test(f))
+    .sort()
+  const tokens = []
+  for (const f of shards) {
+    for (const t of JSON.parse(await readFile(join(dataDir, 'tokens', f), 'utf8'))) {
+      if (archived.has(t.id)) tokens.push(t)
+    }
+  }
+
+  const collaborations = await readFile(join(dataDir, 'collaborations.json'), 'utf8')
+    .then((s) => JSON.parse(s).byProject ?? {})
+    .catch(() => ({}))
+
+  const thumbs = {}
+  for (const f of await readdir(join(dataDir, 'thumbs')).catch(() => [])) {
+    const m = f.match(/^(\d+)\.\w+$/)
+    if (m) thumbs[m[1]] = join(dataDir, 'thumbs', f)
+  }
+
+  return { tokens, collaborations, thumbs }
+}

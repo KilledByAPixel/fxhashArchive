@@ -171,3 +171,194 @@ export function soloRoomSide(n) {
   while (soloRoomSlots(s) < n) s += 1
   return s
 }
+
+export const ATLAS = { size: 4096, tile: 256, gutter: 4, cols: 15 }
+export const ATLAS_SMALL = { size: 2048, tile: 128, gutter: 2, cols: 15 }
+export const TILES_PER_ATLAS = ATLAS.cols * ATLAS.cols
+
+/** Where tile `tile` lives: which file, which cell, and the pixel origin of the image itself (inside its gutter). */
+export function tileRect(tile, atlas = ATLAS) {
+  const perFile = atlas.cols * atlas.cols
+  const file = Math.floor(tile / perFile)
+  const i = tile % perFile
+  const col = i % atlas.cols
+  const row = Math.floor(i / atlas.cols)
+  const cell = atlas.tile + 2 * atlas.gutter
+  return { file, col, row, x: col * cell + atlas.gutter, y: row * cell + atlas.gutter, cell }
+}
+
+const HX = HALL_W / 2
+/** Six decimals is sub-millimetre; it also keeps cos(π/2) from printing as 6e-17. */
+const r6 = (v) => Math.round(v * 1e6) / 1e6
+
+/**
+ * Painting placements along one wall: centres at pitch on the free runs, stood
+ * WALL_OFFSET off the wall along the normal `yaw`.
+ */
+function hangAlong(axis, fixed, from, to, gaps, yaw) {
+  const nx = Math.sin(yaw)
+  const nz = Math.cos(yaw)
+  return freeRuns(from, to, gaps)
+    .flatMap(([a, b]) => slotsOnRun(a, b))
+    .map((c) => ({
+      x: r6((axis === 'x' ? c : fixed) + nx * WALL_OFFSET),
+      z: r6((axis === 'x' ? fixed : c) + nz * WALL_OFFSET),
+      yaw: r6(yaw),
+    }))
+}
+
+const opening = () => ({ from: -OPENING_W / 2, to: OPENING_W / 2, top: DOOR_H })
+
+/**
+ * The whole building, from the archived set.
+ *
+ * A lobby, then seven era halls end to end along +z. Solo rooms hang off the
+ * outer walls of the hall of their artist's first piece, alternating left and
+ * right, packed from the hall's start. A hall is as long as it must be: long
+ * enough for its rooms on its busier side, and long enough to hang every shared
+ * painting of its era in the wall between the doors. Nothing here depends on
+ * input order — see byDate — so the same archive gives the same building.
+ */
+export function buildGallery({ tokens, collaborations = {}, generatedAt }) {
+  const visible = tokens.filter((t) => !HIDDEN_FLAGS.has(t.flag))
+  const { solo, halls, artistCount } = assignRooms(visible, collaborations)
+  const years = visible.map((t) => Number(t.createdAt.slice(0, 4)))
+  const span = years.length ? [Math.min(...years), Math.max(...years)] : [0, 0]
+
+  const rooms = []
+  const walls = []
+  const paintings = []
+  const signs = []
+
+  const hang = (t, room, slot) =>
+    paintings.push({
+      project: t.id, slug: t.slug, name: t.name, artist: creditOf(t, collaborations),
+      year: Number(t.createdAt.slice(0, 4)), room, x: slot.x, z: slot.z, yaw: slot.yaw, tile: 0,
+    })
+  /** A sign on a wall at (x, y, z) facing `yaw`, stood off the wall like a painting. */
+  const sign = (kind, text, x, y, z, yaw, w, h) =>
+    signs.push({
+      text, kind, x: r6(x + Math.sin(yaw) * WALL_OFFSET), y, z: r6(z + Math.cos(yaw) * WALL_OFFSET),
+      yaw: r6(yaw), w, h,
+    })
+
+  // Lobby: spawn in the middle facing the spine; title above the opening ahead.
+  rooms.push({
+    id: 'lobby', kind: 'lobby', title: 'fxhash',
+    rect: { x: -HX, z: 0, w: LOBBY, d: LOBBY }, entry: { x: 0, z: LOBBY / 2, yaw: 0 },
+  })
+  walls.push(
+    ...wallSegments('z', -HX, 0, LOBBY),
+    ...wallSegments('z', HX, 0, LOBBY),
+    ...wallSegments('x', 0, -HX, HX),
+    ...wallSegments('x', LOBBY, -HX, HX, [opening()]),
+  )
+  sign('title', 'fxhash', 0, 3.65, LOBBY, Math.PI, 3, 0.5)
+  sign('title', `${visible.length} archived works · ${artistCount} artists · ${span[0]}–${span[1]}`, 0, 3.25, LOBBY, Math.PI, 3, 0.25)
+
+  let z0 = LOBBY
+  ERAS.forEach((era, k) => {
+    const shared = halls.get(era.id)
+    const here = solo.filter((a) => eraOf(a.projects[0].createdAt) === era.id)
+
+    // Rooms first: they decide the hall's minimum length and where its doors are.
+    const placed = []
+    let need = HALL_MIN
+    for (const side of ['left', 'right']) {
+      let z = z0 + ROOM_GAP
+      here.forEach((a, i) => {
+        if ((i % 2 === 0 ? 'left' : 'right') !== side) return
+        const s = soloRoomSide(a.projects.length)
+        const rect = side === 'left' ? { x: -HX - s, z, w: s, d: s } : { x: HX, z, w: s, d: s }
+        placed.push({ artist: a, side, rect, doorZ: z + s / 2 })
+        z += s + ROOM_GAP
+      })
+      need = Math.max(need, z - z0)
+    }
+    const gapsFor = (side) =>
+      placed.filter((p) => p.side === side).map((p) => ({ from: p.doorZ - DOOR_W / 2, to: p.doorZ + DOOR_W / 2, top: DOOR_H }))
+    const leftGaps = gapsFor('left')
+    const rightGaps = gapsFor('right')
+
+    // Then the hall: grow until every shared painting has a slot. Slots are walked
+    // in z order, left before right, so the hall reads chronologically down both sides.
+    const slotsFor = (L) =>
+      [
+        ...hangAlong('z', -HX, z0, z0 + L, leftGaps, Math.PI / 2),
+        ...hangAlong('z', HX, z0, z0 + L, rightGaps, -Math.PI / 2),
+      ].sort((p, q) => p.z - q.z || p.x - q.x)
+    let L = Math.ceil(need / SPACING) * SPACING
+    while (slotsFor(L).length < shared.length) L += SPACING
+    const slots = slotsFor(L)
+    shared.forEach((t, i) => hang(t, era.id, slots[i]))
+
+    rooms.push({
+      id: era.id, kind: 'hall', title: era.label,
+      rect: { x: -HX, z: z0, w: HALL_W, d: L }, entry: { x: 0, z: z0 + 1.5, yaw: 0 },
+    })
+    walls.push(
+      ...wallSegments('z', -HX, z0, z0 + L, leftGaps),
+      ...wallSegments('z', HX, z0, z0 + L, rightGaps),
+      ...wallSegments('x', z0 + L, -HX, HX, k === ERAS.length - 1 ? [] : [opening()]),
+    )
+    // The era's name on the pier to the right of the opening you are about to walk
+    // through, facing you. (The header above the opening is the lobby title's spot.)
+    sign('era', era.label, HX - 1, 2.2, z0, Math.PI, 1.8, 0.5)
+
+    for (const { artist: a, side, rect, doorZ } of placed) {
+      const s = rect.w
+      const inward = side === 'left' ? -Math.PI / 2 : Math.PI / 2   // walking through the door
+      const doorWallX = side === 'left' ? rect.x + s : rect.x
+      const farWallX = side === 'left' ? rect.x : rect.x + s
+      const gap = { from: doorZ - DOOR_W / 2, to: doorZ + DOOR_W / 2 }
+      const roomSlots = [
+        ...hangAlong('z', doorWallX, rect.z, rect.z + s, [gap], inward),
+        ...hangAlong('x', rect.z + s, rect.x, rect.x + s, [], Math.PI),
+        ...hangAlong('z', farWallX, rect.z, rect.z + s, [], -inward),
+        ...hangAlong('x', rect.z, rect.x, rect.x + s, [], 0),
+      ]
+      a.projects.forEach((t, i) => hang(t, a.id, roomSlots[i]))
+      rooms.push({
+        id: a.id, kind: 'solo', title: a.name, rect,
+        entry: { x: r6(doorWallX + Math.sin(inward) * 1.5), z: doorZ, yaw: r6(inward) },
+      })
+      walls.push(
+        ...wallSegments('z', farWallX, rect.z, rect.z + s),
+        ...wallSegments('x', rect.z, rect.x, rect.x + s),
+        ...wallSegments('x', rect.z + s, rect.x, rect.x + s),
+      )
+      sign('room', a.name, doorWallX, 3.5, doorZ, -inward, 2.4, 0.4)   // above the door, seen from the hall
+      sign('room', a.name, farWallX, 3.5, doorZ, -inward, 2.4, 0.4)    // on the wall facing the door, inside
+    }
+
+    z0 += L
+  })
+
+  // Plaques: under the lower-right corner, as a visitor facing the painting sees it.
+  for (const p of paintings) {
+    const rx = Math.cos(p.yaw)
+    const rz = -Math.sin(p.yaw)
+    const shift = PAINTING / 2 - 0.25
+    signs.push({
+      text: `${p.name} — ${p.artist}, ${p.year}`, kind: 'plaque',
+      x: r6(p.x + rx * shift), y: r6(EYE_Y - PAINTING / 2 - 0.12), z: r6(p.z + rz * shift),
+      yaw: p.yaw, w: 0.5, h: 0.12,
+    })
+  }
+
+  paintings.sort((a, b) => a.project - b.project)
+  paintings.forEach((p, i) => { p.tile = i })
+  const fileCount = Math.ceil(paintings.length / TILES_PER_ATLAS)
+
+  return {
+    generatedAt,
+    counts: { paintings: paintings.length, artists: artistCount, soloRooms: solo.length, years: span },
+    atlas: {
+      ...ATLAS,
+      files: Array.from({ length: fileCount }, (_, i) => `gallery/atlas-${i}.webp`),
+      small: Array.from({ length: fileCount }, (_, i) => `gallery/atlas-${i}-small.webp`),
+    },
+    spawn: { x: 0, z: LOBBY / 2, yaw: 0 },
+    rooms, walls, paintings, signs,
+  }
+}

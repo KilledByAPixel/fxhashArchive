@@ -1,5 +1,10 @@
 import { test, expect } from 'vitest'
-import { ERAS, eraOf, isCollab, creditOf, assignRooms, SOLO_MIN, wallSegments, freeRuns, slotsOnRun, soloRoomSlots, soloRoomSide, WALL_H, DOOR_H, SPACING, CORNER, ROOM_MIN } from './gallery-lib.mjs'
+import { existsSync } from 'node:fs'
+import {
+  ERAS, eraOf, isCollab, creditOf, assignRooms, SOLO_MIN, wallSegments, freeRuns, slotsOnRun, soloRoomSlots, soloRoomSide, WALL_H, DOOR_H, SPACING, CORNER, ROOM_MIN,
+  buildGallery, tileRect, ATLAS, ATLAS_SMALL, TILES_PER_ATLAS, WALL_OFFSET, PAINTING, EYE_Y, HIDDEN_FLAGS,
+} from './gallery-lib.mjs'
+import { readArchiveInputs } from './gallery-inputs.mjs'
 
 const tok = (id, createdAt, author = { id: 'tz1a', name: 'Alice' }, extra = {}) => ({
   id, slug: `p${id}`, name: `P${id}`, flag: 'NONE', createdAt, author, ...extra,
@@ -114,4 +119,135 @@ test('soloRoomSide grows the room until its four walls hold every painting', () 
   expect(soloRoomSlots(s - 1)).toBeLessThan(31)
   expect(s).toBeGreaterThan(20)
   expect(s).toBeLessThan(30)
+})
+
+/** ~44 projects: two solo artists in 2021, one in 2022, a collab, singles in every era. */
+function fixture() {
+  const out = []
+  const add = (id, date, author) => out.push(tok(id, `${date}T00:00:00.000Z`, author))
+  const A = { id: 'tz1A', name: 'Ada' }, B = { id: 'tz1B', name: 'Bea' }, C = { id: 'tz1C', name: 'Cy' }
+  ;[1, 2, 3, 4, 5, 6].forEach((i) => add(100 + i, `2021-11-${10 + i}`, A))
+  ;[1, 2, 3, 4, 5].forEach((i) => add(200 + i, `2021-12-0${i}`, B))
+  ;[1, 2, 3, 4, 5].forEach((i) => add(300 + i, `2022-05-0${i}`, C))
+  ;[1, 2, 3].forEach((i) => add(400 + i, `2022-06-0${i}`, { id: 'KT1x', name: null }))
+  const eras = ['2021-11-20', '2022-02-10', '2022-05-10', '2022-08-10', '2022-11-10', '2023-02-10', '2023-08-10']
+  let id = 500
+  for (const d of eras) for (let i = 0; i < 3; i++) add(id++, d, { id: `tz1s${id}`, name: `Solo ${id}` })
+  out.push(tok(999, '2022-01-01T00:00:00.000Z', A, { flag: 'HIDDEN' }))   // must vanish
+  return out
+}
+const duo = { collaborators: [{ id: 'tz1A', name: 'Ada' }, { id: 'tz1B', name: 'Bea' }] }
+const collaborations = { '401': duo, '402': duo, '403': duo }
+
+const overlap = (a, b) =>
+  Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)) *
+  Math.max(0, Math.min(a.z + a.d, b.z + b.d) - Math.max(a.z, b.z))
+
+/** Which edge of `rect` the point sits against, its inward normal yaw, and the coordinate along it. */
+function edgeOf(rect, x, z) {
+  const d = [
+    { edge: 'w', dist: x - rect.x, yaw: Math.PI / 2, along: z, from: rect.z, to: rect.z + rect.d },
+    { edge: 'e', dist: rect.x + rect.w - x, yaw: -Math.PI / 2, along: z, from: rect.z, to: rect.z + rect.d },
+    { edge: 's', dist: z - rect.z, yaw: 0, along: x, from: rect.x, to: rect.x + rect.w },
+    { edge: 'n', dist: rect.z + rect.d - z, yaw: Math.PI, along: x, from: rect.x, to: rect.x + rect.w },
+  ]
+  return d.reduce((m, e) => (e.dist < m.dist ? e : m))
+}
+
+function checkInvariants(g, expectedIds) {
+  const rooms = new Map(g.rooms.map((r) => [r.id, r]))
+  // placed exactly once
+  expect([...g.paintings.map((p) => p.project)].sort((a, b) => a - b)).toEqual([...expectedIds].sort((a, b) => a - b))
+  // rooms do not overlap
+  for (let i = 0; i < g.rooms.length; i++)
+    for (let j = i + 1; j < g.rooms.length; j++)
+      expect(overlap(g.rooms[i].rect, g.rooms[j].rect)).toBeLessThan(1e-6)
+  // on an edge of its own room, facing in, spaced, clear of corners
+  const byEdge = new Map()
+  for (const p of g.paintings) {
+    const r = rooms.get(p.room)
+    expect(r).toBeDefined()
+    const e = edgeOf(r.rect, p.x, p.z)
+    expect(Math.abs(e.dist - WALL_OFFSET)).toBeLessThan(1e-6)
+    expect(Math.sin(p.yaw) * Math.sin(e.yaw) + Math.cos(p.yaw) * Math.cos(e.yaw)).toBeCloseTo(1, 6)
+    expect(e.along - e.from).toBeGreaterThanOrEqual(CORNER - 1e-6)
+    expect(e.to - e.along).toBeGreaterThanOrEqual(CORNER - 1e-6)
+    const key = `${p.room}:${e.edge}`
+    if (!byEdge.has(key)) byEdge.set(key, [])
+    byEdge.get(key).push(e.along)
+  }
+  for (const along of byEdge.values()) {
+    along.sort((a, b) => a - b)
+    // 1e-5: the build rounds every coordinate to a micrometre, so two neighbours can differ by 3 ∓ 1e-6.
+    for (let i = 1; i < along.length; i++) expect(along[i] - along[i - 1]).toBeGreaterThanOrEqual(SPACING - 1e-5)
+  }
+  // every door/opening header joins exactly two rooms and no solid wall crosses it
+  const onBoundary = (r, x, z) => {
+    const eps = 1e-6
+    const inX = x >= r.rect.x - eps && x <= r.rect.x + r.rect.w + eps
+    const inZ = z >= r.rect.z - eps && z <= r.rect.z + r.rect.d + eps
+    const onX = Math.abs(x - r.rect.x) < eps || Math.abs(x - r.rect.x - r.rect.w) < eps
+    const onZ = Math.abs(z - r.rect.z) < eps || Math.abs(z - r.rect.z - r.rect.d) < eps
+    return (onX && inZ) || (onZ && inX)
+  }
+  const solid = g.walls.filter((w) => w.y0 === 0)
+  for (const h of g.walls.filter((w) => w.y0 > 0)) {
+    const mx = (h.x1 + h.x2) / 2, mz = (h.z1 + h.z2) / 2
+    expect(g.rooms.filter((r) => onBoundary(r, mx, mz)).length).toBe(2)
+    for (const s of solid) {
+      const sameLine = (h.x1 === h.x2 && s.x1 === s.x2 && s.x1 === h.x1) || (h.z1 === h.z2 && s.z1 === s.z2 && s.z1 === h.z1)
+      if (!sameLine) continue
+      const [a1, a2] = h.x1 === h.x2 ? [h.z1, h.z2] : [h.x1, h.x2]
+      const [b1, b2] = h.x1 === h.x2 ? [s.z1, s.z2] : [s.x1, s.x2]
+      expect(Math.min(a2, b2) - Math.max(a1, b1)).toBeLessThanOrEqual(1e-6)
+    }
+  }
+  // every painting has a plaque, every room a sign
+  expect(g.signs.filter((s) => s.kind === 'plaque').length).toBe(g.paintings.length)
+  for (const r of g.rooms) if (r.kind === 'solo') expect(g.signs.filter((s) => s.kind === 'room' && s.text === r.title).length).toBe(2)
+  // tiles are ascending project id and the file count matches
+  expect(g.paintings.map((p) => p.tile)).toEqual(g.paintings.map((_, i) => i))
+  for (let i = 1; i < g.paintings.length; i++) expect(g.paintings[i].project).toBeGreaterThan(g.paintings[i - 1].project)
+  expect(g.atlas.files.length).toBe(Math.ceil(g.paintings.length / TILES_PER_ATLAS))
+}
+
+test('buildGallery satisfies the layout invariants on the fixture', () => {
+  const tokens = fixture()
+  const g = buildGallery({ tokens, collaborations, generatedAt: '2026-08-23T00:00:00.000Z' })
+  checkInvariants(g, tokens.filter((t) => t.flag !== 'HIDDEN').map((t) => t.id))
+  expect(g.rooms.map((r) => r.id)).toContain('tz1A')
+  expect(g.rooms.map((r) => r.id)).toContain('tz1B')
+  expect(g.rooms.map((r) => r.id)).toContain('tz1C')
+  expect(g.rooms.find((r) => r.id === 'tz1A').rect.x).toBeLessThan(-4)      // first solo room: left
+  expect(g.rooms.find((r) => r.id === 'tz1B').rect.x).toBeGreaterThanOrEqual(4) // second: right
+  expect(g.paintings.find((p) => p.project === 401).artist).toBe('Ada and Bea')
+  expect(g.paintings.find((p) => p.project === 401).room).toBe('2022-q2')
+  expect(g.counts).toEqual({ paintings: 40, artists: 24, soloRooms: 3, years: [2021, 2023] })
+  expect(g.spawn).toEqual({ x: 0, z: 4, yaw: 0 })
+  expect(g.rooms[0]).toMatchObject({ id: 'lobby', kind: 'lobby' })
+  expect(g.rooms.filter((r) => r.kind === 'hall').map((r) => r.id)).toEqual(ERAS.map((e) => e.id))
+})
+
+test('buildGallery is deterministic', () => {
+  const a = buildGallery({ tokens: fixture(), collaborations, generatedAt: 'x' })
+  const b = buildGallery({ tokens: fixture().reverse(), collaborations, generatedAt: 'x' })
+  expect(JSON.stringify(a)).toBe(JSON.stringify(b))
+})
+
+test('tileRect maps a tile to its file, cell and pixel origin, in both sizes', () => {
+  expect(tileRect(0)).toEqual({ file: 0, col: 0, row: 0, x: 4, y: 4, cell: 264 })
+  expect(tileRect(224)).toEqual({ file: 0, col: 14, row: 14, x: 3700, y: 3700, cell: 264 })
+  expect(tileRect(225)).toMatchObject({ file: 1, col: 0, row: 0 })
+  expect(tileRect(224).x + ATLAS.tile + ATLAS.gutter).toBeLessThanOrEqual(ATLAS.size)
+  expect(tileRect(224, ATLAS_SMALL)).toEqual({ file: 0, col: 14, row: 14, x: 1850, y: 1850, cell: 132 })
+  expect(tileRect(224, ATLAS_SMALL).x + ATLAS_SMALL.tile + ATLAS_SMALL.gutter).toBeLessThanOrEqual(ATLAS_SMALL.size)
+  expect(TILES_PER_ATLAS).toBe(225)
+})
+
+const REAL = 'public/data/generators/manifest.json'
+test.skipIf(!existsSync(REAL))('the real archive satisfies the invariants and needs two atlases', async () => {
+  const { tokens, collaborations } = await readArchiveInputs('public/data')
+  const g = buildGallery({ tokens, collaborations, generatedAt: 'x' })
+  checkInvariants(g, tokens.filter((t) => !HIDDEN_FLAGS.has(t.flag)).map((t) => t.id))
+  expect(g.atlas.files.length).toBe(2)
 })
