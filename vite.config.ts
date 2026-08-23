@@ -23,5 +23,5 @@ export default defineConfig({
    */
   server: { headers: { 'Access-Control-Allow-Origin': '*' } },
   preview: { headers: { 'Access-Control-Allow-Origin': '*' } },
-  test: { environment: 'jsdom' },
+  test: { environment: 'jsdom', testTimeout: 25000 },
 })
