@@ -195,7 +195,6 @@ img { max-width: 100%; }
 .gallery-hud-top > * { pointer-events: auto; }
 .gallery-back { color: #fff; font-weight: 600; }
 .gallery-room { color: #aaa; flex: 1; pointer-events: none; }
-.gallery-rooms-button { margin: 0; padding: 0.4rem 0.9rem; }
 .gallery-rooms {
   pointer-events: auto; position: absolute; top: 3.25rem; right: 1rem; min-width: 14rem;
   max-height: calc(100vh - 5rem); overflow-y: auto;
@@ -204,6 +203,7 @@ img { max-width: 100%; }
 .gallery-rooms h4 { margin: 0.5rem 0 0.25rem; color: #888; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
 .gallery-rooms ul { list-style: none; margin: 0; padding: 0; }
 .gallery-rooms .link-button { color: #eee; text-decoration: none; padding: 0.2rem 0; display: block; text-align: left; }
+.gallery-rooms-button { margin: 0; padding: 0.4rem 0.9rem; }
 .gallery-crosshair {
   position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px;
   border-radius: 50%; background: rgba(255, 255, 255, 0.8);
