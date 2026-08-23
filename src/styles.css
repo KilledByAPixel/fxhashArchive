@@ -176,3 +176,60 @@ img { max-width: 100%; }
   margin: 1.25rem 0 0;
   opacity: 0.92;
 }
+
+/* ---- The gallery ------------------------------------------------------------
+ * A page of its own, fixed to the viewport, outside the site chrome. The canvas
+ * is the page; everything else floats over it and lets clicks through except
+ * where it is a control. */
+.gallery { position: fixed; inset: 0; background: #111; overflow: hidden; }
+.gallery-canvas { width: 100%; height: 100%; display: block; touch-action: none; }
+.gallery-loading {
+  position: absolute; inset: 0; margin: 0; padding: 1.5rem;
+  display: flex; align-items: center; justify-content: center; text-align: center; color: #888;
+}
+.gallery-unsupported { display: flex; align-items: center; justify-content: center; padding: 2rem; }
+.gallery-unsupported p { max-width: 30rem; }
+
+.gallery-hud { position: absolute; inset: 0; pointer-events: none; }
+.gallery-hud-top { display: flex; gap: 1rem; align-items: center; padding: 0.75rem 1rem; }
+.gallery-hud-top > * { pointer-events: auto; }
+.gallery-back { color: #fff; font-weight: 600; }
+.gallery-room { color: #aaa; flex: 1; pointer-events: none; }
+.gallery-rooms-button { margin: 0; padding: 0.4rem 0.9rem; }
+.gallery-rooms {
+  pointer-events: auto; position: absolute; top: 3.25rem; right: 1rem; min-width: 14rem;
+  max-height: calc(100vh - 5rem); overflow-y: auto;
+  background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 0.5rem 1rem 0.75rem;
+}
+.gallery-rooms h4 { margin: 0.5rem 0 0.25rem; color: #888; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.gallery-rooms ul { list-style: none; margin: 0; padding: 0; }
+.gallery-rooms .link-button { color: #eee; text-decoration: none; padding: 0.2rem 0; display: block; text-align: left; }
+.gallery-crosshair {
+  position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px;
+  border-radius: 50%; background: rgba(255, 255, 255, 0.8);
+}
+.gallery-caption {
+  position: absolute; left: 50%; top: calc(50% + 1.25rem); transform: translateX(-50%); margin: 0;
+  color: #eee; background: rgba(0, 0, 0, 0.6); padding: 0.3rem 0.7rem; border-radius: 6px;
+  font-size: 0.9rem; white-space: nowrap;
+}
+.gallery-hint {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0;
+  color: #ccc; background: rgba(0, 0, 0, 0.6); padding: 0.5rem 1rem; border-radius: 6px;
+}
+.gallery-hint-bottom { top: auto; bottom: 1.5rem; transform: translateX(-50%); font-size: 0.85rem; color: #999; }
+
+/* The piece, over the painting. The frame must coincide with the quad behind it, so
+ * it gives up the border, the radius and the width cap the project page gives it. */
+.gallery-viewer { position: absolute; inset: 0; pointer-events: none; }
+.gallery-frame { position: fixed; pointer-events: auto; background: #000; }
+.gallery-frame .archived-frame { width: 100%; height: 100%; max-width: none; aspect-ratio: auto; border: 0; border-radius: 0; }
+.gallery-frame-note {
+  width: 100%; height: 100%; box-sizing: border-box; padding: 1rem;
+  display: flex; align-items: center; justify-content: center; text-align: center; color: #999;
+}
+.gallery-bar {
+  position: fixed; pointer-events: auto; display: flex; flex-wrap: wrap; gap: 0.5rem 0.75rem;
+  align-items: center; color: #ccc; font-size: 0.9rem;
+}
+.gallery-bar .load-more { margin: 0; padding: 0.3rem 0.7rem; }

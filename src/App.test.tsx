@@ -54,3 +54,10 @@ test('unknown route renders not-found', () => {
   expect(screen.getByText(/not found/i)).toBeTruthy()
   expect(screen.getAllByRole('link', { name: 'fxhash viewer' })).toHaveLength(1)
 })
+
+test('/gallery is its own full-bleed page, outside the site chrome', () => {
+  // jsdom has no WebGL, so the page is its fallback — which is enough to prove the route.
+  renderAt('/gallery')
+  expect(screen.getByText(/needs WebGL/)).toBeTruthy()
+  expect(screen.queryByRole('link', { name: 'Artwork' })).toBeNull()
+})

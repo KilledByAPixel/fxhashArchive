@@ -7,6 +7,7 @@ import IterationPage from './pages/IterationPage'
 import ArtistsPage from './pages/ArtistsPage'
 import ArtistPage from './pages/ArtistPage'
 import NotFoundPage from './pages/NotFoundPage'
+import GalleryPage from './pages/GalleryPage'
 
 export const routes: RouteObject[] = [
   {
@@ -21,6 +22,8 @@ export const routes: RouteObject[] = [
       { path: '*', element: <NotFoundPage /> },
     ],
   },
+  // Outside Layout on purpose: the museum has no site header or footer.
+  { path: '/gallery', element: <GalleryPage /> },
 ]
 
 const router = createHashRouter(routes)
