@@ -1,5 +1,5 @@
 import { test, expect } from 'vitest'
-import { Mesh, MeshBasicMaterial } from 'three'
+import { AdditiveBlending, DirectionalLight, HemisphereLight, Mesh, MeshBasicMaterial, MeshLambertMaterial } from 'three'
 import { buildScene } from './scene'
 import type { Gallery, Painting } from './types'
 
@@ -45,6 +45,33 @@ test('a missing atlas leaves its paintings flat dark, not missing', () => {
 test('without a label texture there is no sign mesh; the rest of the building is there', () => {
   const built = buildScene(gallery, [null, null], null)
   const meshes = built.scene.children.filter((c) => c instanceof Mesh) as Mesh[]
-  expect(meshes.map((m) => m.name).sort()).toEqual(['floors', 'frames', 'paintings-0', 'paintings-1', 'walls'])
+  expect(meshes.map((m) => m.name).sort()).toEqual(['ceilings', 'floors', 'frames', 'paintings-0', 'paintings-1', 'pools', 'walls'])
+  built.dispose()
+})
+
+/** sRGB lightness of a hex colour, as a monitor shows it — not three's linear working value. */
+const lightness = (hex: number) => (((hex >> 16) & 255) + ((hex >> 8) & 255) + (hex & 255)) / (3 * 255)
+
+test('the rooms are lit like a gallery: a sky, a key, a fill, and walls light enough to see', () => {
+  // The first build shipped #2a2a2a walls under a near-black ground light; a
+  // vertical wall got about 6 % of the light and rendered as black.
+  const built = buildScene(gallery, [null, null], null)
+  expect(built.scene.children.filter((c) => c instanceof HemisphereLight).length).toBe(1)
+  expect(built.scene.children.filter((c) => c instanceof DirectionalLight).length).toBe(2)
+  const walls = built.wallsMesh.material as MeshLambertMaterial
+  expect(lightness(walls.color.getHex())).toBeGreaterThanOrEqual(0.4)
+  built.dispose()
+})
+
+test('every painting gets a spot pool: one additive quad each, in one mesh', () => {
+  const built = buildScene(gallery, [null, null], null)
+  const pools = built.scene.children.find((c) => c.name === 'pools') as Mesh
+  expect(pools).toBeDefined()
+  expect(pools.geometry.getAttribute('position').count).toBe(gallery.paintings.length * 6)
+  const m = pools.material as MeshBasicMaterial
+  expect(m.blending).toBe(AdditiveBlending)
+  expect(m.transparent).toBe(true)
+  expect(m.depthWrite).toBe(false)
+  expect(m.map).not.toBeNull()
   built.dispose()
 })

@@ -5,6 +5,7 @@
 import { BufferGeometry, Float32BufferAttribute } from 'three'
 import type { AtlasMeta, Painting, Room, Sign, Wall } from './types'
 import { PAINTING, EYE_Y, WALL_T, WALL_H } from './constants'
+import { POOL_W, POOL_H, POOL_BACK } from './pools'
 
 export interface TileUv { u0: number; u1: number; v0: number; v1: number }
 const FULL: TileUv = { u0: 0, u1: 1, v0: 0, v1: 1 }
@@ -118,14 +119,34 @@ export function buildWallGeometry(walls: Wall[]): BufferGeometry {
   return m.build()
 }
 
-/** A floor at y = 0 facing up and a ceiling at WALL_H facing down, per room. */
+/** A floor at y = 0 facing up, per room. Ceilings are their own mesh so they can take their own colour. */
 export function buildFloorGeometry(rooms: Room[]): BufferGeometry {
   const m = new MeshArrays()
   for (const { rect } of rooms) {
-    const cx = rect.x + rect.w / 2
-    const cz = rect.z + rect.d / 2
-    m.quad([cx, 0, cz], [rect.w / 2, 0, 0], [0, 0, -rect.d / 2], [0, 1, 0])
-    m.quad([cx, WALL_H, cz], [rect.w / 2, 0, 0], [0, 0, rect.d / 2], [0, -1, 0])
+    m.quad([rect.x + rect.w / 2, 0, rect.z + rect.d / 2], [rect.w / 2, 0, 0], [0, 0, -rect.d / 2], [0, 1, 0])
+  }
+  return m.build()
+}
+
+/** A ceiling at WALL_H facing down, per room. */
+export function buildCeilingGeometry(rooms: Room[]): BufferGeometry {
+  const m = new MeshArrays()
+  for (const { rect } of rooms) {
+    m.quad([rect.x + rect.w / 2, WALL_H, rect.z + rect.d / 2], [rect.w / 2, 0, 0], [0, 0, rect.d / 2], [0, -1, 0])
+  }
+  return m.build()
+}
+
+/**
+ * The pool of light behind each painting: a POOL_W × POOL_H quad on the wall,
+ * POOL_BACK behind the painting plane — past the frame (0.01 back) and short of
+ * the wall face, so it reads as lit wall and never as a glow over the picture.
+ */
+export function buildPoolGeometry(paintings: Painting[]): BufferGeometry {
+  const m = new MeshArrays()
+  for (const p of paintings) {
+    const n = normalOf(p)
+    m.quad([p.x - n[0] * POOL_BACK, EYE_Y, p.z - n[2] * POOL_BACK], scale(rightOf(p), POOL_W / 2), [0, POOL_H / 2, 0], n)
   }
   return m.build()
 }

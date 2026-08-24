@@ -1,7 +1,9 @@
 import { test, expect } from 'vitest'
 import {
-  tileUv, atlasFile, buildPaintingGeometry, buildFrameGeometry, buildWallGeometry, buildFloorGeometry, buildSignGeometry,
+  tileUv, atlasFile, buildPaintingGeometry, buildFrameGeometry, buildWallGeometry, buildFloorGeometry, buildCeilingGeometry,
+  buildSignGeometry, buildPoolGeometry,
 } from './geometry'
+import { POOL_W, POOL_H } from './pools'
 import type { AtlasMeta, Painting, Room, Sign, Wall } from './types'
 import { EYE_Y, PAINTING, WALL_T } from './constants'
 
@@ -95,12 +97,17 @@ test('a painting on a wall stands clear of it, not buried inside the opaque box'
   expect(paintingX).toBeGreaterThan(-4 + WALL_T / 2)
 })
 
-test('each room gets a floor and a ceiling', () => {
+test('each room gets a floor facing up and, separately, a ceiling facing down', () => {
   const r: Room = { id: 'x', kind: 'hall', title: 'X', rect: { x: -4, z: 0, w: 8, d: 10 }, entry: { x: 0, z: 1, yaw: 0 } }
-  const g = buildFloorGeometry([r])
-  expect(g.getAttribute('position').count).toBe(12)
-  expectBounds(g, 1, 0, 4)
-  expectBounds(g, 0, -4, 4)
+  const floor = buildFloorGeometry([r])
+  expect(floor.getAttribute('position').count).toBe(6)
+  expectBounds(floor, 1, 0, 0)
+  expectBounds(floor, 0, -4, 4)
+  expect(floor.getAttribute('normal').array[1]).toBe(1)
+  const ceiling = buildCeilingGeometry([r])
+  expect(ceiling.getAttribute('position').count).toBe(6)
+  expectBounds(ceiling, 1, 4, 4)
+  expect(ceiling.getAttribute('normal').array[1]).toBe(-1)
 })
 
 test('signs are quads of their own size with the UVs they are given', () => {
@@ -112,4 +119,17 @@ test('signs are quads of their own size with the UVs they are given', () => {
   const uv = g.getAttribute('uv').array
   expect(uv[0]).toBeCloseTo(0.1, 5)
   expect(uv[1]).toBeCloseTo(0.3, 5)
+})
+
+test('a spot pool is a wide quad between the wall face and the frame', () => {
+  // painting(0) hangs on the x = -4 wall at x = -3.83; its frame is at -3.84 and
+  // the wall's inside face at -3.85. The pool must sit in that centimetre, so it
+  // reads as lit wall behind the frame, not a glow floating over the picture.
+  const g = buildPoolGeometry([painting(0)])
+  expect(g.getAttribute('position').count).toBe(6)
+  expectBounds(g, 1, EYE_Y - POOL_H / 2, EYE_Y + POOL_H / 2)
+  expectBounds(g, 2, 20 - POOL_W / 2, 20 + POOL_W / 2)
+  const [poolX] = bounds(g, 0)
+  expect(poolX).toBeGreaterThan(-4 + WALL_T / 2)
+  expect(poolX).toBeLessThan(bounds(buildFrameGeometry([painting(0)]), 0)[0])
 })

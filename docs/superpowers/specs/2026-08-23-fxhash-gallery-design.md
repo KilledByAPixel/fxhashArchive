@@ -266,9 +266,17 @@ until the scene's first frame.
   thin dark box 0.06 wider than the painting each side, all frames merged.
 - Signs and plaques: one runtime canvas atlas (2048²) drawn at load from the
   `signs` list, then one merged quad mesh. System font, light grey on transparent.
-- Lights: a `HemisphereLight` (sky slightly warm, ground dark) plus one soft
-  `DirectionalLight` from above; `FogExp2` in the background colour for depth.
-  Background `#111`, matching the site.
+- Lights: a warm `HemisphereLight` (sky `#fff4e6`, ground `#3a3a3a`, 1.6), a
+  warm key `DirectionalLight` (`#fff1dc`, 1.2) angled down the spine, and a cool
+  fill (`#cfe0ff`, 0.4) from the other side; `FogExp2` in the background colour
+  (`#151515`, density 0.018) for depth. Walls `#7a746c`, floors `#3a3634`,
+  ceilings `#2b2b2b` — the first build's `#2a2a2a` walls under a near-black
+  ground light rendered as black on every monitor.
+- Spot pools: the lamplight a museum throws on the wall around each picture. Not
+  a light per painting (four hundred lights is the shader melting) but one radial
+  falloff texture, computed once, on an additive quad 2.4 × 3 m behind every
+  painting — between the wall face and the frame — all merged into one mesh:
+  one draw call for every pool in the building. See `src/gallery/pools.ts`.
 - Camera: `PerspectiveCamera`, 70° vertical fov, near 0.1, far 200.
 
 Total triangles are a few thousand; no LOD, no culling work beyond three's own.
@@ -278,7 +286,10 @@ Total triangles are a few thousand; no LOD, no culling work beyond three's own.
 Desktop: while unlocked, a click on the canvas does one thing only — request
 pointer lock. While locked, mouse moves yaw and pitch (pitch clamped ±85°) and a
 click approaches whatever painting is under the crosshair. W/A/S/D and the arrow
-keys move at 3 m/s; Shift makes it 5 m/s. Movement is in the xz plane at `EYE_Y`.
+keys move at 3 m/s; Shift makes it 20 m/s — the halls are up to 105 m long. At
+that speed one frame can move further than a wall is thick, so `integrate` takes
+any move over 0.25 m in pieces and resolves collision after each; a wall can
+never fall between two frames. Movement is in the xz plane at `EYE_Y`.
 When pointer lock is lost while walking (Esc), a centred hint says "Click to look
 around".
 
