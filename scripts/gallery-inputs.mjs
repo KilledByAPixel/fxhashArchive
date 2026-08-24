@@ -43,5 +43,13 @@ export async function readArchiveInputs(dataDir = 'public/data') {
     if (m) thumbs[m[1]] = join(dataDir, 'thumbs', f)
   }
 
-  return { tokens, collaborations, thumbs }
+  // Sales volume per project in tez, primary plus secondary, the same figure
+  // build-summary ranks by. It decides which two-piece artists get a room.
+  const volumes = new Map()
+  for (const f of (await readdir(join(dataDir, 'market')).catch(() => [])).filter((f) => /^stats-\d+\.json$/.test(f))) {
+    const stats = JSON.parse(await readFile(join(dataDir, 'market', f), 'utf8'))
+    for (const [id, st] of Object.entries(stats)) volumes.set(Number(id), st ? ((st.pv ?? 0) + (st.sv ?? 0)) / 1e6 : 0)
+  }
+
+  return { tokens, collaborations, thumbs, volumes }
 }

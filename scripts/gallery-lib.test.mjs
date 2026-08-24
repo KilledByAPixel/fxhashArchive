@@ -50,7 +50,7 @@ test('assignRooms gives a solo room at SOLO_MIN, halls to the rest, in date orde
     tok(31, '2023-06-01T00:00:00.000Z', carol),
   ]
   const collaborations = { '30': { collaborators: [alice, bob] } }
-  const { solo, halls, artistCount } = assignRooms(tokens, collaborations)
+  const { solo, halls, artistCount } = assignRooms(tokens, collaborations, { twoPieceRooms: 0 })
   expect(solo.map((a) => a.id)).toEqual(['tz1a'])
   expect(solo[0].projects.map((t) => t.id)).toEqual(Array.from({ length: SOLO_MIN }, (_, i) => 10 + i))
   expect(halls.get('2021').map((t) => t.id)).toEqual([30])          // the collab, never solo
@@ -237,11 +237,11 @@ test('buildGallery satisfies the layout invariants on the fixture', () => {
   expect(g.rooms.find((r) => r.id === 'tz1A').rect.x).toBeLessThan(-4)      // first solo room: left
   expect(g.rooms.find((r) => r.id === 'tz1B').rect.x).toBeGreaterThanOrEqual(4) // second: right
   expect(g.paintings.find((p) => p.project === 401).artist).toBe('Ada and Bea')
-  expect(LOOP_IDS).toContain(g.paintings.find((p) => p.project === 401).room)   // a collab hangs in the corridor
+  expect(LOOP_IDS).toContain(g.paintings.find((p) => p.project === 401).room.replace(/-\d+$/, ''))   // a collab hangs in the corridor
   expect(g.counts).toEqual({ paintings: 40, artists: 24, soloRooms: 3, years: [2021, 2023] })
   expect(g.spawn).toEqual({ x: 0, z: 4, yaw: 0 })
   expect(g.rooms[0]).toMatchObject({ id: 'lobby', kind: 'lobby' })
-  expect(g.rooms.filter((r) => r.kind === 'hall').map((r) => r.id)).toEqual(LOOP_IDS)
+  expect(g.rooms.filter((r) => r.kind === 'hall').map((r) => r.id).filter((id) => !/-\d+$/.test(id))).toEqual(LOOP_IDS)
   expect(g.rooms.filter((r) => r.kind === 'era').map((r) => r.id)).toEqual(ERAS.map((e) => e.id))
 })
 
@@ -267,9 +267,9 @@ test.skipIf(!existsSync(REAL))('the real archive satisfies the invariants and ne
   const g = buildGallery({ tokens, collaborations, generatedAt: 'x' })
   checkInvariants(g, tokens.filter((t) => !HIDDEN_FLAGS.has(t.flag)).map((t) => t.id))
   expect(g.atlas.files.length).toBe(2)
-  expect(g.rooms.filter((r) => r.kind === 'hall').map((r) => r.id)).toEqual(LOOP_IDS)
-  expect(g.counts.soloRooms).toBeGreaterThan(19)   // every artist with two or more pieces, not five
-})
+  expect(g.rooms.filter((r) => r.kind === 'hall').map((r) => r.id).filter((id) => !/-\d+$/.test(id))).toEqual(LOOP_IDS)
+  expect(g.counts.soloRooms).toBeGreaterThan(19)   // more than the first build's five-piece rule gave
+}, 30000)
 
 // ---- the loop ---------------------------------------------------------------
 // Frank walked the first build: rooms clustered where the veteran artists were and
@@ -278,10 +278,24 @@ test.skipIf(!existsSync(REAL))('the real archive satisfies the invariants and ne
 // and inside the loop in date order, so the beat of doors is regular all the way
 // round and you arrive back where you started.
 
-import { roomSide, distribute, LOOP_IDS } from './gallery-lib.mjs'
+import { roomSide, distribute, LOOP_IDS, TWO_PIECE_ROOMS, INNER_MARGIN, ROOM_GAP, DOOR_H } from './gallery-lib.mjs'
 
-test('SOLO_MIN is 2: any artist with more than one piece gets a room', () => {
-  expect(SOLO_MIN).toBe(2)
+test('a room for three pieces, or for two pieces and enough sales', () => {
+  expect(SOLO_MIN).toBe(3)
+  expect(TWO_PIECE_ROOMS).toBe(8)
+})
+
+test('two-piece artists get a room only if they are among the top TWO_PIECE_ROOMS by sales', () => {
+  const mk = (id, name) => ({ id, name })
+  const tokens = [
+    tok(1, '2022-01-01T00:00:00.000Z', mk('tz1p', 'Poor')), tok(2, '2022-01-02T00:00:00.000Z', mk('tz1p', 'Poor')),
+    tok(3, '2022-02-01T00:00:00.000Z', mk('tz1r', 'Rich')), tok(4, '2022-02-02T00:00:00.000Z', mk('tz1r', 'Rich')),
+    tok(5, '2022-03-01T00:00:00.000Z', mk('tz1m', 'Middling')), tok(6, '2022-03-02T00:00:00.000Z', mk('tz1m', 'Middling')),
+  ]
+  const volumes = new Map([[1, 10], [2, 10], [3, 5000], [4, 5000], [5, 100], [6, 100]])
+  const { solo } = assignRooms(tokens, {}, { volumes, twoPieceRooms: 2 })
+  expect(solo.map((a) => a.name)).toEqual(['Rich', 'Middling'])   // still in order of first piece
+  expect(assignRooms(tokens, {}, { volumes, twoPieceRooms: 0 }).solo).toEqual([])
 })
 
 test('roomSide: a 6 m room for up to four pieces, growing with the walls it must fill', () => {
@@ -318,18 +332,29 @@ function loopFixture() {
 }
 const loopCollabs = { '700': duo }
 const loop = () => buildGallery({ tokens: loopFixture(), collaborations: loopCollabs, generatedAt: 'x' })
+/** A leg's era sections: 'leg-a', 'leg-a-2', … */
+const sections = (g, id) => g.rooms.filter((r) => r.kind === 'hall' && (r.id === id || r.id.startsWith(id + '-')))
+/** The [min, max] a set of rooms spans on an axis. */
+const extent = (rs, axis) => [
+  Math.min(...rs.map((r) => r.rect[axis])),
+  Math.max(...rs.map((r) => r.rect[axis] + r.rect[axis === 'x' ? 'w' : 'd'])),
+]
 
 test('the museum is a loop: four legs and four corners, closing on the lobby', () => {
   const g = loop()
-  expect(g.rooms.filter((r) => r.kind === 'hall').map((r) => r.id)).toEqual(LOOP_IDS)
-  const rect = (id) => g.rooms.find((r) => r.id === id).rect
-  const lobby = rect('lobby'), a = rect('leg-a'), d = rect('leg-d')
-  expect(a.z).toBeCloseTo(lobby.z + lobby.d, 9)        // leg A leaves the lobby northward
-  expect(d.x).toBeCloseTo(lobby.x + lobby.w, 9)        // leg D comes back into the lobby's east side
-  expect(d.z).toBeCloseTo(lobby.z, 9)
-  expect(d.d).toBeCloseTo(lobby.d, 9)
-  expect(rect('leg-c').d).toBeCloseTo(a.d, 9)          // opposite legs match, so the corners are square
-  expect(rect('leg-b').w).toBeCloseTo(d.w, 9)
+  expect(g.rooms.filter((r) => r.kind === 'hall').map((r) => r.id).filter((id) => !/-\d+$/.test(id))).toEqual(LOOP_IDS)
+  const lobby = g.rooms.find((r) => r.id === 'lobby').rect
+  const [az0, az1] = extent(sections(g, 'leg-a'), 'z')
+  const [dx0, dx1] = extent(sections(g, 'leg-d'), 'x')
+  const [dz0, dz1] = extent(sections(g, 'leg-d'), 'z')
+  expect(az0).toBeCloseTo(lobby.z + lobby.d, 9)        // leg A leaves the lobby northward
+  expect(dx0).toBeCloseTo(lobby.x + lobby.w, 9)        // leg D comes back into the lobby's east side
+  expect(dz0).toBeCloseTo(lobby.z, 9)
+  expect(dz1 - dz0).toBeCloseTo(lobby.d, 9)
+  const [cz0, cz1] = extent(sections(g, 'leg-c'), 'z')
+  const [bx0, bx1] = extent(sections(g, 'leg-b'), 'x')
+  expect(cz1 - cz0).toBeCloseTo(az1 - az0, 9)          // opposite legs match, so the corners are square
+  expect(bx1 - bx0).toBeCloseTo(dx1 - dx0, 9)
   checkInvariants(g, loopFixture().map((t) => t.id))
 })
 
@@ -338,7 +363,7 @@ test('every artist with two or more pieces has a room, and rooms sit on both sid
   const solo = g.rooms.filter((r) => r.kind === 'solo')
   expect(solo.map((r) => r.id).sort()).toEqual(['tz1A', 'tz1B', 'tz1C', 'tz1D'])
   expect(g.counts.soloRooms).toBe(4)
-  const a = g.rooms.find((r) => r.id === 'leg-a').rect
+  const a = sections(g, 'leg-a')[0].rect
   const outside = solo.filter((r) => r.rect.x + r.rect.w <= a.x + 1e-6)   // west of leg A
   const inside = solo.filter((r) => r.rect.x >= a.x + a.w - 1e-6)         // east of it, in the courtyard
   expect(outside.length).toBeGreaterThanOrEqual(1)
@@ -370,4 +395,60 @@ test('no blank walls: a room spreads its pieces over its walls', () => {
   expect(wallsUsed('tz1B')).toBe(3)   // three: three walls
   expect(wallsUsed('tz1C')).toBe(4)   // four: every wall
   expect(wallsUsed('tz1D')).toBe(4)   // six: every wall, two of them doubled
+})
+
+// ---- round three: merit, beat, portals ------------------------------------------
+// Frank walked the loop: rooms and corridor pieces both ran out halfway round,
+// leaving the second half bare. Rooms now sit at an even beat along every leg and
+// the corridor's pieces are spread over every stretch of wall; era portals — a
+// lintel across the corridor with the era on it — mark the timeline; and a sign
+// on the way back into the lobby says you have come full circle.
+
+test('rooms sit at an even beat along a leg: equal gaps before, between and after them', () => {
+  const g = loop()
+  const secs = sections(g, 'leg-a')
+  const [zA0, zA1] = extent(secs, 'z')
+  const legA = { x: secs[0].rect.x, w: secs[0].rect.w, z: zA0, d: zA1 - zA0 }
+  const solo = g.rooms.filter((r) => r.kind === 'solo')
+  const outside = solo.filter((r) => Math.abs(r.rect.x + r.rect.w - legA.x) < 1e-6).sort((p, q) => p.rect.z - q.rect.z)
+  const inside = solo.filter((r) => Math.abs(r.rect.x - legA.x - legA.w) < 1e-6).sort((p, q) => p.rect.z - q.rect.z)
+  expect(outside.length + inside.length).toBeGreaterThanOrEqual(1)
+  for (const [rooms, margin] of [[outside, ROOM_GAP], [inside, INNER_MARGIN]]) {
+    if (!rooms.length) continue
+    const bounds = [legA.z + margin, ...rooms.flatMap((r) => [r.rect.z, r.rect.z + r.rect.d]), legA.z + legA.d - margin]
+    const gaps = []
+    for (let i = 0; i < bounds.length; i += 2) gaps.push(bounds[i + 1] - bounds[i])
+    for (const gap of gaps) expect(gap).toBeCloseTo(gaps[0], 4)   // coordinates are rounded to a micrometre
+  }
+})
+
+test('corridor pieces go all the way round: every leg has some', () => {
+  const g = loop()
+  for (const id of ['leg-a', 'leg-b', 'leg-c', 'leg-d']) {
+    const n = g.paintings.filter((p) => p.room === id || p.room.startsWith(id + '-')).length
+    expect(n).toBeGreaterThanOrEqual(1)
+  }
+})
+
+test('era portals: the corridor is sectioned by era, each section titled with its era', () => {
+  const g = loop()
+  const halls = g.rooms.filter((r) => r.kind === 'hall')
+  const titles = new Set(halls.map((r) => r.title))
+  for (const title of titles) expect(ERAS.map((e) => e.label)).toContain(title)
+  expect(titles.size).toBeGreaterThanOrEqual(3)
+  expect(g.signs.filter((s) => s.kind === 'era').length).toBe(ERAS.length)
+  // a portal is a lintel across the corridor whose midpoint lies on the line between two sections
+  const lintels = g.walls.filter((w) => w.y0 === DOOR_H)
+  expect(lintels.length).toBeGreaterThanOrEqual(3)   // the lobby's opening, the way back in, and at least one portal
+  checkInvariants(g, loopFixture().map((t) => t.id))
+})
+
+test('you can go full circle: a lintel and a sign on the way back into the lobby', () => {
+  const g = loop()
+  const back = g.walls.find((w) => w.y0 === DOOR_H && Math.abs(w.x1 - 4) < 1e-6 && Math.abs(w.x2 - 4) < 1e-6)
+  expect(back).toBeDefined()
+  const sign = g.signs.find((s) => s.kind === 'title' && /walked/i.test(s.text))
+  expect(sign).toBeDefined()
+  expect(sign.x).toBeGreaterThan(4)                 // hangs on the leg D side, facing the returning walker
+  expect(sign.yaw).toBeCloseTo(Math.PI / 2, 6)
 })
