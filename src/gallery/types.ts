@@ -30,6 +30,9 @@ export interface Painting {
   yaw: number
   /** Index into the atlas sequence; see tileUv in geometry.ts. */
   tile: number
+  /** Size on the wall in metres: the preview's proportions, PAINTING on the long side. */
+  w: number
+  h: number
 }
 
 export interface Sign {

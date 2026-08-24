@@ -51,5 +51,11 @@ export async function readArchiveInputs(dataDir = 'public/data') {
     for (const [id, st] of Object.entries(stats)) volumes.set(Number(id), st ? ((st.pv ?? 0) + (st.sv ?? 0)) / 1e6 : 0)
   }
 
-  return { tokens, collaborations, thumbs, volumes }
+  // Each preview's pixel size, as archive-previews.mjs recorded it when it saved
+  // the file. A thumbnail that script never replaced is fxhash's square crop, and
+  // an absent entry means exactly that: hang it square.
+  const log = await readFile(join(dataDir, 'thumbs', 'previews.json'), 'utf8').then(JSON.parse).catch(() => ({}))
+  const sizes = new Map(Object.entries(log).map(([id, v]) => [Number(id), { w: v.w, h: v.h }]))
+
+  return { tokens, collaborations, thumbs, volumes, sizes }
 }

@@ -17,7 +17,7 @@ type Vec = [number, number, number]
  * with flipY, so the image's top row is v = 1 — `v1` is the top edge. The gutter
  * is excluded: it exists for the sampler, not for the quad.
  */
-export function tileUv(tile: number, atlas: AtlasMeta): TileUv {
+export function tileUv(tile: number, atlas: AtlasMeta, aspect = 1): TileUv {
   const perFile = atlas.cols * atlas.cols
   const i = tile % perFile
   const col = i % atlas.cols
@@ -26,7 +26,11 @@ export function tileUv(tile: number, atlas: AtlasMeta): TileUv {
   const u0 = (col * cell + atlas.gutter) / atlas.size
   const top = (row * cell + atlas.gutter) / atlas.size
   const span = atlas.tile / atlas.size
-  return { u0, u1: u0 + span, v0: 1 - top - span, v1: 1 - top }
+  // The preview was fitted inside its square tile (contain, on black); a wide one
+  // leaves black above and below, a tall one either side. Crop to the picture.
+  const cropV = aspect >= 1 ? (span * (1 - 1 / aspect)) / 2 : 0
+  const cropU = aspect < 1 ? (span * (1 - aspect)) / 2 : 0
+  return { u0: u0 + cropU, u1: u0 + span - cropU, v0: 1 - top - span + cropV, v1: 1 - top - cropV }
 }
 
 export const atlasFile = (tile: number, atlas: AtlasMeta) => Math.floor(tile / (atlas.cols * atlas.cols))
@@ -88,7 +92,7 @@ export function buildPaintingGeometry(paintings: Painting[], atlas: AtlasMeta, f
   const m = new MeshArrays()
   for (const p of paintings) {
     if (atlasFile(p.tile, atlas) !== file) continue
-    m.quad([p.x, EYE_Y, p.z], scale(rightOf(p), PAINTING / 2), [0, PAINTING / 2, 0], normalOf(p), tileUv(p.tile, atlas))
+    m.quad([p.x, EYE_Y, p.z], scale(rightOf(p), p.w / 2), [0, p.h / 2, 0], normalOf(p), tileUv(p.tile, atlas, p.w / p.h))
   }
   return m.build()
 }
@@ -96,10 +100,9 @@ export function buildPaintingGeometry(paintings: Painting[], atlas: AtlasMeta, f
 /** A dark quad 0.06 proud of the painting on every side, halfway between it and the wall. */
 export function buildFrameGeometry(paintings: Painting[]): BufferGeometry {
   const m = new MeshArrays()
-  const half = PAINTING / 2 + 0.06
   for (const p of paintings) {
     const n = normalOf(p)
-    m.quad([p.x - n[0] * 0.01, EYE_Y, p.z - n[2] * 0.01], scale(rightOf(p), half), [0, half, 0], n)
+    m.quad([p.x - n[0] * 0.01, EYE_Y, p.z - n[2] * 0.01], scale(rightOf(p), p.w / 2 + 0.06), [0, p.h / 2 + 0.06, 0], n)
   }
   return m.build()
 }

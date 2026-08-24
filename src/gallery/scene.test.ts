@@ -4,7 +4,7 @@ import { buildScene } from './scene'
 import type { Gallery, Painting } from './types'
 
 const painting = (tile: number): Painting => ({
-  project: tile, slug: 'p', name: 'P', artist: 'A', year: 2022, room: 'h', x: -3.98, z: 20, yaw: Math.PI / 2, tile,
+  project: tile, slug: 'p', name: 'P', artist: 'A', year: 2022, room: 'h', x: -3.98, z: 20, yaw: Math.PI / 2, tile, w: 1.2, h: 1.2,
 })
 const gallery: Gallery = {
   generatedAt: 'T',

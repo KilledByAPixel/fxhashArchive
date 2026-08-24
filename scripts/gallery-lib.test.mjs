@@ -484,3 +484,24 @@ test('names and era markers are big enough to read from the corridor', () => {
   for (const s of g.signs.filter((s) => s.kind === 'room')) { expect(s.h).toBeGreaterThanOrEqual(0.8); expect(s.w).toBeGreaterThanOrEqual(4) }
   for (const s of g.signs.filter((s) => s.kind === 'era')) expect(s.h).toBeGreaterThanOrEqual(0.8)
 })
+
+// ---- the work's own shape ---------------------------------------------------------
+// fxhash's thumbnails were square crops; archive-previews.mjs replaces them with the
+// display image fitted to 512 px, and the build reads each preview's pixel size.
+
+test('a painting takes its preview\'s proportions, long side PAINTING; no size means square', () => {
+  const tokens = loopFixture()
+  const sizes = new Map([[101, { w: 900, h: 600 }], [102, { w: 400, h: 800 }]])
+  const g = buildGallery({ tokens, collaborations: loopCollabs, sizes, generatedAt: 'x' })
+  const p = (id) => g.paintings.find((p) => p.project === id)
+  expect(p(101).w).toBeCloseTo(PAINTING, 9)
+  expect(p(101).h).toBeCloseTo(PAINTING * 600 / 900, 9)
+  expect(p(102).w).toBeCloseTo(PAINTING * 400 / 800, 9)
+  expect(p(102).h).toBeCloseTo(PAINTING, 9)
+  expect(p(201).w).toBe(PAINTING)
+  expect(p(201).h).toBe(PAINTING)
+  // the plaque sits under the lower-right corner of the actual picture
+  const plaque = (id) => g.signs.find((s) => s.kind === 'plaque' && s.text.startsWith(p(id).name + ' '))
+  expect(plaque(101).y).toBeCloseTo(EYE_Y - p(101).h / 2 - 0.12, 9)
+  expect(plaque(102).y).toBeCloseTo(EYE_Y - PAINTING / 2 - 0.12, 9)
+})

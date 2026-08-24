@@ -69,7 +69,16 @@ goes stale. The README's developer section says so.
   projects in the gallery.
 - `public/data/tokens/index-*.json` — name, slug, `createdAt`, author, flag.
 - `public/data/collaborations.json` — members of collaboration contracts.
-- `public/data/thumbs/<id>.<ext>` — the preview images.
+- `public/data/thumbs/<id>.<ext>` — the preview images, and
+  `public/data/thumbs/previews.json`, the pixel size of each one that
+  `scripts/archive-previews.mjs` saved. fxhash's own thumbnails were square
+  crops; that script fetches each archived project's display image from IPFS
+  once, fits it inside 512 px, and saves it over the crop, so a preview has the
+  work's real shape. A project it never reached keeps the square crop and no
+  entry, and hangs square.
+
+Rerun `npm run summary` after the previews change: the grid's thumbnail map
+records filenames, and the extension changes.
 
 Projects with a hidden flag (`MALICIOUS`, `HIDDEN`, `REPORTED`, `AUTO_DETECT_COPY`,
 kept in step with `HIDDEN_FLAGS` in `src/lib/data.ts` and `build-summary.mjs`) are
@@ -124,7 +133,7 @@ WALL_H         4      ceiling height everywhere
 WALL_T         0.3    wall thickness
 WALL_OFFSET    0.17   a painting or sign stands this far off the room rectangle's edge:
                       WALL_T/2 to the wall's inside face, plus 0.02 clear of it
-PAINTING       1.2    painting side (all square)
+PAINTING       1.2    a painting's long side; the short side follows its preview's proportions
 EYE_Y          1.6    painting centre height, and the camera's eye height
 SPACING        3      painting pitch along a corridor wall, centre to centre
 DOOR_W         2      door width;  DOOR_H 3
@@ -260,6 +269,7 @@ interface Painting {
   room: string
   x: number; z: number; yaw: number   // centre on the wall, facing direction
   tile: number                        // index into the atlas sequence
+  w: number; h: number                // metres on the wall: PAINTING on the long side
 }
 interface Sign {
   text: string; kind: 'title' | 'era' | 'room' | 'plaque'
@@ -277,9 +287,10 @@ is its index in project-id order; its atlas file is `floor(tile / cols²)`, colu
 `public/data/gallery/atlas-<n>.webp`: 4096², tile 256, gutter 4 — cell 264, 15 × 15
 = 225 tiles per file, so two files hold 420 with about 30 slots spare. The gutter is
 the tile's own edge pixels extended (`sharp().extend({ extendWith: 'copy' })`) so
-mipmaps do not bleed neighbours in. Thumbnails are resized to 256 with
-`fit: 'contain'` on black — the grid letterboxes on black, and alpha is flattened
-the same way. `atlas-<n>-small.webp`: 2048², tile 128, gutter 2, cell 132, the same
+mipmaps do not bleed neighbours in. Previews are resized to 256 with
+`fit: 'contain'` on black — a wide one leaves black above and below in its
+tile, a tall one either side — and the client's `tileUv` crops the quad's UVs
+to the picture, so the black never shows; alpha is flattened the same way. `atlas-<n>-small.webp`: 2048², tile 128, gutter 2, cell 132, the same
 15 × 15 grid and the same tile numbering, for phones. WebP quality 82, matching
 `compress-thumbnails.mjs`. Expected 2–4 MB per large file, under 1 MB per small.
 
@@ -326,8 +337,9 @@ until the scene's first frame.
   dark neutral — walls around `#2a2a2a`, floor and ceiling `#1a1a1a`, the hemisphere
   light telling them apart — so the pictures are the light in the room, as on the
   rest of the site.
-- Paintings: one quad per painting with UVs into its atlas tile, merged into one
-  mesh per atlas — two draw calls for all 420. `MeshBasicMaterial` (unlit) with the
+- Paintings: one quad per painting, `w × h` metres, with UVs into the picture
+  inside its atlas tile, merged into one mesh per atlas — two draw calls for all
+  420. Frames and plaques follow the same `w × h`. `MeshBasicMaterial` (unlit) with the
   atlas as map, `toneMapped: false`: the art must look like the art. A frame: a
   thin dark box 0.06 wider than the painting each side, all frames merged.
 - Signs and plaques: one runtime canvas atlas (2048²) drawn at load from the
@@ -376,9 +388,10 @@ tap on one, or Enter/E while the crosshair caption shows one.
 
 1. Release pointer lock; input is ignored until arrival.
 2. Compute the viewing pose: on the painting's normal, at distance
-   `d = PAINTING / (2 × FILL × tan(fov/2) × min(1, aspect))` with `FILL = 0.75`, at
-   `EYE_Y`, yaw facing the painting, pitch 0. At that pose the painting fills 75 %
-   of the viewport's shorter side.
+   `d = max(h / (2 × FILL × tan(fov/2)), w / (2 × FILL × tan(fov/2) × aspect))`
+   with `FILL = 0.75`, at `EYE_Y`, yaw facing the painting, pitch 0. At that
+   pose the painting fills 75 % of the viewport on whichever side it hits
+   first, whatever its shape.
 3. Glide there over 600 ms with ease-in-out on position and yaw/pitch. With
    `prefers-reduced-motion`, jump.
 4. On arrival, `projectedRect(camera, painting, viewport)` projects the four

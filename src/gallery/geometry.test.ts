@@ -12,7 +12,8 @@ const atlas: AtlasMeta = { size: 4096, tile: 256, gutter: 4, cols: 15, files: ['
 // stands WALL_OFFSET (WALL_T/2 + 0.02 = 0.17) off the rectangle edge at x = -4,
 // i.e. 0.02 clear of that inside face, at -4 + 0.17 = -3.83. See gallery-lib.mjs.
 const painting = (tile: number, over: Partial<Painting> = {}): Painting => ({
-  project: tile, slug: 'p', name: 'P', artist: 'A', year: 2022, room: 'r', x: -3.83, z: 20, yaw: Math.PI / 2, tile, ...over,
+  project: tile, slug: 'p', name: 'P', artist: 'A', year: 2022, room: 'r', x: -3.83, z: 20, yaw: Math.PI / 2, tile,
+  w: PAINTING, h: PAINTING, ...over,
 })
 // Buffers are Float32, so 2.2 comes back as 2.2000000477; compare to 5 places.
 const bounds = (g: { getAttribute(n: string): { array: ArrayLike<number> } }, axis: 0 | 1 | 2) => {
@@ -132,4 +133,37 @@ test('a spot pool is a wide quad between the wall face and the frame', () => {
   const [poolX] = bounds(g, 0)
   expect(poolX).toBeGreaterThan(-4 + WALL_T / 2)
   expect(poolX).toBeLessThan(bounds(buildFrameGeometry([painting(0)]), 0)[0])
+})
+
+test('a landscape painting is a wide quad whose UVs crop the letterbox out of its tile', () => {
+  // A 3:2 preview is fitted inside its square tile with black above and below; the
+  // quad must show only the picture, so its v range is the middle two thirds.
+  const wide = painting(0, { w: PAINTING, h: PAINTING * 2 / 3 })
+  const g = buildPaintingGeometry([wide], atlas, 0)
+  expectBounds(g, 1, EYE_Y - PAINTING / 3, EYE_Y + PAINTING / 3)
+  expectBounds(g, 2, 20 - PAINTING / 2, 20 + PAINTING / 2)
+  const full = tileUv(0, atlas)
+  const uv = g.getAttribute('uv').array
+  const vs = Array.from({ length: 6 }, (_, i) => uv[i * 2 + 1])
+  const span = full.v1 - full.v0
+  expect(Math.min(...vs)).toBeCloseTo(full.v0 + span / 6, 5)
+  expect(Math.max(...vs)).toBeCloseTo(full.v1 - span / 6, 5)
+  const us = Array.from({ length: 6 }, (_, i) => uv[i * 2])
+  expect(Math.min(...us)).toBeCloseTo(full.u0, 5)
+  expect(Math.max(...us)).toBeCloseTo(full.u1, 5)
+})
+
+test('a portrait painting crops the tile sideways, and its frame follows its shape', () => {
+  const tall = painting(0, { w: PAINTING / 2, h: PAINTING })
+  const g = buildPaintingGeometry([tall], atlas, 0)
+  expectBounds(g, 1, EYE_Y - PAINTING / 2, EYE_Y + PAINTING / 2)
+  expectBounds(g, 2, 20 - PAINTING / 4, 20 + PAINTING / 4)
+  const full = tileUv(0, atlas)
+  const us = Array.from({ length: 6 }, (_, i) => g.getAttribute('uv').array[i * 2])
+  const span = full.u1 - full.u0
+  expect(Math.min(...us)).toBeCloseTo(full.u0 + span / 4, 5)
+  expect(Math.max(...us)).toBeCloseTo(full.u1 - span / 4, 5)
+  const frame = buildFrameGeometry([tall])
+  expectBounds(frame, 2, 20 - PAINTING / 4 - 0.06, 20 + PAINTING / 4 + 0.06)
+  expectBounds(frame, 1, EYE_Y - PAINTING / 2 - 0.06, EYE_Y + PAINTING / 2 + 0.06)
 })

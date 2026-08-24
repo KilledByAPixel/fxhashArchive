@@ -502,7 +502,7 @@ function assignWalk(runs, counts, items, parts, legs) {
  * back into the lobby says you have come full circle. Nothing here depends on
  * input order — see byDate — so the same archive gives the same building.
  */
-export function buildGallery({ tokens, collaborations = {}, volumes = new Map(), generatedAt }) {
+export function buildGallery({ tokens, collaborations = {}, volumes = new Map(), sizes = new Map(), generatedAt }) {
   const visible = tokens.filter((t) => !HIDDEN_FLAGS.has(t.flag))
   const { solo, halls, artistCount } = assignRooms(visible, collaborations, { volumes })
   const shared = [...halls.values()].flat().sort(byDate)
@@ -564,10 +564,23 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
   const paintings = []
   const signs = []
 
+  /**
+   * A painting's size on the wall: the preview's proportions with PAINTING on
+   * the long side. `sizes` is what archive-previews.mjs recorded; a project it
+   * never reached keeps fxhash's square thumbnail and hangs square.
+   */
+  const shapeOf = (t) => {
+    const dims = sizes.get(t.id)
+    const aspect = dims && dims.w > 0 && dims.h > 0 ? dims.w / dims.h : 1
+    return aspect >= 1
+      ? { w: PAINTING, h: r6(PAINTING / aspect) }
+      : { w: r6(PAINTING * aspect), h: PAINTING }
+  }
   const hang = (t, room, point, normal) =>
     paintings.push({
       project: t.id, slug: t.slug, name: t.name, artist: creditOf(t, collaborations),
       year: Number(t.createdAt.slice(0, 4)), room, x: r6(point.x), z: r6(point.z), yaw: yawOf(normal), tile: 0,
+      ...shapeOf(t),
     })
   /** A sign on a wall at `point` (on the wall line), facing `normal`, stood off like a painting. */
   const sign = (kind, text, point, normal, y, w, h) =>
@@ -722,10 +735,10 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
   for (const p of paintings) {
     const rx = Math.cos(p.yaw)
     const rz = -Math.sin(p.yaw)
-    const shift = PAINTING / 2 - 0.25
+    const shift = p.w / 2 - 0.25
     signs.push({
       text: `${p.name} — ${p.artist}, ${p.year}`, kind: 'plaque',
-      x: r6(p.x + rx * shift), y: r6(EYE_Y - PAINTING / 2 - 0.12), z: r6(p.z + rz * shift),
+      x: r6(p.x + rx * shift), y: r6(EYE_Y - p.h / 2 - 0.12), z: r6(p.z + rz * shift),
       yaw: p.yaw, w: 0.5, h: 0.12,
     })
   }

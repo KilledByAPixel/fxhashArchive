@@ -154,6 +154,7 @@ npm run dev       # dev server
 npm test          # tests
 npm run build     # production build
 npm run gallery   # rebuild public/data/gallery.json and its atlases after an archive change
+npm run archive:previews   # fetch true-aspect previews from IPFS for archived projects (once)
 ```
 
 Pushing to `master` builds and publishes to GitHub Pages automatically.

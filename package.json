@@ -18,6 +18,7 @@
     "check:gateways": "node scripts/check-gateways.mjs",
     "build:runners": "node scripts/build-runners.mjs",
     "thumbs:compress": "node scripts/compress-thumbnails.mjs",
+    "archive:previews": "node scripts/archive-previews.mjs",
     "build:release": "node scripts/build-release.mjs",
     "verify:release": "node scripts/verify-release.mjs"
   },

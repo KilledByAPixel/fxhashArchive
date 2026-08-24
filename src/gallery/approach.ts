@@ -14,18 +14,19 @@ import { PAINTING, EYE_Y, FILL } from './constants'
 export interface ScreenRect { left: number; top: number; width: number; height: number }
 
 /**
- * How far back to stand so the painting fills `fill` of the viewport's shorter
- * side. The fov is vertical; in portrait the width is the tighter constraint, and
- * the horizontal half-angle's tangent is the vertical one times the aspect.
+ * How far back to stand so the painting fills `fill` of the viewport on
+ * whichever side it hits first. The fov is vertical; the horizontal half-angle's
+ * tangent is the vertical one times the screen aspect, so a painting of width w
+ * and height h needs the greater of the two distances.
  */
-export function viewingDistance(fovDeg: number, aspect: number, fill = FILL): number {
+export function viewingDistance(fovDeg: number, aspect: number, w = PAINTING, h = PAINTING, fill = FILL): number {
   const halfTan = Math.tan((fovDeg * Math.PI) / 360)
-  return PAINTING / (2 * fill * halfTan * Math.min(1, aspect))
+  return Math.max(h / (2 * fill * halfTan), w / (2 * fill * halfTan * aspect))
 }
 
 /** On the painting's normal at the viewing distance, facing it. */
 export function viewingPose(p: Painting, fovDeg: number, aspect: number): Pose {
-  const d = viewingDistance(fovDeg, aspect)
+  const d = viewingDistance(fovDeg, aspect, p.w, p.h)
   return { x: p.x + Math.sin(p.yaw) * d, z: p.z + Math.cos(p.yaw) * d, yaw: p.yaw + Math.PI }
 }
 
@@ -54,11 +55,10 @@ export const paintingRight = (p: Painting) => new Vector3(Math.cos(p.yaw), 0, -M
  */
 export function projectedRect(camera: PerspectiveCamera, p: Painting, width: number, height: number): ScreenRect {
   const right = paintingRight(p)
-  const half = PAINTING / 2
   const xs: number[] = []
   const ys: number[] = []
   for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
-    const v = new Vector3(p.x, EYE_Y + sy * half, p.z).addScaledVector(right, sx * half).project(camera)
+    const v = new Vector3(p.x, EYE_Y + (sy * p.h) / 2, p.z).addScaledVector(right, (sx * p.w) / 2).project(camera)
     xs.push(((v.x + 1) / 2) * width)
     ys.push(((1 - v.y) / 2) * height)
   }

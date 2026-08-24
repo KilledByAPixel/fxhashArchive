@@ -9,7 +9,7 @@ import type { Painting } from './types'
 // On the west wall of a hall, facing +x.
 const painting: Painting = {
   project: 1, slug: 'p', name: 'P', artist: 'A', year: 2022, room: '2022-q1',
-  x: -3.98, z: 20, yaw: Math.PI / 2, tile: 0,
+  x: -3.98, z: 20, yaw: Math.PI / 2, tile: 0, w: PAINTING, h: PAINTING,
 }
 
 test('landscape: the painting fills FILL of the height', () => {
@@ -48,4 +48,20 @@ test('easing and angle interpolation', () => {
   // Shortest way round: from just above 0 to just below 2π goes through 0, not π.
   expect(Math.sin(lerpAngle(0.1, 2 * Math.PI - 0.1, 0.5))).toBeCloseTo(0, 9)
   expect(lerpPose({ x: 0, z: 0, yaw: 0 }, { x: 2, z: 4, yaw: 1 }, 0.5)).toEqual({ x: 1, z: 2, yaw: 0.5 })
+})
+
+test('a wide painting stands further back so its width fits, and its rect is wide', () => {
+  const wide: Painting = { ...painting, w: PAINTING, h: PAINTING / 2 }
+  const width = 1600, height = 900
+  const camera = new PerspectiveCamera(FOV, width / height, 0.1, 200)
+  // In landscape the height fits easily; the width is the constraint only in portrait.
+  applyPose(camera, viewingPose(wide, FOV, width / height))
+  const r = projectedRect(camera, wide, width, height)
+  expect(r.width / r.height).toBeCloseTo(2, 1)
+  expect(r.width).toBeCloseTo(FILL * width, 0)            // 2:1 is wider than 16:9, so the width is what fits
+  // Portrait screen: the width is what has to fit.
+  const tallScreen = new PerspectiveCamera(FOV, 0.5, 0.1, 200)
+  applyPose(tallScreen, viewingPose(wide, FOV, 0.5))
+  const r2 = projectedRect(tallScreen, wide, 450, 900)
+  expect(r2.width).toBeCloseTo(FILL * 450, 0)
 })

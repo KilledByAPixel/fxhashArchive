@@ -7,7 +7,7 @@ import type { Painting } from './types'
 
 const painting: Painting = {
   project: 5, slug: 'zartz', name: 'Zartz', artist: 'KilledByAPixel', year: 2021, room: 'tz1k',
-  x: -3.98, z: 20, yaw: Math.PI / 2, tile: 3,
+  x: -3.98, z: 20, yaw: Math.PI / 2, tile: 3, w: 1.2, h: 1.2,
 }
 const rect = { left: 100, top: 50, width: 600, height: 600 }
 
