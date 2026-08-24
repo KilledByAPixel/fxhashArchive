@@ -56,7 +56,12 @@ test('unknown route renders not-found', () => {
 })
 
 test('/gallery is its own full-bleed page, outside the site chrome', () => {
-  // jsdom has no WebGL, so the page is its fallback — which is enough to prove the route.
+  // jsdom has no WebGL, so the page is its fallback — which is enough to prove the
+  // route. jsdom's own getContext is an unimplemented stub that logs a "Not
+  // implemented" console line on every call GalleryPage's hasWebGL() makes to it;
+  // stubbing it to return null (a real "this browser has no WebGL" answer) gets
+  // the same fallback without that noise.
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null)
   renderAt('/gallery')
   expect(screen.getByText(/needs WebGL/)).toBeTruthy()
   expect(screen.queryByRole('link', { name: 'Artwork' })).toBeNull()

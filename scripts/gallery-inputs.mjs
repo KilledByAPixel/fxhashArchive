@@ -26,6 +26,13 @@ export async function readArchiveInputs(dataDir = 'public/data') {
     }
   }
 
+  // The manifest and the catalog are captured separately, so a manifest id with no
+  // matching token is possible (a project removed from the catalog after it was
+  // archived, say) — silently dropping it means the gallery and the archived count
+  // it feeds (scripts/build-summary.mjs) quietly disagree about what "archived" means.
+  const found = new Set(tokens.map((t) => t.id))
+  for (const id of archived) if (!found.has(id)) console.warn(`gallery: manifest has ${id} but no catalog entry for it; skipping`)
+
   const collaborations = await readFile(join(dataDir, 'collaborations.json'), 'utf8')
     .then((s) => JSON.parse(s).byProject ?? {})
     .catch(() => ({}))
