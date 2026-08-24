@@ -781,14 +781,18 @@ test('a room takes the colour it is handed, and stays white without one', () => 
   expect(g.rooms.filter((r) => r.tint).length).toBe(1)
 })
 
-test('the lobby names the archive, riding the lobby\'s own ceiling', () => {
+test('the lobby names the archive on the lintel over its own opening', () => {
   const g = buildGallery({ tokens: fixture(), collaborations, generatedAt: T })
   const title = g.signs.find((s) => s.text === 'fxhash archive')
   expect(title).toBeTruthy()
-  expect(title.y + title.h / 2).toBeCloseTo(LOBBY_H - 0.1, 6)
-  // The count hangs off the title, not off the ceiling, so the two stay a pair.
+  // On the lintel, a hand's width clear of the arch — not up under the 6 m
+  // ceiling, where it was a 45 degree crane from the spawn point.
+  expect(title.y - title.h / 2).toBeGreaterThan(DOOR_H)
+  expect(title.y + title.h / 2).toBeLessThan(LOBBY_H - 1)
+  // The count stays a pair with it, tucked between the title and the arch.
   const count = g.signs.find((s) => /archived works/.test(s.text))
-  expect(title.y - count.y).toBeCloseTo(0.4, 6)
+  expect(title.y - count.y).toBeCloseTo(0.475, 6)
+  expect(count.y - count.h / 2).toBeGreaterThanOrEqual(DOOR_H)
 })
 
 test('a room\'s name hangs under the corridor\'s ceiling outside and its own inside', () => {
@@ -796,10 +800,48 @@ test('a room\'s name hangs under the corridor\'s ceiling outside and its own ins
   const room = g.rooms.find((r) => r.kind === 'solo')
   const both = g.signs.filter((s) => s.kind === 'room' && s.text === room.title)
   expect(both.length).toBe(2)
+  // The same name, read standing up on both sides, so it hangs at the same
+  // height on both. It used to follow a tall room's ceiling up on the inside,
+  // which put one face of one sign at 5.44 m and the other at 3.5.
   const [outside, inside] = both.map((s) => s.y).sort((a, b) => a - b)
-  // Read from the corridor, whose ceiling has not moved: unchanged at 3.5.
   expect(outside).toBe(3.5)
-  // Read from inside, so it follows this room up.
-  expect(inside).toBeCloseTo(room.h - 0.1 - 0.4, 6)
-  expect(inside).toBeGreaterThan(outside)
+  expect(inside).toBe(outside)
+})
+
+test('a room too short for the reading height keeps its sign under the ceiling', () => {
+  // The cap still works the other way: nothing hangs through a low ceiling.
+  const g = buildGallery({ tokens: fixture(), collaborations, generatedAt: T })
+  const byId = new Map(g.rooms.map((r) => [r.id, r]))
+  for (const s of g.signs) {
+    const room = [...byId.values()].find((r) =>
+      r.rect.w > 0 && s.x >= r.rect.x - 0.3 && s.x <= r.rect.x + r.rect.w + 0.3 &&
+      s.z >= r.rect.z - 0.3 && s.z <= r.rect.z + r.rect.d + 0.3)
+    if (room) expect(s.y + s.h / 2).toBeLessThanOrEqual(room.h - 0.1 + 1e-6)
+  }
+})
+
+// Frank: the name of the place sat at the very ceiling and you had to look
+// straight up to read it. A sign is for reading, so it hangs just above the
+// opening it labels; the ceiling is only a cap, for a room too short for that.
+// Riding the ceiling was fine while every room was WALL_H tall and became a
+// 45 degree crane the moment the rooms got their air.
+
+test('every sign hangs where it can be read, not up under the ceiling', () => {
+  const g = loop()
+  const tall = g.rooms.filter((r) => r.h > WALL_H)
+  expect(tall.length).toBeGreaterThan(0)          // there are tall rooms to get this wrong in
+  for (const s of g.signs) expect(s.y + s.h / 2).toBeLessThanOrEqual(4.2)
+})
+
+test('the lobby title sits just above the arch, with the counts under it', () => {
+  const g = loop()
+  const title = g.signs.find((s) => s.text === 'fxhash archive')
+  const counts = g.signs.find((s) => /archived works/.test(s.text))
+  expect(title).toBeDefined()
+  expect(counts).toBeDefined()
+  // The big line is the top one, as a title is.
+  expect(counts.y).toBeLessThan(title.y)
+  // Both clear the opening they hang over, and neither is up in the roof.
+  expect(counts.y - counts.h / 2).toBeGreaterThanOrEqual(DOOR_H)
+  expect(title.y + title.h / 2).toBeLessThanOrEqual(DOOR_H + 1.1)
 })

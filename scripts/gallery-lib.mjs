@@ -254,6 +254,20 @@ export function ceilingHeight(kind, rect) {
 const underCeiling = (h, signH) => r6(h - 0.1 - signH / 2)
 
 /**
+ * Where a sign hangs to be read: clear of the heads walking under it, and well
+ * short of the roof.
+ *
+ * Signs used to ride the ceiling, which was indistinguishable from this while
+ * every room was WALL_H tall. The moment the rooms got their air it stopped
+ * being: the lobby's own name went to 5.65 m in a 6 m room, and from the spawn
+ * point four metres back that is a 45 degree crane to read the name of the
+ * place you are standing in. The ceiling is only a cap now, for a room too
+ * short to hang a sign at this height at all.
+ */
+const READ_Y = 3.5
+const readable = (signH, ceiling) => r6(Math.min(READ_Y, underCeiling(ceiling, signH)))
+
+/**
  * A straight wall from p toward q, with door gaps given as distances from p.
  * Each gap becomes a lintel from `gap.top` to the ceiling, so the renderer draws
  * it and the collider, which ignores anything with y0 > 0, lets people through.
@@ -865,11 +879,16 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
     ...wallBetween({ x: -HX, z: LOBBY }, { x: HX, z: LOBBY }, opening(HX), LOBBY_H),
     ...wallBetween({ x: HX, z: 0 }, { x: HX, z: LOBBY }, opening(LOBBY / 2), LOBBY_H),
   )
-  // The title rides the lobby's ceiling; the count hangs off the title, 0.4 below
-  // it, which is exactly where both sat when the lobby was WALL_H tall.
-  const titleY = underCeiling(LOBBY_H, 0.5)
+  // Stacked on the lintel just above the opening, not up under the ceiling: this
+  // is the first thing anyone reads, and it should be there when they arrive
+  // rather than somewhere above them. The counts line takes the bottom of the
+  // pair, a hand's width over the arch, and the title sits on top of it — a
+  // title belongs above its strapline even when the room is tall enough to put
+  // it anywhere.
+  const countY = r6(Math.min(DOOR_H + 0.275, underCeiling(LOBBY_H, 0.25)))
+  const titleY = r6(Math.min(countY + 0.475, underCeiling(LOBBY_H, 0.5)))
   sign('title', 'fxhash archive', { x: 0, z: LOBBY }, { x: 0, z: -1 }, titleY, 3, 0.5)
-  sign('title', `${visible.length} archived works · ${artistCount} artists · ${span[0]}–${span[1]}`, { x: 0, z: LOBBY }, { x: 0, z: -1 }, r6(titleY - 0.4), 3, 0.25)
+  sign('title', `${visible.length} archived works · ${artistCount} artists · ${span[0]}–${span[1]}`, { x: 0, z: LOBBY }, { x: 0, z: -1 }, countY, 3, 0.25)
   sign('title', `You have walked the whole of fxhash, ${span[0]}–${span[1]} — the lobby is ahead`, { x: HX, z: LOBBY / 2 }, { x: 1, z: 0 }, 3.5, 3.6, 0.4)
   // The lobby face of the same lintel, read on the way out into leg D. Leg D is
   // the last leg of the loop, so walking out through here is walking the whole
@@ -1001,7 +1020,7 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
     // Read from the corridor, whose ceiling has not moved: stays where it was.
     sign('room', a.name, at(s / 2, 0), neg(V), 3.5, 4.8, 0.8)
     // Read from inside, so it rides this room's ceiling, however high that is.
-    sign('room', a.name, at(s / 2, s), neg(V), underCeiling(roomH, 0.8), 4.8, 0.8)
+    sign('room', a.name, at(s / 2, s), neg(V), readable(0.8, roomH), 4.8, 0.8)
   }
 
   // Plaques: under the lower-right corner, as a visitor facing the painting sees
