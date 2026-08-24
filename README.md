@@ -1,9 +1,11 @@
 # fxhash archive
 
-**→ [killedbyapixel.github.io/fxhashArchive](https://killedbyapixel.github.io/fxhashArchive/)**
+**→ [killedbyapixel.github.io/fxhashArchive](https://killedbyapixel.github.io/fxhashArchive/)**\
+**→ [walk the interactive gallery](https://killedbyapixel.github.io/fxhashArchive/gallery)**
 
-An unofficial effort to preserve the art from [fxhash](https://fxhash.xyz), and a
-viewer for what has been preserved.
+An unofficial effort to preserve the art from [fxhash](https://fxhash.xyz), a
+viewer for what has been preserved, and an interactive gallery you can walk
+through.
 
 fxhash appears to be gone indefinitely, and the assumption here is that it is not
 coming back. The art outlives the platform only if somebody keeps a copy. This
@@ -11,6 +13,16 @@ repository holds its Tezos catalog: every project, every artist, all 1,802,387
 seeds, the artists' own words, and the code for the projects people engaged with
 most. You can browse all of it and run the original artworks again — no wallet, no
 minting, no marketplace.
+
+**The interactive gallery.** The 420 projects whose code is archived here are
+also hung in a building you can walk through. One corridor runs out along four
+legs and comes back to where it started, in the order the work was made, with
+rooms off it for the artists who made the most of it and a portal at each turn
+of the era. Step up to a painting and the piece runs *there, on the wall* — the
+artist's own program, from the seed behind the very picture you walked up to —
+and the arrow keys page through its minted editions without leaving the frame.
+It is built from the same files as the rest of this repository and needs nothing
+else: no chain, no IPFS, no network.
 
 If fxhash does come back, nothing here was wasted.
 
@@ -25,11 +37,13 @@ Tezos catalog: 27,430 projects and 5,407 artists.
 - **Run the artwork** — not a picture of it. Every piece is the artist's own
   program, re-run with the seed that produced the edition you are looking at, so
   what you see is the piece as it was minted.
-- **Walk the gallery.** The 420 archived projects hang in a museum you can walk
-  through — halls by era, rooms for the artists with the most archived work. Step
-  up to a painting and it runs — first as the very iteration the picture on the
-  wall shows, from the seed the artist chose at mint — and you can page through
-  the edition without leaving the wall.
+- **[Walk the interactive gallery](https://killedbyapixel.github.io/fxhashArchive/gallery).**
+  The 420 archived projects hang in a building you can walk through — the corridor
+  in the order the work was made, rooms for the artists with the most archived
+  work. Step up to a painting and it runs, first as the very iteration the picture
+  on the wall shows, from the seed the artist chose at mint; the arrow keys page
+  through the minted editions, and the bar says who holds the one you are looking
+  at.
 - **Step through an edition** with next/previous, on any project, whether or not
   its code is stored here.
 - **Follow a piece to the chain.** Each artwork links to its token, its minter and
