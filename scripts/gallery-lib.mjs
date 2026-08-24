@@ -18,7 +18,10 @@ export const WALL_H = 4
 export const WALL_T = 0.3
 export const PAINTING = 1.2
 export const EYE_Y = 1.6
-export const SPACING = 3
+/** Wall between neighbouring pictures' edges, whatever their widths: a gallery's hanging distance. */
+export const GAP = 1
+/** The pitch of two square pieces — what a wall's capacity is counted in. */
+export const SPACING = PAINTING + GAP
 export const DOOR_W = 2
 export const DOOR_H = 3
 export const OPENING_W = 4
@@ -27,7 +30,7 @@ export const ROOM_MIN = 6
 export const ROOM_MIN_PIECES = 4
 /** Where a room with more pieces than that starts growing from. */
 export const ROOM_MID = 8
-export const ROOM_GAP = 2
+export const ROOM_GAP = 1
 export const CORNER = 1
 export const LOBBY = 8
 /**
@@ -170,15 +173,6 @@ export function freeRuns(from, to, gaps = []) {
   return runs.filter(([a, b]) => b >= a)
 }
 
-/** Painting centres at pitch SPACING, as many as fit, centred within the run. */
-export function slotsOnRun(a, b) {
-  const len = b - a
-  if (len < 0) return []
-  const n = Math.floor(len / SPACING) + 1
-  const start = a + (len - (n - 1) * SPACING) / 2
-  return Array.from({ length: n }, (_, i) => start + i * SPACING)
-}
-
 export const ATLAS = { size: 4096, tile: 256, gutter: 4, cols: 15 }
 export const ATLAS_SMALL = { size: 2048, tile: 128, gutter: 2, cols: 15 }
 export const TILES_PER_ATLAS = ATLAS.cols * ATLAS.cols
@@ -239,7 +233,33 @@ export function spreadOnRun(a, b, k) {
   return Array.from({ length: k }, (_, i) => a + ((b - a) * i) / (k - 1))
 }
 
-/** How many pieces a centre-allowed run [a, b] can hold at pitch SPACING. */
+/**
+ * Centres for pieces of these widths hung along a run, GAP of wall between
+ * neighbours' edges. Spread, the slack is shared evenly before, between and
+ * after them, so a corridor wall is as full at one end as the other; not
+ * spread, they hang exactly GAP apart as one group in the middle of the wall,
+ * the slack at its ends — how a room is hung. [a, b] is where a square piece's
+ * centre may go, so the pictures' edges may reach PAINTING/2 beyond it. Null
+ * when they do not fit.
+ */
+export function hangOnRun(a, b, widths, spread = true) {
+  const k = widths.length
+  if (k === 0) return []
+  const from = a - PAINTING / 2
+  const need = widths.reduce((t, w) => t + w, 0) + GAP * (k - 1)
+  const slack = b + PAINTING / 2 - from - need
+  if (slack < -1e-9) return null
+  const extra = spread ? slack / (k + 1) : 0
+  const out = []
+  let at = from + (spread ? extra : slack / 2)
+  for (const w of widths) {
+    out.push(at + w / 2)
+    at += w + GAP + extra
+  }
+  return out
+}
+
+/** How many square pieces a centre-allowed run [a, b] can hold at pitch SPACING. */
 const runCapacity = (a, b) => (b >= a ? Math.floor((b - a) / SPACING) + 1 : 0)
 
 /**
@@ -283,18 +303,39 @@ function roomRuns(s) {
   ]
 }
 
-/** How many pieces a square room of side `s` hangs at pitch, all four walls. */
+/** How many square pieces a room of side `s` hangs at pitch, all four walls. */
 export const roomCapacity = (s) => roomRuns(s).reduce((n, r) => n + runCapacity(r.a, r.b), 0)
+
+/**
+ * Where a square room of side `s` hangs pieces of these widths, in order: each
+ * wall's count from distribute(), then each wall hung by hangOnRun as one
+ * group in its middle. Null when a wall's share does not fit on it.
+ */
+export function roomLayout(s, widths) {
+  const runs = roomRuns(s)
+  const each = distribute(runs.map((r) => runCapacity(r.a, r.b)), widths.length)
+  if (each.reduce((t, n) => t + n, 0) < widths.length) return null
+  const out = []
+  let k = 0
+  for (const [i, run] of runs.entries()) {
+    const centres = hangOnRun(run.a, run.b, widths.slice(k, k + each[i]), false)
+    if (!centres) return null
+    k += each[i]
+    out.push({ run, centres })
+  }
+  return out
+}
 
 /**
  * The side of an artist's room. Up to four pieces get the smallest room — one
  * picture per wall reads as a room, not a cupboard; beyond that the room grows
- * from ROOM_MID until its walls hold them all. Thirty-one comes out at 24 m.
+ * from ROOM_MID until its walls hold them all, wide pieces needing more wall
+ * than square ones. Thirty-one square pieces come out at 20 m.
  */
-export function roomSide(n) {
-  if (n <= ROOM_MIN_PIECES) return ROOM_MIN
-  let s = ROOM_MID
-  while (roomCapacity(s) < n) s += 1
+export function roomSide(n, widths = []) {
+  const ws = Array.from({ length: n }, (_, i) => widths[i] ?? PAINTING)
+  let s = n <= ROOM_MIN_PIECES ? ROOM_MIN : ROOM_MID
+  while (!roomLayout(s, ws)) s += 1
   return s
 }
 
@@ -307,7 +348,7 @@ export const LOOP_IDS = ['leg-a', 'corner-nw', 'leg-b', 'corner-ne', 'leg-c', 'c
  * at every courtyard corner, and an inner room at the end of one would sit
  * exactly where an inner room at the start of the next begins.
  */
-export const INNER_MARGIN = 10
+export const INNER_MARGIN = 8
 /** A room wider than this goes outside the loop, where there is room for anything. */
 export const INNER_MAX = 8
 /** Two of the widest inner rooms must fit face to face across the courtyard. */
@@ -354,26 +395,58 @@ function loopParts(L) {
   ]
 }
 
-/** Split n items over k legs as evenly as they go, earlier legs taking the extra. */
-const blocks = (n, k) => Array.from({ length: k }, (_, i) => Math.floor(n / k) + (i < n % k ? 1 : 0))
+/**
+ * Split items, kept in order, into k consecutive blocks whose largest total is
+ * as small as it can be — the classic linear partition, by dynamic programming.
+ * Splitting rooms over the legs by count instead let the leg that drew the one
+ * 20 m room run eleven metres longer than the rest, and every leg is as long as
+ * the longest. Among splits with the same largest block, the most even one
+ * (least sum of squares), so ties do not leave a leg bare; no block is empty
+ * unless there are fewer items than blocks, and then the first blocks take them
+ * — the walk starts at leg A. Returns the block sizes (counts).
+ */
+export function partition(weights, k) {
+  const n = weights.length
+  if (n < k) return Array.from({ length: k }, (_, i) => (i < n ? 1 : 0))
+  const prefix = [0]
+  for (const w of weights) prefix.push(prefix[prefix.length - 1] + w)
+  const sum = (i, j) => prefix[j] - prefix[i]   // items i..j-1
+  const nonEmpty = n >= k
+  const better = (a, b) => a[0] < b[0] - 1e-9 || (Math.abs(a[0] - b[0]) <= 1e-9 && a[1] < b[1] - 1e-9)
+  // best[j][b]: [largest block, sum of squares] for the first j items in b blocks
+  const best = Array.from({ length: n + 1 }, () => Array.from({ length: k + 1 }, () => [Infinity, Infinity]))
+  const cut = Array.from({ length: n + 1 }, () => new Array(k + 1).fill(0))
+  best[0][0] = [0, 0]
+  for (let b = 1; b <= k; b++) {
+    for (let j = 0; j <= n; j++) {
+      for (let i = 0; i <= j; i++) {
+        if ((nonEmpty && i === j) || best[i][b - 1][0] === Infinity) continue
+        const s = sum(i, j)
+        const v = [Math.max(best[i][b - 1][0], s), best[i][b - 1][1] + s * s]
+        if (better(v, best[j][b])) { best[j][b] = v; cut[j][b] = i }
+      }
+    }
+  }
+  const counts = []
+  for (let j = n, b = k; b > 0; b--) { counts.unshift(j - cut[j][b]); j = cut[j][b] }
+  return counts
+}
 
 /**
  * Rooms at an even beat. Each side of the corridor takes its rooms in date
- * order, shared over the four legs as evenly as they go; on a leg the rooms are
- * spaced so the gaps before, between and after them are all the same. Null when
- * a gap would be tighter than ROOM_GAP: L is too short.
+ * order, shared over the four legs so that no leg's wall of rooms is longer
+ * than it must be; on a leg the rooms are spaced so the gaps before, between
+ * and after them are all the same. Null when a gap would be tighter than
+ * ROOM_GAP: L is too short.
  */
-function placeRooms(legs, L, solo) {
+function placeRooms(legs, L, sized) {
   const bySide = { OUT: [], IN: [] }
-  solo.forEach((a, i) => {
-    const s = roomSide(a.projects.length)
-    bySide[s > INNER_MAX ? 'OUT' : i % 2 === 0 ? 'OUT' : 'IN'].push({ artist: a, s })
-  })
+  sized.forEach((r, i) => bySide[r.s > INNER_MAX ? 'OUT' : i % 2 === 0 ? 'OUT' : 'IN'].push(r))
   const placed = []
   for (const side of ['OUT', 'IN']) {
     const margin = side === 'OUT' ? ROOM_GAP : INNER_MARGIN
     let from = 0
-    for (const [li, count] of blocks(bySide[side].length, legs.length).entries()) {
+    for (const [li, count] of partition(bySide[side].map((r) => r.s + ROOM_GAP), legs.length).entries()) {
       const block = bySide[side].slice(from, from + count)
       from += count
       if (!block.length) continue
@@ -490,6 +563,123 @@ function assignWalk(runs, counts, items, parts, legs) {
 }
 
 /**
+ * Settle the portals: a portal took a slot on one wall of its leg, but its
+ * lintel crosses the corridor, so it keeps clear of every door by PORTAL_CLEAR,
+ * at least SPACING from other portals, and back from the leg's end — a portal
+ * within SPACING of it would put its marker on the junction (or the lobby's
+ * return lintel) and its lintel a step from the next one. Nearest spot first,
+ * up to six metres either way. The pictures are hung afterwards, around it.
+ */
+function settlePortals(legs, portals, gapsOf) {
+  for (const leg of legs) {
+    const gaps = [...gapsOf(leg, 'OUT'), ...gapsOf(leg, 'IN')]
+    const list = portals.get(leg)
+    for (const p of list) {
+      if (p.pos === 0) continue
+      const clear = (pos) =>
+        pos >= CORNER && pos <= leg.len - SPACING &&
+        !gaps.some((g) => pos > g.from - PORTAL_CLEAR && pos < g.to + PORTAL_CLEAR) &&
+        !list.some((o) => o !== p && Math.abs(o.pos - pos) < SPACING)
+      for (let d = 0; d <= 6; d += 0.5) {
+        if (clear(p.pos + d)) { p.pos = r6(p.pos + d); break }
+        if (d > 0 && clear(p.pos - d)) { p.pos = r6(p.pos - d); break }
+      }
+    }
+  }
+}
+
+/**
+ * The corridor by era: each leg cut at its portals into sections, each section
+ * and each corner titled with the era in force there. A junction where two
+ * portals stack is the later era's — the earlier one had no pieces to hang
+ * between them.
+ */
+function corridorSections(parts, portals, stacked) {
+  const sections = new Map()
+  let era = ERAS[0]
+  for (const part of parts) {
+    if (part.kind === 'leg') {
+      const list = [...portals.get(part), ...stacked.filter((s) => s.leg === part).map((s) => ({ pos: 0, era: s.era }))]
+      const cuts = [...new Set([0, ...list.map((p) => p.pos), part.len])].sort((a, b) => a - b)
+      const out = []
+      for (let i = 0; i + 1 < cuts.length; i++) {
+        const here = list.filter((p) => p.pos === cuts[i])
+        for (const p of here) if (ERAS.indexOf(p.era) > ERAS.indexOf(era)) era = p.era
+        out.push({ id: i === 0 ? part.id : `${part.id}-${i + 1}`, from: cuts[i], to: cuts[i + 1], era, portal: here.length > 0 })
+      }
+      sections.set(part, out)
+    } else {
+      sections.set(part, [{ id: part.id, from: 0, to: part.len, era, portal: false }])
+    }
+  }
+  return sections
+}
+
+/**
+ * Hang the corridor's pieces, the portals now fixed. A portal's piers cut both
+ * walls, so they are cuts like the doors; between the cuts, each era's pieces
+ * are shared over the runs of its own sections and hung by their widths. When
+ * an era's sections cannot hold its pieces, returns instead how many short each
+ * era is, for nudgePortals to act on.
+ */
+function hangCorridor(parts, portals, stacked, shared, gapsOf, widthOf) {
+  const sections = corridorSections(parts, portals, stacked)
+  const cutsOf = (leg, side) => [
+    ...gapsOf(leg, side),
+    ...portals.get(leg).filter((p) => p.pos > 0).map((p) => ({ from: p.pos - WALL_T / 2, to: p.pos + WALL_T / 2 })),
+  ]
+  const runs = corridorRuns(parts, cutsOf)
+  const sectionOf = (run) => {
+    const mid = (run.a + run.b) / 2
+    return sections.get(run.part).find((s) => mid >= s.from - 1e-6 && mid <= s.to + 1e-6)
+  }
+  const hung = []
+  const deficits = new Map()
+  for (const era of ERAS) {
+    const pieces = shared.filter((t) => eraOf(t.createdAt) === era.id)
+    const mine = runs.filter((r) => sectionOf(r).era === era)
+    const counts = share(mine, pieces.length)
+    if (!counts) {
+      deficits.set(era, pieces.length - mine.reduce((t, r) => t + runCapacity(r.a, r.b), 0))
+      continue
+    }
+    let next = 0
+    mine.forEach((run, i) => {
+      const group = pieces.slice(next, next + counts[i])
+      next += counts[i]
+      const centres = hangOnRun(run.a, run.b, group.map(widthOf))
+      if (centres) group.forEach((t, j) => hung.push({ t, room: sectionOf(run).id, point: run.at(centres[j]), normal: run.normal }))
+      else deficits.set(era, (deficits.get(era) ?? 0) + 1)
+    })
+  }
+  return deficits.size ? { deficits } : { hung, sections }
+}
+
+/**
+ * Give a short era more corridor: the portal that ends it — the next era's —
+ * moves on by the wall its deficit needs, half a pitch per piece on each wall.
+ * The next era loses that much, and if it was short too the next round moves
+ * its portal in turn; a round that can move nothing (the era runs to the lobby,
+ * or its portal sits on a junction the walk put it on) reports false, and the
+ * loop grows instead. settlePortals runs after, so a nudged portal still keeps
+ * clear of doors.
+ */
+function nudgePortals(deficits, portals, legs) {
+  let moved = false
+  for (const [era, short] of deficits) {
+    const after = ERAS[ERAS.indexOf(era) + 1]
+    if (!after) continue
+    for (const leg of legs) {
+      const p = portals.get(leg).find((q) => q.era === after && q.pos > 0)
+      if (!p) continue
+      const to = Math.min(leg.len - SPACING, p.pos + (short * SPACING) / 2 + PORTAL_CLEAR)
+      if (to > p.pos + 1e-9) { p.pos = r6(to); moved = true }
+    }
+  }
+  return moved
+}
+
+/**
  * The whole building, from the archived set.
  *
  * A lobby, then one corridor that runs out along four legs and four corners and
@@ -502,10 +692,25 @@ function assignWalk(runs, counts, items, parts, legs) {
  * back into the lobby says you have come full circle. Nothing here depends on
  * input order — see byDate — so the same archive gives the same building.
  */
-export function buildGallery({ tokens, collaborations = {}, volumes = new Map(), sizes = new Map(), generatedAt }) {
+export function buildGallery({ tokens, collaborations = {}, volumes = new Map(), sizes = new Map(), previews = new Map(), generatedAt }) {
   const visible = tokens.filter((t) => !HIDDEN_FLAGS.has(t.flag))
   const { solo, halls, artistCount } = assignRooms(visible, collaborations, { volumes })
   const shared = [...halls.values()].flat().sort(byDate)
+
+  /**
+   * A painting's size on the wall: the preview's proportions with PAINTING on
+   * the long side. `sizes` is what archive-previews.mjs recorded; a project it
+   * never reached keeps fxhash's square thumbnail and hangs square.
+   */
+  const shapeOf = (t) => {
+    const dims = sizes.get(t.id)
+    const aspect = dims && dims.w > 0 && dims.h > 0 ? dims.w / dims.h : 1
+    return aspect >= 1
+      ? { w: PAINTING, h: r6(PAINTING / aspect) }
+      : { w: r6(PAINTING * aspect), h: PAINTING }
+  }
+  const widthOf = (t) => shapeOf(t).w
+  const sized = solo.map((a) => ({ artist: a, s: roomSide(a.projects.length, a.projects.map(widthOf)) }))
 
   // The walk: the corridor's pieces in date order, and before the first piece of
   // every era after the first, a portal — a reserved slot that gets the lintel.
@@ -524,63 +729,62 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
 
   // Grow the loop until the rooms keep their beat and the walls hold every piece.
   // Start from a lower bound rather than the minimum: the rooms on the busier
-  // side need their wall, and the corridor pieces need theirs (eight walls of
-  // L, less the rooms, at pitch) — growing from 18 m to a hundred in 3 m steps
-  // was most of the build time.
+  // side need their wall, and the corridor pieces need theirs — eight walls of
+  // L at pitch, and the corners' walls beyond that. A bound must never overshoot:
+  // the first loop's charged every room its whole frontage, when a room only
+  // costs its door, and started 25 m too long, which was the empty wall Frank saw.
   const sides = { OUT: [], IN: [] }
-  solo.forEach((a, i) => {
-    const s = roomSide(a.projects.length)
-    sides[s > INNER_MAX ? 'OUT' : i % 2 === 0 ? 'OUT' : 'IN'].push(s)
-  })
+  sized.forEach((r, i) => sides[r.s > INNER_MAX ? 'OUT' : i % 2 === 0 ? 'OUT' : 'IN'].push(r.s))
   const need = (rooms, margin) => (rooms.reduce((t, s) => t + s + ROOM_GAP, 0) + ROOM_GAP) / 4 + 2 * margin
-  const roomWall = [...sides.OUT, ...sides.IN].reduce((t, s) => t + s, 0)
-  const lower = Math.max(LOOP_MIN, need(sides.OUT, ROOM_GAP), need(sides.IN, INNER_MARGIN), (SPACING * items.length + roomWall) / 8)
+  const lower = Math.max(LOOP_MIN, need(sides.OUT, ROOM_GAP), need(sides.IN, INNER_MARGIN), (SPACING * items.length) / 8 - HALL_W)
   let layout = null
-  for (let L = Math.floor(lower / SPACING) * SPACING; !layout; L += SPACING) {
+  for (let L = Math.max(LOOP_MIN, Math.floor(lower / SPACING) * SPACING); !layout; L += SPACING) {
     if (L > LOOP_MAX) throw new Error(`gallery: no loop up to ${LOOP_MAX} m holds ${solo.length} rooms and ${items.length} corridor items`)
     const parts = loopParts(L)
     const legs = parts.filter((p) => p.kind === 'leg')
-    const placed = placeRooms(legs, L, solo)
+    const placed = placeRooms(legs, L, sized)
     if (!placed) continue
     const gapsOf = (leg, side) =>
       placed.filter((p) => p.leg === leg && p.side === side)
         .map((p) => ({ from: p.a0 + p.s / 2 - DOOR_W / 2, to: p.a0 + p.s / 2 + DOOR_W / 2, top: DOOR_H }))
     const runs = corridorRuns(parts, gapsOf)
-    // Slots for the items, plus exactly as many as portals pass on: k grows until
-    // the walk fits, so the spare slots are the ones passed over in the middle,
-    // not a bare stretch at the end. share() says when the walls cannot hold
-    // that many at all, and then the loop grows.
+    // First pass, at pitch: where the portals fall in the walk. Slots for the
+    // items, plus exactly as many as portals pass on: k grows until the walk
+    // fits, so the spare slots are the ones passed over in the middle, not a
+    // bare stretch at the end. Second pass: the portals settled and cut into
+    // both walls, each era's pieces hung by their widths in its own sections.
+    // share() says when the walls cannot hold that many at all, and then the
+    // loop grows.
     for (let k = 0; k <= ERAS.length; k++) {
       const counts = share(runs, items.length + k)
       if (!counts) break
       const walk = assignWalk(runs, counts, items, parts, legs)
-      if (walk) { layout = { L, parts, legs, placed, gapsOf, ...walk }; break }
+      if (!walk) continue
+      settlePortals(legs, walk.portals, gapsOf)
+      let corridor = null
+      for (let round = 0; round < 8 && !corridor; round++) {
+        const result = hangCorridor(parts, walk.portals, walk.stacked, shared, gapsOf, widthOf)
+        if (result.hung) corridor = result
+        else if (nudgePortals(result.deficits, walk.portals, legs)) settlePortals(legs, walk.portals, gapsOf)
+        else break
+      }
+      if (corridor) { layout = { L, parts, legs, placed, gapsOf, portals: walk.portals, stacked: walk.stacked, ...corridor }; break }
     }
   }
-  const { L, parts, legs, placed, gapsOf, hung, portals, stacked } = layout
+  const { parts, legs, placed, gapsOf, hung, portals, stacked, sections } = layout
 
   const rooms = []
   const walls = []
   const paintings = []
   const signs = []
 
-  /**
-   * A painting's size on the wall: the preview's proportions with PAINTING on
-   * the long side. `sizes` is what archive-previews.mjs recorded; a project it
-   * never reached keeps fxhash's square thumbnail and hangs square.
-   */
-  const shapeOf = (t) => {
-    const dims = sizes.get(t.id)
-    const aspect = dims && dims.w > 0 && dims.h > 0 ? dims.w / dims.h : 1
-    return aspect >= 1
-      ? { w: PAINTING, h: r6(PAINTING / aspect) }
-      : { w: r6(PAINTING * aspect), h: PAINTING }
-  }
+  /** `preview` only when one was captured: the first metadata format never recorded it. */
   const hang = (t, room, point, normal) =>
     paintings.push({
       project: t.id, slug: t.slug, name: t.name, artist: creditOf(t, collaborations),
       year: Number(t.createdAt.slice(0, 4)), room, x: r6(point.x), z: r6(point.z), yaw: yawOf(normal), tile: 0,
       ...shapeOf(t),
+      ...(previews.has(t.id) ? { preview: previews.get(t.id) } : {}),
     })
   /** A sign on a wall at `point` (on the wall line), facing `normal`, stood off like a painting. */
   const sign = (kind, text, point, normal, y, w, h) =>
@@ -604,35 +808,6 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
   sign('title', 'fxhash', { x: 0, z: LOBBY }, { x: 0, z: -1 }, 3.65, 3, 0.5)
   sign('title', `${visible.length} archived works · ${artistCount} artists · ${span[0]}–${span[1]}`, { x: 0, z: LOBBY }, { x: 0, z: -1 }, 3.25, 3, 0.25)
   sign('title', `You have walked the whole of fxhash, ${span[0]}–${span[1]} — the lobby is ahead`, { x: HX, z: LOBBY / 2 }, { x: 1, z: 0 }, 3.5, 3.6, 0.4)
-
-  // Settle the portals. A portal took a slot on one wall, but its lintel crosses
-  // the corridor, and the other wall's pictures — spread on their own — can sit
-  // at the very same distance along the leg, on the jamb. Pictures on a wall are
-  // at least SPACING apart, so within a metre and a half either way there is
-  // always a spot at least CORNER from every picture on both walls; take the
-  // nearest one that is also clear of doors and of other portals.
-  for (const leg of legs) {
-    const pieces = hung.filter((h) => h.slot.run.part === leg).map((h) => h.slot.along)
-    const gaps = [...gapsOf(leg, 'OUT'), ...gapsOf(leg, 'IN')]
-    const list = portals.get(leg)
-    for (const p of list) {
-      if (p.pos === 0) continue
-      // A portal within SPACING of a leg's end would put its marker on the
-      // junction (or the lobby's return lintel) and its lintel a step from the
-      // next one; keep it back.
-      const clear = (pos) =>
-        pos >= CORNER && pos <= leg.len - SPACING &&
-        !pieces.some((q) => Math.abs(q - pos) < CORNER) &&
-        !gaps.some((g) => pos > g.from - PORTAL_CLEAR && pos < g.to + PORTAL_CLEAR) &&
-        !list.some((o) => o !== p && Math.abs(o.pos - pos) < SPACING)
-      // Nearest first, up to six metres either way: a door's dead zone on the far
-      // wall is four metres wide, and the pictures beyond it are at pitch.
-      for (let d = 0; d <= 6; d += 0.5) {
-        if (clear(p.pos + d)) { p.pos = r6(p.pos + d); break }
-        if (d > 0 && clear(p.pos - d)) { p.pos = r6(p.pos - d); break }
-      }
-    }
-  }
 
   // Era markers: something to teleport to a metre past each portal, and the
   // era's name on the lintel facing you. The first era's name is on the pier
@@ -662,42 +837,27 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
   // Legs as era sections between their portals, corners as they come, all
   // titled with the era in force; the corridor walls cut for the doors and the
   // portals cut for the opening.
-  const sectionOf = new Map()   // leg -> [{ from, to, id }]
-  let era = ERAS[0]
   for (const part of parts) {
     if (part.kind === 'leg') {
-      const cuts = [...new Set([0, ...portals.get(part).map((p) => p.pos), part.len])].sort((a, b) => a - b)
-      const sections = []
-      for (let i = 0; i + 1 < cuts.length; i++) {
-        const portal = portals.get(part).find((p) => p.pos === cuts[i])
-        if (portal) era = portal.era
-        const id = i === 0 ? part.id : `${part.id}-${i + 1}`
-        sections.push({ from: cuts[i], to: cuts[i + 1], id })
+      for (const s of sections.get(part)) {
         rooms.push({
-          id, kind: 'hall', title: era.label,
-          rect: rectOf([part.at(cuts[i], part.OUT), part.at(cuts[i + 1], part.OUT), part.at(cuts[i], part.IN), part.at(cuts[i + 1], part.IN)]),
-          entry: { x: r6(part.at(cuts[i] + 1.5).x), z: r6(part.at(cuts[i] + 1.5).z), yaw: yawOf(part.U) },
+          id: s.id, kind: 'hall', title: s.era.label,
+          rect: rectOf([part.at(s.from, part.OUT), part.at(s.to, part.OUT), part.at(s.from, part.IN), part.at(s.to, part.IN)]),
+          entry: { x: r6(part.at(s.from + 1.5).x), z: r6(part.at(s.from + 1.5).z), yaw: yawOf(part.U) },
         })
-        if (portal) walls.push(...wallBetween(part.at(cuts[i], part.OUT), part.at(cuts[i], part.IN), opening(HX)))
+        if (s.portal) walls.push(...wallBetween(part.at(s.from, part.OUT), part.at(s.from, part.IN), opening(HX)))
       }
-      sectionOf.set(part, sections)
       for (const side of ['OUT', 'IN']) {
         const wallDir = side === 'OUT' ? part.OUT : part.IN
         walls.push(...wallBetween(part.at(0, wallDir), part.at(part.len, wallDir), gapsOf(part, side)))
       }
     } else {
       const centre = { x: part.rect.x + part.rect.w / 2, z: part.rect.z + part.rect.d / 2 }
-      rooms.push({ id: part.id, kind: 'hall', title: era.label, rect: part.rect, entry: { x: r6(centre.x), z: r6(centre.z), yaw: 0 } })
+      rooms.push({ id: part.id, kind: 'hall', title: sections.get(part)[0].era.label, rect: part.rect, entry: { x: r6(centre.x), z: r6(centre.z), yaw: 0 } })
       for (const w of part.outerWalls) walls.push(...wallBetween(w.p, w.q))
     }
   }
-  for (const h of hung) {
-    const part = h.slot.run.part
-    const room = part.kind === 'leg'
-      ? sectionOf.get(part).find((s) => h.slot.along >= s.from && h.slot.along <= s.to).id
-      : part.id
-    hang(h.t, room, h.slot.point, h.slot.normal)
-  }
+  for (const h of hung) hang(h.t, h.room, h.point, h.normal)
 
   // Artists' rooms: a square off the corridor with its door centred on the
   // corridor wall, pictures spread over the walls facing and beside the door
@@ -708,16 +868,14 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
     const O = leg.at(a0, V)
     const at = (u, v) => add(add(O, U, u), V, v)
     const toWorld = (n) => ({ x: U.x * n.u + V.x * n.v, z: U.z * n.u + V.z * n.v })
-    const runsIn = roomRuns(s)
-    const each = distribute(runsIn.map((r) => runCapacity(r.a, r.b)), a.projects.length)
     let k = 0
-    runsIn.forEach((r, i) => {
+    for (const { run: r, centres } of roomLayout(s, a.projects.map(widthOf))) {
       const normal = toWorld(r.normal)
-      for (const t of spreadOnRun(r.a, r.b, each[i])) {
-        const local = r.at(t)
+      for (const c of centres) {
+        const local = r.at(c)
         hang(a.projects[k++], a.id, add(at(local.u, local.v), normal, WALL_OFFSET), normal)
       }
-    })
+    }
     rooms.push({
       id: a.id, kind: 'solo', title: a.name, rect: rectOf([at(0, 0), at(s, 0), at(0, s), at(s, s)]),
       entry: { x: r6(at(s / 2, 1.5).x), z: r6(at(s / 2, 1.5).z), yaw: yawOf(V) },

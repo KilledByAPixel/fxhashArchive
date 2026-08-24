@@ -27,8 +27,9 @@ Tezos catalog: 27,430 projects and 5,407 artists.
   what you see is the piece as it was minted.
 - **Walk the gallery.** The 420 archived projects hang in a museum you can walk
   through — halls by era, rooms for the artists with the most archived work. Step
-  up to a painting and it runs, from its real seed, and you can page through the
-  edition without leaving the wall.
+  up to a painting and it runs — first as the very iteration the picture on the
+  wall shows, from the seed the artist chose at mint — and you can page through
+  the edition without leaving the wall.
 - **Step through an edition** with next/previous, on any project, whether or not
   its code is stored here.
 - **Follow a piece to the chain.** Each artwork links to its token, its minter and
@@ -155,6 +156,7 @@ npm test          # tests
 npm run build     # production build
 npm run gallery   # rebuild public/data/gallery.json and its atlases after an archive change
 npm run archive:previews   # fetch true-aspect previews from IPFS for archived projects (once)
+npm run snapshot:previews  # capture what fxhash ran every project's preview with (the gallery's #0)
 ```
 
 Pushing to `master` builds and publishes to GitHub Pages automatically.

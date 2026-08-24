@@ -22,7 +22,11 @@ These came out of the brainstorming and are not open for re-litigation here:
   piece comes alive.
 - **Minted editions only.** Stepping a piece walks the real edition using archived
   seeds. No random unminted seeds — every piece shown exists on chain, consistent
-  with the rest of the site.
+  with the rest of the site. One thing beside the editions, asked for in round
+  five: a piece *opens* on its preview — the iteration fxhash's own thumbnail
+  shows, run from the query the artist minted the project with — because that is
+  the picture on the wall you walked up to. It is labelled "#0 · the preview",
+  never counted as an edition, and Random never picks it.
 - **The walk is chronological.** The corridor follows the platform's timeline, with
   a portal where each era begins, and artists with three archived pieces — or two
   and enough sales — have rooms off it at an even beat. (First built as seven era
@@ -76,6 +80,15 @@ goes stale. The README's developer section says so.
   once, fits it inside 512 px, and saves it over the crop, so a preview has the
   work's real shape. A project it never reached keeps the square crop and no
   entry, and hangs square.
+- `public/data/previews/NNNN.json` — for every project (chunked by id / 250,
+  like the descriptions), the query fxhash ran its preview with:
+  `?fxhash=…&fxiteration=…&fxminter=…` and, for fx(params) work, the chosen
+  parameters as a `#0x…` fragment — taken from the project metadata's
+  `artifactUri` by `scripts/snapshot-previews.mjs` (`npm run snapshot:previews`,
+  3 minutes against fxhash's API; 23,326 of 27,430 projects have one, 2.5 MB).
+  The first metadata format (2021) never recorded a preview hash, so those
+  projects have no entry and open on their first edition. The build copies an
+  archived project's query onto its painting as `preview`.
 
 Rerun `npm run summary` after the previews change: the grid's thumbnail map
 records filenames, and the extension changes.
@@ -135,16 +148,17 @@ WALL_OFFSET    0.17   a painting or sign stands this far off the room rectangle'
                       WALL_T/2 to the wall's inside face, plus 0.02 clear of it
 PAINTING       1.2    a painting's long side; the short side follows its preview's proportions
 EYE_Y          1.6    painting centre height, and the camera's eye height
-SPACING        3      painting pitch along a corridor wall, centre to centre
+GAP            1      wall between neighbouring pictures' edges, whatever their widths
+SPACING        2.2    PAINTING + GAP: the pitch of two square pieces, used only to count capacity
 DOOR_W         2      door width;  DOOR_H 3
 OPENING_W      4      the lobby's opening onto the loop
 ROOM_MIN       6      the smallest room, for up to ROOM_MIN_PIECES (4) pieces
 ROOM_MID       8      where a room with more pieces starts growing from
-ROOM_GAP       2      wall left between adjacent rooms on the same side
+ROOM_GAP       1      wall left between adjacent rooms on the same side
 CORNER         1      no painting centre closer than this to a room corner
-INNER_MARGIN   10     inner rooms keep this clear of each leg's ends (see below)
+INNER_MARGIN   8      inner rooms keep this clear of each leg's ends (see below)
 INNER_MAX      8      a room wider than this goes outside the loop
-LOOP_MIN       18     shortest leg: two of the widest inner rooms face to face
+LOOP_MIN       17     shortest leg: two of the widest inner rooms face to face
 LOBBY          8      lobby is LOBBY × LOBBY
 ```
 
@@ -159,25 +173,41 @@ wall.
 
 **Rooms** hang off both walls of every leg, at an even beat. A room's side `s`
 is `ROOM_MIN` for up to four pieces and otherwise the smallest `s ≥ ROOM_MID`
-whose walls hold them at pitch (see hanging, below) — 31 pieces is 24 m. Each
-side of the corridor takes its rooms in date order, shared over the four legs
-as evenly as they go, and on a leg the rooms are spaced so the gaps before,
-between and after them are equal. Outside rooms may use a leg from `ROOM_GAP`
-in to `ROOM_GAP` short of its end, inside rooms from `INNER_MARGIN` to
-`INNER_MARGIN` short, because two legs meet at every courtyard corner and an
-inner room at the end of one would sit where an inner room at the start of the
-next begins. A room wider than `INNER_MAX` goes outside regardless. The door
-is centred on the room's corridor wall.
+whose walls hold them, by their real widths (see hanging, below) — 31 square
+pieces is 20 m. Each side of the corridor takes its rooms in date order, split
+over the four legs so that no leg's wall of rooms is longer than it must be
+(`partition`: the linear partition by dynamic programming, ties broken toward
+the evenest split, no leg left bare while there are rooms for it — a split by
+count let the leg with the one 20 m room run eleven metres past the rest, and
+every leg is as long as the longest), and on a leg the rooms are spaced so the
+gaps before, between and after them are equal. Outside rooms may use a leg
+from `ROOM_GAP` in to `ROOM_GAP` short of its end, inside rooms from
+`INNER_MARGIN` to `INNER_MARGIN` short, because two legs meet at every
+courtyard corner and an inner room at the end of one would sit where an inner
+room at the start of the next begins — `INNER_MAX` is exactly that depth. A
+room wider than `INNER_MAX` goes outside regardless. The door is centred on
+the room's corridor wall.
 
-**Corridor pieces** are shared over every free run of corridor wall — legs' walls
-between the doors, corners' two outer walls — in proportion to what each run
-holds at pitch `SPACING`, and spread evenly along it, `CORNER` clear of ends
-and doors; walking order is leg A's outside wall then inside wall by distance,
-corner NW, and so on round, so the pieces are in date order and the walls are as
-full at the end of the walk as at the start. `L` is the smallest length, in
-steps of `SPACING`, at which every leg keeps its rooms' beat with gaps of at
-least `ROOM_GAP` and the walls hold every piece; the search starts from the
-lower bound the rooms and pieces imply.
+**Corridor pieces** hang on every free run of corridor wall — legs' walls
+between the doors and the portals' piers, corners' two outer walls — in two
+passes. The first lays the walk at pitch to find where the era portals fall
+(next paragraph). The second, with the portals fixed and cut into both walls,
+takes each era's pieces in date order and shares them over the runs of that
+era's own sections in proportion to what each run holds, then hangs each run's
+share by `hangOnRun`: the pieces' real widths, `GAP` of wall between
+neighbours' edges, and the slack shared evenly before, between and after them,
+so a wall is as full at one end as the other and the walls are as full at the
+end of the walk as at the start. A square piece keeps its centre `CORNER` from
+a wall's ends and doors; a narrower one keeps its edge where the square's would
+be. Walking order is leg A's outside wall then inside wall by distance, corner
+NW, and so on round. `L` is the smallest length, in steps of `SPACING`, at
+which every leg keeps its rooms' beat with gaps of at least `ROOM_GAP` and
+every era's sections hold its pieces; the search starts from a bound the rooms
+and pieces imply that never overshoots. (The first loop's bound charged every
+room its whole frontage, when a room only costs its door, and started 25 m too
+long: that was the empty wall Frank saw. On this archive the leg is now 68 m,
+the rooms' own minimum, and the typical wall between two corridor neighbours
+is a metre and a half; a room's wall is hung at exactly a metre.)
 
 **Portals.** For every era after the first, a wall across the corridor with an
 `OPENING_W` opening and a lintel carrying the era's name, facing the walker.
@@ -188,11 +218,17 @@ is in era order by construction. Two rules keep it honest: a portal that would
 be within `SPACING` of another on the same leg passes on its slot and takes
 the next (the walls are spread independently, so their slots can coincide),
 and after the walk is laid, each portal is settled — moved up to six metres to
-the nearest spot at least `CORNER` from every picture on either wall, clear of
-every door by `PORTAL_CLEAR` (0.5), at least `SPACING` from other portals and
-from the leg's end. A portal that lands in a corner, where there is no wall to
-cut, stands at the junction at the start of the leg ahead; a second one there
-shares the lintel with a lower sign. A leg is split into sections at its
+the nearest spot clear of every door by `PORTAL_CLEAR` (0.5), at least
+`SPACING` from other portals and from the leg's end. Its piers then cut both
+corridor walls like a door does, and the pictures are hung around them in the
+second pass — so no picture can stand against a pier, on either wall. When an
+era's sections come out too short for its pieces (the piers cost a slot or two
+on each wall, which a small era feels), the portal that ends it — the next
+era's — is nudged on by the wall the deficit needs and settled again, up to
+eight rounds, before the loop is allowed to grow. A portal that lands in a
+corner, where there is no wall to cut, stands at the junction at the start of
+the leg ahead; a second one there shares the lintel with a lower sign, and that
+junction's sections are the later era's. A leg is split into sections at its
 portals; sections and corners are rooms of kind `hall` titled with the era in
 force. The way back into the lobby is a lintel too, with "You have walked the
 whole of fxhash, 2021–2024 — the lobby is ahead" on it.
@@ -200,9 +236,11 @@ whole of fxhash, 2021–2024 — the lobby is ahead" on it.
 **Hanging in a room.** No blank walls: the room's walls are filled in the order
 *facing the door, left, right, door wall left of the door, door wall right of
 it*, one piece on each before any wall gets a second (`distribute`), and each
-wall's pieces are spread evenly over its usable run, `CORNER` from the corners
-and from the door (`spreadOnRun`). Two pieces face you and flank you as you
-enter; four use every wall.
+wall's pieces hang as one group in the middle of the wall, exactly `GAP` apart
+by their real widths, the slack at the wall's ends (`roomLayout`, `hangOnRun`
+not spread) — how a room is hung, where a corridor is filled. A room is the
+smallest side on which every wall's share fits (`roomSide`). Two pieces face
+you and flank you as you enter; four use every wall.
 
 **Lobby.** The south-west corner of the loop, 8 × 8. Spawn is its centre, eye
 height, facing north into leg A; the title sits above that opening: "fxhash"
@@ -362,9 +400,13 @@ until the scene's first frame.
 - Quality, chosen by device (`chooseQuality`): `low` — the plain renderer, no
   shadows, no post-processing — for touch devices and GPUs whose max texture is
   under 4096; `high` — shadows, then an `EffectComposer` of render → GTAO
-  (ambient occlusion) → SMAA → output; `ultra` — `high` with the occlusion
-  swapped for `SSRPass` screen-space reflections of the paintings, frames,
-  walls and lamps on the floor (opacity 0.4, 6 m), which costs real frame time
+  (ambient occlusion) → SMAA → output; `ultra` — `high` rendered through
+  `SSRPass` in place of the plain render pass: screen-space reflections of the
+  room on the floor (`selects` names the surfaces that *reflect* — the floor
+  alone; the first build listed the paintings and walls there, the things meant
+  to appear in the reflection, and nothing reflected — opacity 0.4, rays to
+  10 m), then the same occlusion and anti-aliasing as `high`, so the switch adds
+  reflections rather than trading the occlusion away. It costs real frame time
   and is a switch in the HUD that only desktop visitors see.
 - Spot pools: the lamplight a museum throws on the wall around each picture. Not
   a light per painting (four hundred lights is the shader melting) but one radial
@@ -414,15 +456,21 @@ tap on one, or Enter/E while the crosshair caption shows one.
    corners and takes their bounding box, in CSS pixels. `Viewer` mounts an
    absolutely positioned `PieceFrame` at that rect (`position: fixed`, no border
    radius — it must coincide with the quad). Recomputed on resize.
-5. The edition: `loadSummary()` for `runners`, `loadIterationIds(slug, project)`
+5. The piece: `loadSummary()` for `runners`, `loadIterationIds(slug, project)`
    for the ids, `loadProjectIteration(project, tokenId)` for the seed and query —
-   the same three calls the project page makes, through the same cache. The first
-   minted iteration plays first. `archivedSrc(project, seed, query, hasRunner &&
-   !raw)` is the frame's `src`.
-6. The bar under the frame: "**Name #n** of N · Artist · Year", ‹ and › to step
-   (wrapping), **Random** for a random minted iteration, a link to
-   `/token/<slug>`, the same "run the artist's file untouched" toggle the project
-   page offers, and **Back**. Left/Right arrow keys step too.
+   the same three calls the project page makes, through the same cache.
+   Positions run #0, #1 … #N. #0 is the preview — the painting's `preview`
+   query, run as `archivedSrc(project, hash, preview, …)` — and the piece opens
+   there when the painting has one, so the running piece matches the wall;
+   without one (the 2021 metadata format) it opens on #1, the first minted
+   iteration. Nothing is mounted until the summary has answered, or the frame
+   would load once from the artist's file and again through the runner.
+   `archivedSrc(project, seed, query, hasRunner && !raw)` is the frame's `src`.
+6. The bar under the frame: "**Name #n** · the preview / of N · Artist · Year",
+   ‹ and › to step through #0 … #N (wrapping), **Random** for a random minted
+   iteration (never #0), a link to `/token/<slug>`, the same "run the artist's
+   file untouched" toggle the project page offers, and **Back**. Left/Right
+   arrow keys step too.
 7. Leaving: Back, Esc, a click on the canvas outside the frame, or W/A/S/D. The
    frame unmounts first, then pointer lock is re-requested from the user's gesture
    where there was one (a click); after Esc the "Click to look around" hint shows.

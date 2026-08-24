@@ -1,7 +1,7 @@
 import { test, expect } from 'vitest'
 import { existsSync } from 'node:fs'
 import {
-  ERAS, eraOf, isCollab, creditOf, assignRooms, SOLO_MIN, wallSegments, freeRuns, slotsOnRun, WALL_H, DOOR_H, SPACING, CORNER, ROOM_MIN,
+  ERAS, eraOf, isCollab, creditOf, assignRooms, SOLO_MIN, wallSegments, freeRuns, hangOnRun, GAP, WALL_H, DOOR_H, SPACING, CORNER, ROOM_MIN, ROOM_MID, WALL_T,
   buildGallery, tileRect, ATLAS, ATLAS_SMALL, TILES_PER_ATLAS, WALL_OFFSET, PAINTING, EYE_Y, HIDDEN_FLAGS,
 } from './gallery-lib.mjs'
 import { readArchiveInputs } from './gallery-inputs.mjs'
@@ -122,11 +122,26 @@ test('freeRuns keeps CORNER clear of the ends and of each gap', () => {
   expect(freeRuns(0, 2.5, [{ from: 1, to: 2 }])).toEqual([])   // nothing fits either side
 })
 
-test('slotsOnRun places centres at pitch SPACING, centred in the run', () => {
-  expect(slotsOnRun(1, 7)).toEqual([1, 4, 7])
-  expect(slotsOnRun(1, 8)).toEqual([1.5, 4.5, 7.5])
-  expect(slotsOnRun(1, 1)).toEqual([1])
-  expect(slotsOnRun(3, 1)).toEqual([])
+// Frank, round five: "a ton of empty space between paintings". Pieces are hung
+// by the wall between them, not by a pitch: GAP of wall between neighbours' edges,
+// whatever their widths, and what is left over shared evenly along the run.
+test('GAP is the wall between neighbours; SPACING is the pitch of two square pieces', () => {
+  expect(GAP).toBe(1)
+  expect(SPACING).toBeCloseTo(PAINTING + GAP, 9)
+})
+
+test('hangOnRun hangs pieces of these widths GAP apart, the slack shared evenly, or null when they do not fit', () => {
+  // [a, b] is where a square piece's centre may go, so its edges may reach a - 0.6 and b + 0.6
+  expect(hangOnRun(1, 7, [1.2, 1.2]).map((c) => +c.toFixed(4))).toEqual([2.2667, 5.7333])
+  expect(hangOnRun(1, 7, [1.2, 1.2, 1.2]).map((c) => +c.toFixed(4))).toEqual([1.4, 4, 6.6])
+  expect(hangOnRun(1, 7, [2.4])[0]).toBeCloseTo(4, 9)
+  expect(hangOnRun(1, 1, [1.2])[0]).toBeCloseTo(1, 9)
+  expect(hangOnRun(1, 1, [2.4])).toBeNull()          // a piece twice the square on a one-square spot
+  expect(hangOnRun(1, 3, [1.2, 1.2, 1.2])).toBeNull() // three on a wall for two
+  expect(hangOnRun(1, 7, [])).toEqual([])
+  // not spread: one group in the middle, exactly GAP apart — a room's wall
+  expect(hangOnRun(1, 7, [1.2, 1.2], false).map((c) => +c.toFixed(4))).toEqual([2.9, 5.1])
+  expect(hangOnRun(1, 7, [0.6, 1.2], false).map((c) => +c.toFixed(4))).toEqual([2.9, 4.8])
 })
 
 
@@ -168,6 +183,27 @@ function edgeOf(rect, x, z) {
   return d.reduce((m, e) => (e.dist < m.dist ? e : m))
 }
 
+/** The wall between neighbouring pictures on the same wall, in rooms of this kind. */
+function edgeGaps(g, kind) {
+  const rooms = new Map(g.rooms.map((r) => [r.id, r]))
+  const byEdge = new Map()
+  for (const p of g.paintings) {
+    const r = rooms.get(p.room)
+    if (r.kind !== kind) continue
+    const e = edgeOf(r.rect, p.x, p.z)
+    const key = `${p.room}:${e.edge}`
+    if (!byEdge.has(key)) byEdge.set(key, [])
+    byEdge.get(key).push({ along: e.along, w: p.w })
+  }
+  const gaps = []
+  for (const list of byEdge.values()) {
+    list.sort((a, b) => a.along - b.along)
+    for (let i = 1; i < list.length; i++) gaps.push(list[i].along - list[i - 1].along - (list[i].w + list[i - 1].w) / 2)
+  }
+  return gaps
+}
+const median = (xs) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)]
+
 function checkInvariants(g, expectedIds) {
   const rooms = new Map(g.rooms.map((r) => [r.id, r]))
   // placed exactly once
@@ -184,16 +220,35 @@ function checkInvariants(g, expectedIds) {
     const e = edgeOf(r.rect, p.x, p.z)
     expect(Math.abs(e.dist - WALL_OFFSET)).toBeLessThan(1e-6)
     expect(Math.sin(p.yaw) * Math.sin(e.yaw) + Math.cos(p.yaw) * Math.cos(e.yaw)).toBeCloseTo(1, 6)
-    expect(e.along - e.from).toBeGreaterThanOrEqual(CORNER - 1e-6)
-    expect(e.to - e.along).toBeGreaterThanOrEqual(CORNER - 1e-6)
+    // a square piece keeps its centre CORNER from the wall's ends; a wider one keeps its edge where that square's edge would be
+    expect(e.along - p.w / 2 - e.from).toBeGreaterThanOrEqual(CORNER - PAINTING / 2 - 1e-6)
+    expect(e.to - (e.along + p.w / 2)).toBeGreaterThanOrEqual(CORNER - PAINTING / 2 - 1e-6)
     const key = `${p.room}:${e.edge}`
     if (!byEdge.has(key)) byEdge.set(key, [])
-    byEdge.get(key).push(e.along)
+    byEdge.get(key).push({ along: e.along, w: p.w })
+    // nothing solid stands in front of the picture: a wall meeting this one on the
+    // room's side (an era portal's pier, a corner) keeps the same clearance
+    const nx = Math.sin(p.yaw), nz = Math.cos(p.yaw)
+    const lineX = p.x - nx * WALL_OFFSET, lineZ = p.z - nz * WALL_OFFSET
+    for (const w of g.walls.filter((w) => w.y0 === 0)) {
+      const alongZ = Math.abs(nx) > 0.5   // this wall runs along z, so a crossing wall runs along x
+      const crossing = alongZ ? w.z1 === w.z2 : w.x1 === w.x2
+      if (!crossing) continue
+      const [lo, hi] = alongZ ? [Math.min(w.x1, w.x2), Math.max(w.x1, w.x2)] : [Math.min(w.z1, w.z2), Math.max(w.z1, w.z2)]
+      const line = alongZ ? lineX : lineZ
+      if (line < lo - 1e-6 || line > hi + 1e-6) continue                       // does not meet this wall
+      const inFront = alongZ ? (nx > 0 ? hi : lo) : (nz > 0 ? hi : lo)         // its far end is on the picture's side
+      if (Math.abs(inFront - line) < WALL_T / 2 + 1e-6) continue                 // only touches from behind
+      const s = alongZ ? w.z1 : w.x1
+      const along = alongZ ? p.z : p.x
+      expect(Math.abs(s - along) - p.w / 2).toBeGreaterThanOrEqual(CORNER - PAINTING / 2 - 1e-6)
+    }
   }
-  for (const along of byEdge.values()) {
-    along.sort((a, b) => a - b)
-    // 1e-5: the build rounds every coordinate to a micrometre, so two neighbours can differ by 3 ∓ 1e-6.
-    for (let i = 1; i < along.length; i++) expect(along[i] - along[i - 1]).toBeGreaterThanOrEqual(SPACING - 1e-5)
+  for (const list of byEdge.values()) {
+    list.sort((a, b) => a.along - b.along)
+    // 1e-5: the build rounds every coordinate to a micrometre.
+    for (let i = 1; i < list.length; i++)
+      expect(list[i].along - list[i - 1].along - (list[i].w + list[i - 1].w) / 2).toBeGreaterThanOrEqual(GAP - 1e-5)
   }
   // every door/opening header joins exactly two rooms and no solid wall crosses it
   const onBoundary = (r, x, z) => {
@@ -263,10 +318,20 @@ test('tileRect maps a tile to its file, cell and pixel origin, in both sizes', (
 
 const REAL = 'public/data/generators/manifest.json'
 test.skipIf(!existsSync(REAL))('the real archive satisfies the invariants and needs two atlases', async () => {
-  const { tokens, collaborations } = await readArchiveInputs('public/data')
-  const g = buildGallery({ tokens, collaborations, generatedAt: 'x' })
+  const { tokens, collaborations, sizes } = await readArchiveInputs('public/data')
+  const g = buildGallery({ tokens, collaborations, sizes, generatedAt: 'x' })
   checkInvariants(g, tokens.filter((t) => !HIDDEN_FLAGS.has(t.flag)).map((t) => t.id))
   expect(g.atlas.files.length).toBe(2)
+  // hung close: the typical wall between two corridor neighbours is about GAP, not the
+  // four metres the first loop left (its leg length came from a bound that charged
+  // every room its whole frontage, when a room only costs its door)
+  // The corridor is the rooms' length (68 m a leg on this archive, from 114), and
+  // its pieces are spread over that, so the typical wall between two neighbours is
+  // GAP and a half; a room's wall hangs its group at exactly GAP.
+  const gaps = edgeGaps(g, 'hall')
+  expect(gaps.length).toBeGreaterThan(100)
+  expect(median(gaps)).toBeLessThanOrEqual(GAP + 0.75)
+  expect(median(edgeGaps(g, 'solo'))).toBeCloseTo(GAP, 5)
   expect(g.rooms.filter((r) => r.kind === 'hall').map((r) => r.id).filter((id) => !/-\d+$/.test(id))).toEqual(LOOP_IDS)
   expect(g.counts.soloRooms).toBeGreaterThan(19)   // more than the first build's five-piece rule gave
 }, 30000)
@@ -278,7 +343,19 @@ test.skipIf(!existsSync(REAL))('the real archive satisfies the invariants and ne
 // and inside the loop in date order, so the beat of doors is regular all the way
 // round and you arrive back where you started.
 
-import { roomSide, distribute, LOOP_IDS, TWO_PIECE_ROOMS, INNER_MARGIN, ROOM_GAP, DOOR_H } from './gallery-lib.mjs'
+import { roomSide, distribute, partition, LOOP_IDS, TWO_PIECE_ROOMS, INNER_MARGIN, ROOM_GAP, DOOR_H } from './gallery-lib.mjs'
+
+test('partition keeps the order, makes the largest block as small as it can be, and leaves no block bare', () => {
+  const blocks = (ws, counts) => { let i = 0; return counts.map((c) => ws.slice(i, (i += c)).reduce((t, w) => t + w, 0)) }
+  expect(partition([20, 6, 6, 6, 6, 6, 6], 4)).toEqual([1, 2, 2, 2])          // the one even split with the 20 alone
+  const p = partition([6, 6, 6, 20, 6, 6, 6], 4)
+  expect(p.reduce((t, c) => t + c, 0)).toBe(7)
+  expect(Math.max(...blocks([6, 6, 6, 20, 6, 6, 6], p))).toBe(20)
+  expect(Math.min(...p)).toBeGreaterThanOrEqual(1)
+  expect(partition([1, 1, 1, 1], 4)).toEqual([1, 1, 1, 1])
+  expect(partition([5, 5], 4)).toEqual([1, 1, 0, 0])                          // fewer rooms than legs: the first legs take them
+  expect(partition([], 4)).toEqual([0, 0, 0, 0])
+})
 
 test('a room for three pieces, or for two pieces and enough sales', () => {
   expect(SOLO_MIN).toBe(3)
@@ -298,11 +375,15 @@ test('two-piece artists get a room only if they are among the top TWO_PIECE_ROOM
   expect(assignRooms(tokens, {}, { volumes, twoPieceRooms: 0 }).solo).toEqual([])
 })
 
-test('roomSide: a 6 m room for up to four pieces, growing with the walls it must fill', () => {
+test('roomSide: a 6 m room for up to four pieces, growing with the walls it must fill; wide pieces need more', () => {
   expect(roomSide(2)).toBe(6)
   expect(roomSide(4)).toBe(6)
-  expect(roomSide(5)).toBe(8)
-  expect(roomSide(31)).toBe(24)
+  expect(roomSide(5)).toBeGreaterThanOrEqual(ROOM_MID)
+  for (let n = 5; n < 40; n++) expect(roomSide(n + 1)).toBeGreaterThanOrEqual(roomSide(n))
+  expect(roomSide(31)).toBeLessThan(24)                                   // hung closer than the 3 m pitch did
+  expect(roomSide(5, [2.4, 2.4, 2.4, 2.4, 2.4])).toBeGreaterThan(roomSide(5))
+  expect(roomSide(4, [2.4, 2.4, 2.4, 2.4])).toBeGreaterThan(6)          // the door wall's halves cannot take a double-width piece
+  expect(roomSide(5, [0.6, 0.6, 0.6, 0.6, 0.6])).toBeLessThanOrEqual(roomSide(5))   // portraits, PAINTING tall and narrower, never need more
 })
 
 test('distribute fills the wall facing the door, then the sides, then the door wall, one each before doubling up', () => {
@@ -504,4 +585,25 @@ test('a painting takes its preview\'s proportions, long side PAINTING; no size m
   const plaque = (id) => g.signs.find((s) => s.kind === 'plaque' && s.text.startsWith(p(id).name + ' '))
   expect(plaque(101).y).toBeCloseTo(EYE_Y - p(101).h / 2 - 0.12, 9)
   expect(plaque(102).y).toBeCloseTo(EYE_Y - PAINTING / 2 - 0.12, 9)
+})
+
+// ---- the preview seed ---------------------------------------------------------------
+// The thumbnail on the wall is one particular iteration; the painting carries the
+// query fxhash ran it with, so the piece opens on the very image you walked up to.
+
+test('a painting carries the query its preview was run with, when one was captured', () => {
+  const previews = new Map([[101, '?fxhash=ooA&fxiteration=1&fxminter=tz1x#0x82ff']])
+  const g = buildGallery({ tokens: loopFixture(), collaborations: loopCollabs, previews, generatedAt: 'x' })
+  expect(g.paintings.find((p) => p.project === 101).preview).toBe('?fxhash=ooA&fxiteration=1&fxminter=tz1x#0x82ff')
+  expect('preview' in g.paintings.find((p) => p.project === 102)).toBe(false)
+})
+
+test('pieces are hung by their edges: a museum of portraits keeps GAP between them and needs no longer a loop than squares', () => {
+  const tokens = loopFixture()
+  const sizes = new Map(tokens.map((t) => [t.id, { w: 500, h: 1000 }]))   // every piece PAINTING tall, half as wide
+  const g = buildGallery({ tokens, collaborations: loopCollabs, sizes, generatedAt: 'x' })
+  checkInvariants(g, tokens.map((t) => t.id))
+  for (const p of g.paintings) expect(p.w).toBeCloseTo(PAINTING / 2, 9)
+  const legLength = (g) => { const [z0, z1] = extent(sections(g, 'leg-a'), 'z'); return z1 - z0 }
+  expect(legLength(g)).toBeLessThanOrEqual(legLength(loop()) + 1e-9)
 })
