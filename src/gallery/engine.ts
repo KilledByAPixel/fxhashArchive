@@ -149,7 +149,7 @@ export class GalleryEngine {
     this.built.scene.traverse((o) => { if ((o as Mesh).isMesh && (o as Mesh).material) ((o as Mesh).material as { needsUpdate: boolean }).needsUpdate = true })
     this.composer?.dispose()
     this.composer = null
-    if (quality === 'low') return
+    if (quality === 'low') { this.setMirror(false); return }
     const w = Math.max(1, this.canvas.clientWidth)
     const h = Math.max(1, this.canvas.clientHeight)
     const composer = new EffectComposer(this.renderer)
@@ -171,19 +171,19 @@ export class GalleryEngine {
     composer.addPass(new SMAAPass())
     composer.addPass(new OutputPass())
     this.composer = composer
+    this.setMirror(true)
   }
 
   /**
-   * Reflections on the floor: a mirror over the whole building, or none.
+   * The mirror in the floor, which every device that can afford it gets.
    *
-   * Screen-space reflections were here, and could only reflect what was already
-   * on the screen — so the reflection tore away at the edges of the view, which
-   * is the artifact the technique is known for. This renders the room a second
-   * time from under the floor instead: slower, and nothing missing. A 'low'
-   * device never offers it.
+   * It was a switch while it was screen-space reflections, because those cost
+   * real frame time and tore at the edges of the view. A mirror is one more
+   * pass over geometry this simple, which measured as no cost worth a button,
+   * so it is simply on — except on a 'low' device, which is on this tier for a
+   * reason and does not get a second pass over anything.
    */
-  setReflections(on: boolean): void {
-    if (this.quality === 'low' && on) return
+  private setMirror(on: boolean): void {
     if (on === Boolean(this.mirror)) return
     if (!on) {
       this.built.scene.remove(this.mirror!)

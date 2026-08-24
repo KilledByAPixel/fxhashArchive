@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import PieceFrame, { archivedSrc } from '../components/PieceFrame'
 import { loadIterationIds, loadProjectIteration, loadSummary, type LocalIteration } from '../lib/data'
 import type { Painting } from './types'
-import type { ScreenRect } from './approach'
+import { coverRect, type ScreenRect } from './approach'
 
 interface Props {
   painting: Painting
@@ -94,7 +94,8 @@ export default function Viewer({ painting, rect, onBack }: Props) {
   const src = hasRunner === undefined ? null
     : pos === 0 && preview ? archivedSrc(painting.project, hashOf(preview), preview, useRunner)
     : local?.seed ? archivedSrc(painting.project, local.seed, local.query, useRunner) : null
-  const box = { left: rect.left, top: rect.top, width: rect.width, height: rect.height }
+  // Grown to whole pixels so no sliver of the painting underneath survives at an edge.
+  const box = coverRect(rect)
 
   return (
     <div className="gallery-viewer">
@@ -117,7 +118,7 @@ export default function Viewer({ painting, rect, onBack }: Props) {
       {/* 4 px under the frame: inside the black mat the frame quad draws around the
           painting. At 12 px the text sat half over the lit wall below and read as
           spilling off the picture. */}
-      <div className="gallery-bar" style={{ left: rect.left, top: rect.top + rect.height + 4, width: rect.width }}>
+      <div className="gallery-bar" style={{ left: box.left, top: box.top + box.height + 4, width: box.width }}>
         <span>
           <strong>{label}</strong>
           {pos === 0 && <span className="muted"> · the preview</span>}

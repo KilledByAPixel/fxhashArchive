@@ -67,6 +67,29 @@ export function projectedRect(camera: PerspectiveCamera, p: Painting, width: num
   return { left, top, width: Math.max(...xs) - left, height: Math.max(...ys) - top }
 }
 
+/**
+ * The whole-pixel rect that certainly covers a projected one.
+ *
+ * projectedRect is exact, and exact is the trouble: its edges land on fractions
+ * of a pixel, the browser lays an element out on whole ones, and whatever it
+ * drops leaves the painting quad showing through — a thin bright line along an
+ * edge of the running piece. So the overlay is grown outward to whole pixels
+ * and then a pixel further, because a whole CSS pixel is still a fraction of a
+ * device pixel at 1.5x. The overhang lands on the black mat the frame draws
+ * around every painting, which is 30-odd pixels wide at any size worth looking
+ * at, so nothing of the picture is covered.
+ */
+export function coverRect(r: ScreenRect): ScreenRect {
+  const left = Math.floor(r.left) - 1
+  const top = Math.floor(r.top) - 1
+  return {
+    left,
+    top,
+    width: Math.ceil(r.left + r.width) + 1 - left,
+    height: Math.ceil(r.top + r.height) + 1 - top,
+  }
+}
+
 export const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2)
 
 /** From a to b the short way round. */

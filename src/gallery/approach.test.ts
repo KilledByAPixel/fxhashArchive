@@ -65,3 +65,36 @@ test('a wide painting stands further back so its width fits, and its rect is wid
   const r2 = projectedRect(tallScreen, wide, 450, 900)
   expect(r2.width).toBeCloseTo(FILL * 450, 0)
 })
+
+// Frank, round ten: zoomed in on a work, the running piece sat over the painting
+// "almost perfectly — but there is like a thin row of pixels on the bottom where
+// i can see the original in the background". The projected rect is exact, and
+// exact is the problem: its edges land on fractions of a pixel, the browser lays
+// the overlay out on whole ones, and whatever it drops shows the quad underneath.
+import { coverRect } from './approach'
+
+test('coverRect covers a fractional rect completely: whole pixels, and never short', () => {
+  const r = coverRect({ left: 100.6, top: 50.2, width: 600.7, height: 400.9 })
+  expect(Number.isInteger(r.left)).toBe(true)
+  expect(Number.isInteger(r.top)).toBe(true)
+  expect(Number.isInteger(r.width)).toBe(true)
+  expect(Number.isInteger(r.height)).toBe(true)
+  // every edge is outside the rect it has to hide
+  expect(r.left).toBeLessThanOrEqual(100.6)
+  expect(r.top).toBeLessThanOrEqual(50.2)
+  expect(r.left + r.width).toBeGreaterThanOrEqual(100.6 + 600.7)
+  expect(r.top + r.height).toBeGreaterThanOrEqual(50.2 + 400.9)
+})
+
+test('coverRect overhangs by a pixel even when the rect is already whole', () => {
+  // A whole CSS pixel is still a fraction of a device pixel at 1.5x, so landing
+  // exactly on the edge is not enough to cover it.
+  const r = coverRect({ left: 100, top: 50, width: 600, height: 400 })
+  expect(r.left).toBeLessThan(100)
+  expect(r.top).toBeLessThan(50)
+  expect(r.left + r.width).toBeGreaterThan(700)
+  expect(r.top + r.height).toBeGreaterThan(450)
+  // but only just: the overhang lands on the mat, not over the picture
+  expect(100 - r.left).toBeLessThanOrEqual(2)
+  expect(r.left + r.width - 700).toBeLessThanOrEqual(2)
+})

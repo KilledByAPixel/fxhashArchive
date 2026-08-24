@@ -35,7 +35,6 @@ export default function GalleryView() {
   const [locked, setLocked] = useState(false)
   const [mode, setMode] = useState<Mode>('walk')
   const [view, setView] = useState<{ painting: Painting; rect: ScreenRect } | null>(null)
-  const [reflections, setReflections] = useState(false)
   const [quality, setQuality] = useState<Quality>('low')
   const touch = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
 
@@ -107,8 +106,6 @@ export default function GalleryView() {
           mode={mode}
           touch={touch}
           onTeleport={(r) => engineRef.current?.teleport(r.entry)}
-          reflections={reflections}
-          onReflections={quality === 'low' ? undefined : (on) => { setReflections(on); engineRef.current?.setReflections(on) }}
         />
       )}
       {view && <Viewer painting={view.painting} rect={view.rect} onBack={() => engineRef.current?.leaveView()} />}

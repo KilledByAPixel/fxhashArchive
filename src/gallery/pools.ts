@@ -17,7 +17,7 @@ import { DataTexture, LinearFilter, RGBAFormat, SRGBColorSpace } from 'three'
 export const POOL_W = 2.4
 export const POOL_H = 3.0
 /** Bright enough to read as a lamp on a white wall; Frank found 0.35 dim. */
-export const POOL_OPACITY = 0.6
+export const POOL_OPACITY = 0.85
 /** Warm — tungsten, not daylight. */
 export const POOL_COLOR = 0xffe9c8
 /** How far behind the painting plane the pool sits: past the frame, short of the wall. */

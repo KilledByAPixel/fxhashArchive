@@ -27,14 +27,23 @@ test('runs the first minted edition from the archived runner, placed over the pa
   renderViewer()
   const frame = await screen.findByTitle('Zartz #1 (archived copy)')
   expect(frame.getAttribute('src')).toContain('data/generators/5/_run.html?fxhash=seed10')
+  // The overlay covers the painting rather than matching it edge for edge. An
+  // exact rect lands on fractions of a pixel, the browser lays elements out on
+  // whole ones, and the sliver it dropped showed the painting underneath along
+  // the bottom of the running piece.
   const box = frame.parentElement as HTMLElement
-  expect(box.style.left).toBe('100px')
-  expect(box.style.width).toBe('600px')
+  const px = (v: string) => parseFloat(v)
+  expect(px(box.style.left)).toBeLessThanOrEqual(rect.left)
+  expect(px(box.style.top)).toBeLessThanOrEqual(rect.top)
+  expect(px(box.style.left) + px(box.style.width)).toBeGreaterThanOrEqual(rect.left + rect.width)
+  expect(px(box.style.top) + px(box.style.height)).toBeGreaterThanOrEqual(rect.top + rect.height)
+  // and only just: the overhang has to stay on the mat, not creep over the picture
+  expect(rect.left - px(box.style.left)).toBeLessThanOrEqual(2)
   // The bar sits just under the frame, inside the black mat the frame quad draws
   // around the painting; 12 px put its text half over the wall below.
   const bar = document.querySelector('.gallery-bar') as HTMLElement
-  expect(bar.style.top).toBe('654px')
-  expect(bar.style.left).toBe('100px')
+  expect(px(bar.style.top)).toBeCloseTo(px(box.style.top) + px(box.style.height) + 4, 6)
+  expect(bar.style.left).toBe(box.style.left)
   expect(screen.getByText(/of 3/)).toBeTruthy()
 })
 

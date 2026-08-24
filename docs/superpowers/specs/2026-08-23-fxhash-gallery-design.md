@@ -447,7 +447,10 @@ until the scene's first frame.
   mapping whenever it renders into a render target — which is what the Reflector
   draws into and what the composer draws this into — so values stay linear and
   `OutputPass` maps them once at the end. It costs a second pass over the
-  geometry each frame, and is a switch in the HUD that only desktop visitors see.
+  geometry each frame, which on geometry this simple measured as no cost worth a
+  button: it is simply on wherever the quality tier is high, and off on `low`,
+  which is on that tier precisely because it cannot afford a second pass. There
+  is no reflections switch in the HUD.
   Its target is half the canvas and capped at 1024 × 512: a reflection in
   concrete is low-frequency, and the softness flatters it. Like the signs, the
   mirror is taken out of the occlusion pass — it is not a surface in the room.
