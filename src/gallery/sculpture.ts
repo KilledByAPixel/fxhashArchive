@@ -27,7 +27,7 @@
 import { BufferGeometry } from 'three'
 import type { Gallery, Room } from './types'
 import { MeshArrays, type Rgb } from './geometry'
-import { linear, washed, type Tint } from './palette'
+import { hsvToRgb255, linear, type Tint } from './palette'
 import type { Obstacle } from './collide'
 
 /** A room needs a shorter side this long before it gets sculpture: only the 20 m one does. */
@@ -51,18 +51,36 @@ export const SCULPTURE_COLOR = 0xe4e1d9
 /**
  * How much colour a sculpture takes from the piece it was generated from.
  *
- * Far more than a wall takes: a wall is a background and wants a wash you would
- * struggle to name, while a vase is an object at arm's length and can be
- * properly coloured. Nine plaster-white objects in a row was the thing that
- * looked unfinished. Set to 0 and they all go back to plaster.
+ * A wall is a background and wants a wash you would struggle to name. An object
+ * at arm's length is the opposite: it wants to be a colour you could name out
+ * loud. At 0.4 on near-white plaster this was a pastel you had to be told about;
+ * these are glazed, not whitewashed. Set to 0 and they all go back to plaster.
  */
-export const SCULPTURE_SAT = 0.4
+export const SCULPTURE_SAT = 0.95
+/**
+ * How dark or light an object is allowed to be, independent of its hue.
+ *
+ * Hue alone gave nine objects at one lightness, which reads as one material in
+ * nine flavours. Drawing the value per object is what puts a near-black vase
+ * beside a red one and a pale one — the range Frank asked for — while the hue
+ * still comes from the picture the object was generated from.
+ */
+const VALUE_LO = 0.10
+const VALUE_HI = 0.92
+
+/** The smallest a block may be, and the most blocks a terrace may spend. */
+export const MIN_BLOCK = 0.078
+export const MAX_BLOCKS = 14
+/** How far along its side a cut may land: never the middle, never a sliver. */
+const SPLIT_LO = 0.1
+const SPLIT_HI = 0.9
+/** Wall left between neighbouring blocks, so each one reads as its own. */
+const BLOCK_GAP = 0.006
 
 const VASE_RADIAL = 12
 const VASE_RINGS = 10
 const VASE_R = 0.3
-const TERRACE_DEPTH = 3
-const TERRACE_SIDE = 0.62
+export const TERRACE_SIDE = 0.62
 
 export interface Plinth {
   x: number
@@ -138,19 +156,46 @@ export function plinthObstacles(list: Plinth[]): Obstacle[] {
   return list.map((p) => ({ x: p.x, z: p.z, r }))
 }
 
-export function buildSculptureGeometry(list: Plinth[]): BufferGeometry {
-  const m = new MeshArrays()
+/**
+ * The colour of one object: the hue of the piece it came from, at a saturation
+ * and a lightness of its own.
+ *
+ * Drawn from a stream of its own rather than the one that shapes it, so changing
+ * the palette later does not reshape every vase in the room.
+ */
+function objectColor(tint: Tint | undefined, seed: number): Rgb {
+  if (!tint || SCULPTURE_SAT <= 0) return linear(SCULPTURE_COLOR)
+  const rand = mulberry32(seed ^ 0x9e3779b9)
+  const [r, g, b] = hsvToRgb255(
+    tint.hue,
+    Math.min(1, tint.strength * SCULPTURE_SAT),
+    between(rand, VALUE_LO, VALUE_HI),
+  )
+  return linear((r << 16) | (g << 8) | b)
+}
+
+/**
+ * The room's furniture, in two meshes.
+ *
+ * Split because the materials genuinely differ: a vase is glazed and holds a
+ * highlight, while the plinths are stone and the terraces are cut blocks, and
+ * one roughness cannot be both. Two draw calls for eighteen objects is a price
+ * worth paying for a vase that looks fired.
+ */
+export function buildSculptureGeometry(list: Plinth[]): { matte: BufferGeometry; glazed: BufferGeometry } {
+  const matte = new MeshArrays()
+  const glazed = new MeshArrays()
   // The plinths stay one stone throughout: they are furniture, and nine coloured
   // pedestals under nine coloured objects would be a fight rather than a room.
   const stone = linear(PLINTH_COLOR)
   for (const p of list) {
-    plinth(m, p.x, p.z, stone)
-    const color = washed(SCULPTURE_COLOR, p.tint, SCULPTURE_SAT)
+    plinth(matte, p.x, p.z, stone)
+    const color = objectColor(p.tint, p.seed)
     const rand = mulberry32(p.seed)
-    if (p.kind === 'vase') vase(m, p.x, PLINTH_H, p.z, rand, color)
-    else terrace(m, p.x, PLINTH_H, p.z, rand, color)
+    if (p.kind === 'vase') vase(glazed, p.x, PLINTH_H, p.z, rand, color)
+    else terrace(matte, p.x, PLINTH_H, p.z, rand, color)
   }
-  return m.build()
+  return { matte: matte.build(), glazed: glazed.build() }
 }
 
 /**
@@ -267,60 +312,89 @@ function vase(m: MeshArrays, cx: number, y0: number, cz: number, rand: () => num
   translate(m, cx, cz)
 }
 
+/** One leaf of the subdivision: a rectangle of the square, and how tall it stands. */
+export interface Block {
+  x0: number
+  z0: number
+  x1: number
+  z1: number
+  /** Raw, in the units the tree walked in; terrace() normalises the set. */
+  height: number
+}
+
 /**
- * The subdivided cube: a square quartered again and again, each quarter's height
- * nudged up or down by half as much as its parent's was, which leaves a terrace
- * of blocks agreeing with their neighbours at the coarse scale and arguing at the
- * fine one.
+ * Cut a square into blocks.
  *
- * Drawn as a heightfield rather than as boxes: one lid per cell, and a wall
- * between two cells only where one is taller than the other. That halves the
- * triangles and, more to the point, means no face is ever built inside the solid.
+ * Not a grid and not a quartering. One cut at a time, across whichever side is
+ * longer — which is what keeps the blocks rectangles rather than slivers — at a
+ * point drawn between SPLIT_LO and SPLIT_HI of the way along, never the middle.
+ * Each cut hands its two halves the parent's height nudged apart, and the nudge
+ * halves at every level, so neighbours agree at the coarse scale and argue at
+ * the fine one: the finished shape is a picture of the tree that made it.
+ *
+ * Two limits stop it, whichever comes first — a block too small to cut again,
+ * and a budget of blocks. The budget is spent depth first, so an unlucky run of
+ * cuts costs the later branches their detail rather than costing the room its
+ * frame rate; some sculptures come out coarser on one side, which is the point.
  */
-function terrace(m: MeshArrays, cx: number, y0: number, cz: number, rand: () => number, color: Rgb): void {
-  const n = 1 << TERRACE_DEPTH
-  const h: number[][] = Array.from({ length: n }, () => new Array<number>(n).fill(0))
-  const quarter = (x: number, z: number, size: number, base: number, amp: number) => {
-    if (size === 1) { h[z][x] = base; return }
-    const half = size / 2
-    for (const [dx, dz] of [[0, 0], [half, 0], [0, half], [half, half]]) {
-      quarter(x + dx, z + dz, half, base + (rand() * 2 - 1) * amp, amp / 2)
+export function subdivide(rand: () => number, side: number): Block[] {
+  const out: Block[] = []
+  // Every cut turns one block into two, so the tree ends with cuts + 1 blocks.
+  // Counting the cuts is what makes the budget exact; counting the blocks already
+  // emitted does not, because a depth-first walk has not emitted the ones it is
+  // still inside.
+  let cuts = 0
+  const cut = (x0: number, z0: number, x1: number, z1: number, height: number, amp: number): void => {
+    const w = x1 - x0
+    const d = z1 - z0
+    const long = Math.max(w, d)
+    if (long < 2 * MIN_BLOCK || cuts >= MAX_BLOCKS - 1) {
+      out.push({ x0, z0, x1, z1, height })
+      return
+    }
+    cuts++
+    // Keep the cut far enough from both ends that neither half is under the
+    // minimum, then take the drawn fraction wherever it still can go.
+    const edge = MIN_BLOCK / long
+    const f = Math.min(Math.max(between(rand, SPLIT_LO, SPLIT_HI), edge), 1 - edge)
+    const nudge = () => height + (rand() * 2 - 1) * amp
+    if (w >= d) {
+      const xm = x0 + w * f
+      cut(x0, z0, xm, z1, nudge(), amp / 2)
+      cut(xm, z0, x1, z1, nudge(), amp / 2)
+    } else {
+      const zm = z0 + d * f
+      cut(x0, z0, x1, zm, nudge(), amp / 2)
+      cut(x0, zm, x1, z1, nudge(), amp / 2)
     }
   }
-  quarter(0, 0, n, 1, 0.55)
-  // Normalise into [0.2, 1] of the sculpture height, so one unlucky draw cannot
-  // make a flat slab or a spike.
-  let lo = Infinity, hi = -Infinity
-  for (const row of h) for (const v of row) { lo = Math.min(lo, v); hi = Math.max(hi, v) }
-  const span = hi - lo || 1
-  const height = (x: number, z: number) =>
-    x < 0 || z < 0 || x >= n || z >= n ? 0 : (0.2 + 0.8 * ((h[z][x] - lo) / span)) * SCULPTURE_H
+  const h = side / 2
+  cut(-h, -h, h, h, 1, 0.55)
+  return out
+}
 
-  const cell = TERRACE_SIDE / n
-  const edge = (i: number) => -TERRACE_SIDE / 2 + i * cell
-  for (let z = 0; z < n; z++) {
-    for (let x = 0; x < n; x++) {
-      const y = y0 + height(x, z)
-      const x0 = edge(x), x1 = edge(x + 1), z0 = edge(z), z1 = edge(z + 1)
-      m.face([x0, y, z1], [x1, y, z1], [x1, y, z0], [x0, y, z0], color)
-      // One skirt per side, dropping only as far as the neighbour it faces, and
-      // only where this cell is the taller of the two.
-      const sides: Array<[number, number, [number, number, number], [number, number, number]]> = [
-        [x + 1, z, [x1, 0, z0], [x1, 0, z1]],
-        [x - 1, z, [x0, 0, z1], [x0, 0, z0]],
-        [x, z + 1, [x1, 0, z1], [x0, 0, z1]],
-        [x, z - 1, [x0, 0, z0], [x1, 0, z0]],
-      ]
-      for (const [nx, nz, a, b] of sides) {
-        const below = y0 + height(nx, nz)
-        if (below >= y) continue
-        // b before a: the pair names the edge, and taking them in that order is
-        // what winds the skirt outward. The lids above are built separately and
-        // were always right, so getting this backwards showed as a terrace of
-        // floating tops with the insides of the far walls behind them.
-        m.face([b[0], below, b[2]], [a[0], below, a[2]], [a[0], y, a[2]], [b[0], y, b[2]], color)
-      }
-    }
+/**
+ * The subdivided cube, built from those blocks: each one a closed box, standing
+ * at its own height, with a hair of wall left between it and its neighbours.
+ *
+ * Closed boxes rather than a heightfield because the blocks no longer line up on
+ * a grid, so there is no neighbour to measure a skirt against; and the gap
+ * because two abutting boxes would otherwise share a face exactly, which is a
+ * z-fight. The gap earns its keep besides — it is what makes the cuts legible.
+ */
+function terrace(m: MeshArrays, cx: number, y0: number, cz: number, rand: () => number, color: Rgb): void {
+  const blocks = subdivide(rand, TERRACE_SIDE)
+  // Normalise into [0.25, 1] of the sculpture height, so one unlucky tree cannot
+  // come out a flat slab or a spike.
+  let lo = Infinity, hi = -Infinity
+  for (const b of blocks) { lo = Math.min(lo, b.height); hi = Math.max(hi, b.height) }
+  const span = hi - lo || 1
+  const paint = () => color
+  for (const b of blocks) {
+    const h = (0.25 + 0.75 * ((b.height - lo) / span)) * SCULPTURE_H
+    const hx = Math.max(0.002, (b.x1 - b.x0) / 2 - BLOCK_GAP / 2)
+    const hz = Math.max(0.002, (b.z1 - b.z0) / 2 - BLOCK_GAP / 2)
+    m.box((b.x0 + b.x1) / 2, y0 + h / 2, (b.z0 + b.z1) / 2, hx, h / 2, hz, paint)
   }
   translate(m, cx, cz)
 }

@@ -189,9 +189,18 @@ export function buildScene(
   // which case the geometry has no vertices and costs nothing.
   const standing = plinths(gallery)
   if (standing.length) {
+    const { matte, glazed } = buildSculptureGeometry(standing)
+    // Stone and cut blocks: dry, so their facets read by shape alone.
     add('sculpture', new Mesh(
-      buildSculptureGeometry(standing),
-      new MeshStandardMaterial({ color: 0xffffff, roughness: 0.75, metalness: 0, vertexColors: true }),
+      matte,
+      new MeshStandardMaterial({ color: 0xffffff, roughness: 0.78, metalness: 0, vertexColors: true }),
+    ))
+    // The vases are glazed, which is the whole reason they are a second draw
+    // call: a fired glaze holds a hard highlight, and one roughness cannot be
+    // both this and a block of stone.
+    add('vases', new Mesh(
+      glazed,
+      new MeshStandardMaterial({ color: 0xffffff, roughness: 0.18, metalness: 0.05, vertexColors: true }),
     ))
   }
 
