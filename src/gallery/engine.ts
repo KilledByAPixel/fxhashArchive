@@ -49,6 +49,7 @@ export class GalleryEngine {
   private room: Room | null = null
   private touch: Touch | null = null
   private raycaster = new Raycaster()
+  private readonly centerNdc = new Vector2(0, 0)
   private raf = 0
   private last = 0
   private labelTexture: Texture | null
@@ -109,7 +110,10 @@ export class GalleryEngine {
   }
 
   requestLock(): void {
-    this.canvas.requestPointerLock?.()
+    // In Chrome this returns a promise that rejects if called again during the
+    // ~1s cooldown after Escape released the lock; @types/three's lib.dom types it
+    // as void, so the cast is only to reach the promise and swallow that rejection.
+    void (this.canvas.requestPointerLock?.() as unknown as Promise<void> | undefined)?.catch?.(() => {})
   }
 
   resize(): void {
@@ -135,6 +139,10 @@ export class GalleryEngine {
     for (const t of this.atlases) t?.dispose()
     this.labelTexture?.dispose()
     this.renderer.dispose()
+    // dispose() frees GL resources but keeps the context alive; without this, the
+    // canvas holds one of the browser's few live WebGL contexts until it is GC'd,
+    // which does not happen soon enough to survive visiting the gallery a few times.
+    this.renderer.forceContextLoss()
   }
 
   // ---- frame loop ----
@@ -151,7 +159,7 @@ export class GalleryEngine {
         if (r.arrived) this.walkTarget = null
       }
       applyPose(this.camera, toPose(this.state), this.state.pitch)
-      this.setHovered(this.paintingAt(new Vector2(0, 0), CAPTION_RANGE))
+      this.setHovered(this.paintingAt(this.centerNdc, CAPTION_RANGE))
     } else if (this.mode === 'glide' && this.glide) {
       const g = this.glide
       const t = easeInOut(Math.min(1, (now - g.start) / GLIDE_MS))
@@ -175,13 +183,21 @@ export class GalleryEngine {
 
   // ---- picking ----
 
-  /** The painting under a screen point (NDC), within `range` metres, or null. */
+  /**
+   * The painting under a screen point (NDC), within `range` metres, or null.
+   *
+   * Walls are cast against too, purely to block: without them a painting in the
+   * next room over could still be picked (and approached) straight through the
+   * wall between. intersectObjects sorts by distance, so if the wall is nearer
+   * than every painting it wins the hit and no painting is returned.
+   */
   private paintingAt(ndc: Vector2, range = Infinity): Painting | null {
     this.raycaster.setFromCamera(ndc, this.camera)
     this.raycaster.far = range
-    const hit = this.raycaster.intersectObjects(this.built.paintingMeshes, false)[0]
+    const hit = this.raycaster.intersectObjects([...this.built.paintingMeshes, this.built.wallsMesh], false)[0]
     if (!hit || hit.faceIndex === undefined) return null
     const f = this.built.paintingMeshes.indexOf(hit.object as Mesh)
+    if (f === -1) return null   // nearest hit was the wall, not a painting
     return this.built.paintingIndex[f]?.[Math.floor(hit.faceIndex! / 2)] ?? null
   }
 
@@ -252,6 +268,13 @@ export class GalleryEngine {
 
     // Keys. While viewing, a move key is the way out; the overlay owns arrows and Escape.
     onWin('keydown', (e) => {
+      // Enter on a HUD control (the Rooms button, say) must only activate that
+      // control, not also approach whatever the crosshair happens to be on.
+      if (
+        e.target instanceof HTMLButtonElement || e.target instanceof HTMLAnchorElement ||
+        e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) return
       const k = keyFor(e.code)
       if (this.mode === 'view') {
         if (k && k !== 'run' && !e.code.startsWith('Arrow')) this.leaveView()

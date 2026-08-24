@@ -17,6 +17,13 @@ const gallery: Gallery = {
   signs: [{ text: 't', kind: 'plaque', x: 0, y: 1, z: 0, yaw: 0, w: 0.5, h: 0.12 }],
 }
 
+test('wallsMesh is the walls mesh, so picking can be blocked by it', () => {
+  const built = buildScene(gallery, [null, null], null)
+  expect(built.wallsMesh.name).toBe('walls')
+  expect(built.wallsMesh.parent).toBe(built.scene)
+  built.dispose()
+})
+
 test('one painting mesh per atlas file, indexed so a face maps back to its painting', () => {
   const built = buildScene(gallery, [null, null], null)
   expect(built.paintingMeshes.length).toBe(2)

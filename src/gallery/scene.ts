@@ -14,6 +14,8 @@ import {
 
 export interface BuiltScene {
   scene: Scene
+  /** The one merged walls mesh, so picking can be blocked by it — see engine.ts paintingAt. */
+  wallsMesh: Mesh
   paintingMeshes: Mesh[]
   /** paintingIndex[f][floor(faceIndex / 2)] is the painting behind a hit on paintingMeshes[f]. */
   paintingIndex: Painting[][]
@@ -40,7 +42,7 @@ export function buildScene(
     return mesh
   }
 
-  add('walls', new Mesh(buildWallGeometry(gallery.walls), new MeshLambertMaterial({ color: 0x2a2a2a })))
+  const wallsMesh = add('walls', new Mesh(buildWallGeometry(gallery.walls), new MeshLambertMaterial({ color: 0x2a2a2a })))
   add('floors', new Mesh(buildFloorGeometry(gallery.rooms), new MeshLambertMaterial({ color: 0x1a1a1a })))
   add('frames', new Mesh(buildFrameGeometry(gallery.paintings), new MeshBasicMaterial({ color: 0x0b0b0b })))
 
@@ -71,6 +73,7 @@ export function buildScene(
 
   return {
     scene,
+    wallsMesh,
     paintingMeshes,
     paintingIndex,
     dispose() {

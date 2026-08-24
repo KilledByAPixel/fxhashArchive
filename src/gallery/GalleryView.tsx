@@ -53,20 +53,30 @@ export default function GalleryView() {
     let cancelled = false
     let engine: GalleryEngine | null = null
     ;(async () => {
-      const caps = probeCapabilities()
-      const small = chooseSmall(caps.maxTextureSize, Math.min(window.screen.width, window.screen.height))
-      const atlases = await loadAtlases(gallery, small, caps.maxAnisotropy)
-      if (cancelled) { for (const t of atlases) t?.dispose(); return }
-      engine = new GalleryEngine(canvas, gallery, atlases, small, {
-        onHover: setHovered,
-        onRoom: setRoom,
-        onLock: setLocked,
-        onMode: (m) => { setMode(m); if (m !== 'view') setView(null) },
-        onArrive: (painting, rect) => setView({ painting, rect }),
-      })
-      engineRef.current = engine
-      engine.start(spawnFor(gallery, `?${search.toString()}`))
-      setStatus('ready')
+      try {
+        const caps = probeCapabilities()
+        const small = chooseSmall(caps.maxTextureSize, Math.min(window.screen.width, window.screen.height))
+        const atlases = await loadAtlases(gallery, small, caps.maxAnisotropy)
+        if (cancelled) { for (const t of atlases) t?.dispose(); return }
+        engine = new GalleryEngine(canvas, gallery, atlases, small, {
+          onHover: setHovered,
+          onRoom: setRoom,
+          onLock: setLocked,
+          onMode: (m) => { setMode(m); if (m !== 'view') setView(null) },
+          onArrive: (painting, rect) => setView({ painting, rect }),
+        })
+        engineRef.current = engine
+        engine.start(spawnFor(gallery, `?${search.toString()}`))
+        setStatus('ready')
+      } catch (err) {
+        // WebGLRenderer construction, a shader compile, anything in loadAtlases —
+        // all of it can throw. Without this the page is stuck on "Loading…" forever
+        // instead of offering the retry LoadError already gives every other view.
+        if (!cancelled) {
+          console.warn('gallery: failed to start the engine', err)
+          setStatus('error')
+        }
+      }
     })()
     return () => {
       cancelled = true
