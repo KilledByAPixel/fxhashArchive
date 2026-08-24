@@ -5,7 +5,7 @@
 
 import type { Pose, Wall } from './types'
 import { WALK_SPEED, RUN_SPEED } from './constants'
-import { resolve, type Point } from './collide'
+import { resolve, type Obstacle, type Point } from './collide'
 
 export interface PlayerState { x: number; z: number; yaw: number; pitch: number }
 export interface Keys { forward: boolean; back: boolean; left: boolean; right: boolean; run: boolean }
@@ -36,7 +36,7 @@ const PITCH_LIMIT = (85 * Math.PI) / 180
 export const SUB_STEP = 0.25
 
 /** One frame of walking. Diagonals are normalised so nobody is faster sideways-and-forward. */
-export function integrate(s: PlayerState, keys: Keys, dt: number, walls: Wall[]): PlayerState {
+export function integrate(s: PlayerState, keys: Keys, dt: number, walls: Wall[], obstacles: Obstacle[] = []): PlayerState {
   const fx = Math.sin(s.yaw), fz = Math.cos(s.yaw)
   const rx = -Math.cos(s.yaw), rz = Math.sin(s.yaw)
   let dx = 0, dz = 0
@@ -51,7 +51,7 @@ export function integrate(s: PlayerState, keys: Keys, dt: number, walls: Wall[])
   const step = total / pieces
   let p: Point = { x: s.x, z: s.z }
   for (let i = 0; i < pieces; i++) {
-    p = resolve({ x: p.x + (dx / len) * step, z: p.z + (dz / len) * step }, walls)
+    p = resolve({ x: p.x + (dx / len) * step, z: p.z + (dz / len) * step }, walls, undefined, obstacles)
   }
   return { ...s, x: p.x, z: p.z }
 }
@@ -70,12 +70,12 @@ export function look(s: PlayerState, dx: number, dy: number, sensitivity = 0.002
  * "blocked" — a wall absorbed most of the step — so a tap through a wall does not
  * leave the visitor grinding against it forever.
  */
-export function walkToward(s: PlayerState, target: Point, dt: number, walls: Wall[]): { state: PlayerState; arrived: boolean } {
+export function walkToward(s: PlayerState, target: Point, dt: number, walls: Wall[], obstacles: Obstacle[] = []): { state: PlayerState; arrived: boolean } {
   const dx = target.x - s.x, dz = target.z - s.z
   const dist = Math.hypot(dx, dz)
   const step = Math.min(dist, WALK_SPEED * dt)
   if (dist < 0.1) return { state: s, arrived: true }
-  const p = resolve({ x: s.x + (dx / dist) * step, z: s.z + (dz / dist) * step }, walls)
+  const p = resolve({ x: s.x + (dx / dist) * step, z: s.z + (dz / dist) * step }, walls, undefined, obstacles)
   const moved = Math.hypot(p.x - s.x, p.z - s.z)
   return { state: { ...s, x: p.x, z: p.z }, arrived: moved < step * 0.1 || dist - step < 0.1 }
 }

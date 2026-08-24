@@ -19,7 +19,8 @@ import type { Gallery, Painting, Pose, Room, Wall } from './types'
 import { buildScene, hidden, type BuiltScene } from './scene'
 import { makeFloorMirror, type FloorMirror } from './mirror'
 import { makeLabelTexture } from './labels'
-import { solidWalls, type Point } from './collide'
+import { solidWalls, type Obstacle, type Point } from './collide'
+import { plinths, plinthObstacles } from './sculpture'
 import {
   emptyKeys, fromPose, integrate, keyFor, look, toPose, walkToward, type Keys, type PlayerState,
 } from './controls'
@@ -50,6 +51,8 @@ export class GalleryEngine {
   private camera: PerspectiveCamera
   private built: BuiltScene
   private walls: Wall[]
+  /** Plinths, as circles. Objects in open floor the walls know nothing about. */
+  private obstacles: Obstacle[]
   private state: PlayerState
   private keys: Keys = emptyKeys()
   private mode: Mode = 'walk'
@@ -98,6 +101,7 @@ export class GalleryEngine {
     this.built.scene.environmentIntensity = 0.5
     this.setQuality(quality)
     this.walls = solidWalls(gallery.walls)
+    this.obstacles = plinthObstacles(plinths(gallery))
     this.state = fromPose(gallery.spawn)
     this.listen()
   }
@@ -246,9 +250,9 @@ export class GalleryEngine {
     this.last = now
 
     if (this.mode === 'walk') {
-      this.state = integrate(this.state, this.keys, dt, this.walls)
+      this.state = integrate(this.state, this.keys, dt, this.walls, this.obstacles)
       if (this.walkTarget) {
-        const r = walkToward(this.state, this.walkTarget, dt, this.walls)
+        const r = walkToward(this.state, this.walkTarget, dt, this.walls, this.obstacles)
         this.state = r.state
         if (r.arrived) this.walkTarget = null
       }

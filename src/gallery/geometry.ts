@@ -63,6 +63,8 @@ export class MeshArrays {
   private colors: number[] = []
   /** Whether any quad has asked for a colour. Until one does, no attribute is built. */
   private tinted = false
+  /** How far into `positions` the last `shift` reached. */
+  private shifted = 0
 
   /**
    * A quad from its centre and half-extent vectors, facing `normal`. Corners wind
@@ -98,6 +100,41 @@ export class MeshArrays {
   }
 
   /**
+   * A quad from its four corners, wound counter-clockwise seen from the front,
+   * taking its normal from them.
+   *
+   * `quad` builds a parallelogram from a centre and two half-extents, which
+   * cannot describe a trapezoid — a chamfer band, a lathe segment — so those come
+   * through here. Passing the same point for `tr` and `tl` makes a triangle, at
+   * the cost of one degenerate triangle, which is cheaper than a second code path.
+   */
+  face(bl: Vec, br: Vec, tr: Vec, tl: Vec, color: Rgb | null = null): void {
+    const u = [br[0] - bl[0], br[1] - bl[1], br[2] - bl[2]]
+    const v = [tr[0] - bl[0], tr[1] - bl[1], tr[2] - bl[2]]
+    const n: Vec = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]]
+    const len = Math.hypot(n[0], n[1], n[2]) || 1
+    const normal: Vec = [n[0] / len, n[1] / len, n[2] / len]
+    const verts: Array<[Vec, number, number]> = [
+      [bl, 0, 0], [br, 1, 0], [tr, 1, 1],
+      [bl, 0, 0], [tr, 1, 1], [tl, 0, 1],
+    ]
+    for (const [p, s, t] of verts) {
+      this.positions.push(...p)
+      this.normals.push(...normal)
+      this.uvs.push(s, t)
+    }
+    if (color) {
+      if (!this.tinted) {
+        this.tinted = true
+        while (this.colors.length < this.positions.length - 18) this.colors.push(1)
+      }
+      for (let i = 0; i < 6; i++) this.colors.push(color[0], color[1], color[2])
+    } else if (this.tinted) {
+      for (let i = 0; i < 6; i++) this.colors.push(1, 1, 1)
+    }
+  }
+
+  /**
    * An axis-aligned box from its centre and half-extents. `colorOf` is asked once
    * per face, with that face's own centre and outward normal, so the six sides of
    * a wall can differ — which is what lets one merged mesh carry a different
@@ -115,6 +152,25 @@ export class MeshArrays {
     for (const [c, right, up, normal] of faces) {
       this.quad(c, right, up, normal, FULL, colorOf ? colorOf(c, normal) : null)
     }
+  }
+
+  /**
+   * Move every vertex written since the last `shift` by (dx, dy, dz), and mark
+   * that point.
+   *
+   * This is for generators that build about the origin and are then placed: nine
+   * plinths and their sculptures all share one MeshArrays so they come out as one
+   * draw call, and threading a centre through every corner of every face of a
+   * lathe would bury the arithmetic that makes the shape. Normals and colours are
+   * untouched, a translation changing neither.
+   */
+  shift(dx: number, dy: number, dz: number): void {
+    for (let i = this.shifted; i < this.positions.length; i += 3) {
+      this.positions[i] += dx
+      this.positions[i + 1] += dy
+      this.positions[i + 2] += dz
+    }
+    this.shifted = this.positions.length
   }
 
   build(): BufferGeometry {

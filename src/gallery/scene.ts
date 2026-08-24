@@ -23,6 +23,7 @@ import {
 } from './geometry'
 import { WALL_T } from './constants'
 import { makePoolTexture, POOL_COLOR, POOL_OPACITY } from './pools'
+import { buildSculptureGeometry, plinths } from './sculpture'
 
 export interface BuiltScene {
   scene: Scene
@@ -198,6 +199,18 @@ export function buildScene(
   ))
 
   add('frames', new Mesh(buildFrameGeometry(gallery.paintings), new MeshBasicMaterial({ color: 0x0b0b0b })))
+
+  // Plinths and the sculpture on them, for the one room with floor to spare. One
+  // mesh, one material: stone and plaster tell themselves apart by vertex colour,
+  // the same way the walls carry their paint. Empty in every other building, in
+  // which case the geometry has no vertices and costs nothing.
+  const standing = plinths(gallery)
+  if (standing.length) {
+    add('sculpture', new Mesh(
+      buildSculptureGeometry(standing),
+      new MeshStandardMaterial({ color: 0xffffff, roughness: 0.75, metalness: 0, vertexColors: true }),
+    ))
+  }
 
   const paintingMeshes: Mesh[] = []
   const paintingIndex: Painting[][] = []
