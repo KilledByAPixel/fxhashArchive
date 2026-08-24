@@ -6,8 +6,9 @@ export interface Pose { x: number; z: number; yaw: number }
 export interface FloorRect { x: number; z: number; w: number; d: number }
 
 export interface Room {
-  id: string                         // era id, artist tz address, or 'lobby'
-  kind: 'lobby' | 'hall' | 'solo'
+  id: string                         // a corridor part, an era id, an artist tz address, or 'lobby'
+  /** 'hall' is a stretch of corridor; 'era' is a zero-area marker where an era begins, listed in the Rooms menu. */
+  kind: 'lobby' | 'hall' | 'solo' | 'era'
   title: string
   rect: FloorRect
   /** Just inside the door, facing in — where the Rooms menu lands you. */

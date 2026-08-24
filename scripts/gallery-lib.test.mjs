@@ -1,7 +1,7 @@
 import { test, expect } from 'vitest'
 import { existsSync } from 'node:fs'
 import {
-  ERAS, eraOf, isCollab, creditOf, assignRooms, SOLO_MIN, wallSegments, freeRuns, slotsOnRun, soloRoomSlots, soloRoomSide, WALL_H, DOOR_H, SPACING, CORNER, ROOM_MIN,
+  ERAS, eraOf, isCollab, creditOf, assignRooms, SOLO_MIN, wallSegments, freeRuns, slotsOnRun, WALL_H, DOOR_H, SPACING, CORNER, ROOM_MIN,
   buildGallery, tileRect, ATLAS, ATLAS_SMALL, TILES_PER_ATLAS, WALL_OFFSET, PAINTING, EYE_Y, HIDDEN_FLAGS,
 } from './gallery-lib.mjs'
 import { readArchiveInputs } from './gallery-inputs.mjs'
@@ -38,22 +38,26 @@ test('a KT1 author is a collaboration and is credited to every member', () => {
 })
 
 test('assignRooms gives a solo room at SOLO_MIN, halls to the rest, in date order', () => {
+  // Written against SOLO_MIN rather than a number: Alice has exactly enough for a
+  // room, Bob one too few, Carol one piece on her own, and the collab never counts.
   const alice = { id: 'tz1a', name: 'Alice' }
-  const charlie = { id: 'tz1c', name: 'Charlie' }
   const bob = { id: 'tz1b', name: 'Bob' }
+  const carol = { id: 'tz1c', name: 'Carol' }
   const tokens = [
     ...Array.from({ length: SOLO_MIN }, (_, i) => tok(10 + i, `2021-11-${String(10 + i).padStart(2, '0')}T00:00:00.000Z`, alice)),
-    ...Array.from({ length: SOLO_MIN - 1 }, (_, i) => tok(20 + i, `2022-02-0${1 + i}T00:00:00.000Z`, charlie)),
+    ...Array.from({ length: SOLO_MIN - 1 }, (_, i) => tok(20 + i, `2022-02-0${1 + i}T00:00:00.000Z`, bob)),
     tok(30, '2021-12-01T00:00:00.000Z', { id: 'KT1abc', name: null }),
+    tok(31, '2023-06-01T00:00:00.000Z', carol),
   ]
   const collaborations = { '30': { collaborators: [alice, bob] } }
   const { solo, halls, artistCount } = assignRooms(tokens, collaborations)
   expect(solo.map((a) => a.id)).toEqual(['tz1a'])
-  expect(solo[0].projects.map((t) => t.id)).toEqual([10, 11, 12, 13, 14])
+  expect(solo[0].projects.map((t) => t.id)).toEqual(Array.from({ length: SOLO_MIN }, (_, i) => 10 + i))
   expect(halls.get('2021').map((t) => t.id)).toEqual([30])          // the collab, never solo
-  expect(halls.get('2022-q1').map((t) => t.id)).toEqual([20, 21, 22, 23])
+  expect(halls.get('2022-q1').map((t) => t.id)).toEqual(Array.from({ length: SOLO_MIN - 1 }, (_, i) => 20 + i))
+  expect(halls.get('2023-on').map((t) => t.id)).toEqual([31])
   expect(halls.get('2022-q3')).toEqual([])                            // every era exists
-  expect(artistCount).toBe(3)                                          // alice, bob (in collab), charlie
+  expect(artistCount).toBe(3)
 })
 
 test('a KT1 project with no collaborations entry does not raise artistCount', () => {
@@ -125,15 +129,6 @@ test('slotsOnRun places centres at pitch SPACING, centred in the run', () => {
   expect(slotsOnRun(3, 1)).toEqual([])
 })
 
-test('soloRoomSide grows the room until its four walls hold every painting', () => {
-  expect(soloRoomSide(1)).toBe(ROOM_MIN)
-  expect(soloRoomSlots(ROOM_MIN)).toBeGreaterThanOrEqual(SOLO_MIN)
-  const s = soloRoomSide(31)
-  expect(soloRoomSlots(s)).toBeGreaterThanOrEqual(31)
-  expect(soloRoomSlots(s - 1)).toBeLessThan(31)
-  expect(s).toBeGreaterThan(20)
-  expect(s).toBeLessThan(30)
-})
 
 /** ~44 projects: two solo artists in 2021, one in 2022, a collab, singles in every era. */
 function fixture() {
@@ -242,11 +237,12 @@ test('buildGallery satisfies the layout invariants on the fixture', () => {
   expect(g.rooms.find((r) => r.id === 'tz1A').rect.x).toBeLessThan(-4)      // first solo room: left
   expect(g.rooms.find((r) => r.id === 'tz1B').rect.x).toBeGreaterThanOrEqual(4) // second: right
   expect(g.paintings.find((p) => p.project === 401).artist).toBe('Ada and Bea')
-  expect(g.paintings.find((p) => p.project === 401).room).toBe('2022-q2')
+  expect(LOOP_IDS).toContain(g.paintings.find((p) => p.project === 401).room)   // a collab hangs in the corridor
   expect(g.counts).toEqual({ paintings: 40, artists: 24, soloRooms: 3, years: [2021, 2023] })
   expect(g.spawn).toEqual({ x: 0, z: 4, yaw: 0 })
   expect(g.rooms[0]).toMatchObject({ id: 'lobby', kind: 'lobby' })
-  expect(g.rooms.filter((r) => r.kind === 'hall').map((r) => r.id)).toEqual(ERAS.map((e) => e.id))
+  expect(g.rooms.filter((r) => r.kind === 'hall').map((r) => r.id)).toEqual(LOOP_IDS)
+  expect(g.rooms.filter((r) => r.kind === 'era').map((r) => r.id)).toEqual(ERAS.map((e) => e.id))
 })
 
 test('buildGallery is deterministic', () => {
@@ -271,4 +267,107 @@ test.skipIf(!existsSync(REAL))('the real archive satisfies the invariants and ne
   const g = buildGallery({ tokens, collaborations, generatedAt: 'x' })
   checkInvariants(g, tokens.filter((t) => !HIDDEN_FLAGS.has(t.flag)).map((t) => t.id))
   expect(g.atlas.files.length).toBe(2)
+  expect(g.rooms.filter((r) => r.kind === 'hall').map((r) => r.id)).toEqual(LOOP_IDS)
+  expect(g.counts.soloRooms).toBeGreaterThan(19)   // every artist with two or more pieces, not five
+})
+
+// ---- the loop ---------------------------------------------------------------
+// Frank walked the first build: rooms clustered where the veteran artists were and
+// the second half was a corridor with nothing off it. The building is now a loop,
+// every artist with two or more pieces has a room, and rooms alternate outside
+// and inside the loop in date order, so the beat of doors is regular all the way
+// round and you arrive back where you started.
+
+import { roomSide, distribute, LOOP_IDS } from './gallery-lib.mjs'
+
+test('SOLO_MIN is 2: any artist with more than one piece gets a room', () => {
+  expect(SOLO_MIN).toBe(2)
+})
+
+test('roomSide: a 6 m room for up to four pieces, growing with the walls it must fill', () => {
+  expect(roomSide(2)).toBe(6)
+  expect(roomSide(4)).toBe(6)
+  expect(roomSide(5)).toBe(8)
+  expect(roomSide(31)).toBe(24)
+})
+
+test('distribute fills the wall facing the door, then the sides, then the door wall, one each before doubling up', () => {
+  // capacities in wall order: facing, left, right, door-left run, door-right run
+  expect(distribute([2, 2, 2, 1, 1], 2)).toEqual([1, 1, 0, 0, 0])
+  expect(distribute([2, 2, 2, 1, 1], 3)).toEqual([1, 1, 1, 0, 0])
+  expect(distribute([2, 2, 2, 1, 1], 4)).toEqual([1, 1, 1, 1, 0])
+  expect(distribute([2, 2, 2, 1, 1], 6)).toEqual([2, 1, 1, 1, 1])
+  expect(distribute([3, 3, 3, 1, 1], 8)).toEqual([2, 2, 2, 1, 1])
+  expect(distribute([1, 1, 1, 0, 0], 3)).toEqual([1, 1, 1, 0, 0])
+})
+
+/** Four artists with 2, 3, 4 and 6 pieces, a dozen singles across every era, one collab. */
+function loopFixture() {
+  const out = []
+  const add = (id, date, author) => out.push(tok(id, `${date}T00:00:00.000Z`, author))
+  const A = { id: 'tz1A', name: 'Ada' }, B = { id: 'tz1B', name: 'Bea' }, C = { id: 'tz1C', name: 'Cy' }, D = { id: 'tz1D', name: 'Dee' }
+  add(101, '2021-11-11', A); add(102, '2021-11-12', A)
+  ;[1, 2, 3].forEach((i) => add(200 + i, `2022-02-0${i}`, B))
+  ;[1, 2, 3, 4].forEach((i) => add(300 + i, `2022-05-0${i}`, C))
+  ;[1, 2, 3, 4, 5, 6].forEach((i) => add(400 + i, `2023-0${i}-01`, D))
+  const dates = ['2021-11-20', '2021-12-05', '2022-01-10', '2022-03-10', '2022-04-10', '2022-06-10',
+    '2022-07-10', '2022-09-10', '2022-10-10', '2022-12-10', '2023-02-10', '2023-08-10']
+  dates.forEach((d, i) => add(500 + i, d, { id: `tz1s${i}`, name: `Solo ${i}` }))
+  add(700, '2022-06-15', { id: 'KT1x', name: null })
+  return out
+}
+const loopCollabs = { '700': duo }
+const loop = () => buildGallery({ tokens: loopFixture(), collaborations: loopCollabs, generatedAt: 'x' })
+
+test('the museum is a loop: four legs and four corners, closing on the lobby', () => {
+  const g = loop()
+  expect(g.rooms.filter((r) => r.kind === 'hall').map((r) => r.id)).toEqual(LOOP_IDS)
+  const rect = (id) => g.rooms.find((r) => r.id === id).rect
+  const lobby = rect('lobby'), a = rect('leg-a'), d = rect('leg-d')
+  expect(a.z).toBeCloseTo(lobby.z + lobby.d, 9)        // leg A leaves the lobby northward
+  expect(d.x).toBeCloseTo(lobby.x + lobby.w, 9)        // leg D comes back into the lobby's east side
+  expect(d.z).toBeCloseTo(lobby.z, 9)
+  expect(d.d).toBeCloseTo(lobby.d, 9)
+  expect(rect('leg-c').d).toBeCloseTo(a.d, 9)          // opposite legs match, so the corners are square
+  expect(rect('leg-b').w).toBeCloseTo(d.w, 9)
+  checkInvariants(g, loopFixture().map((t) => t.id))
+})
+
+test('every artist with two or more pieces has a room, and rooms sit on both sides of the corridor', () => {
+  const g = loop()
+  const solo = g.rooms.filter((r) => r.kind === 'solo')
+  expect(solo.map((r) => r.id).sort()).toEqual(['tz1A', 'tz1B', 'tz1C', 'tz1D'])
+  expect(g.counts.soloRooms).toBe(4)
+  const a = g.rooms.find((r) => r.id === 'leg-a').rect
+  const outside = solo.filter((r) => r.rect.x + r.rect.w <= a.x + 1e-6)   // west of leg A
+  const inside = solo.filter((r) => r.rect.x >= a.x + a.w - 1e-6)         // east of it, in the courtyard
+  expect(outside.length).toBeGreaterThanOrEqual(1)
+  expect(inside.length).toBeGreaterThanOrEqual(1)
+})
+
+test('era markers replace era halls: one per era, zero-area, standing in the corridor, with a sign', () => {
+  const g = loop()
+  const eras = g.rooms.filter((r) => r.kind === 'era')
+  expect(eras.map((r) => r.id)).toEqual(ERAS.map((e) => e.id))
+  const halls = g.rooms.filter((r) => r.kind === 'hall')
+  for (const m of eras) {
+    expect(m.rect.w).toBe(0)
+    expect(m.rect.d).toBe(0)
+    const standing = halls.some((r) =>
+      m.entry.x >= r.rect.x && m.entry.x <= r.rect.x + r.rect.w && m.entry.z >= r.rect.z && m.entry.z <= r.rect.z + r.rect.d)
+    expect(standing).toBe(true)
+  }
+  expect(g.signs.filter((s) => s.kind === 'era').length).toBe(ERAS.length)
+})
+
+test('no blank walls: a room spreads its pieces over its walls', () => {
+  const g = loop()
+  const wallsUsed = (id) => {
+    const r = g.rooms.find((x) => x.id === id)
+    return new Set(g.paintings.filter((p) => p.room === id).map((p) => edgeOf(r.rect, p.x, p.z).edge)).size
+  }
+  expect(wallsUsed('tz1A')).toBe(2)   // two pieces: two walls
+  expect(wallsUsed('tz1B')).toBe(3)   // three: three walls
+  expect(wallsUsed('tz1C')).toBe(4)   // four: every wall
+  expect(wallsUsed('tz1D')).toBe(4)   // six: every wall, two of them doubled
 })

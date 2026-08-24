@@ -10,9 +10,10 @@ const room = (id: string, kind: Room['kind'], title: string): Room =>
   ({ id, kind, title, rect: { x: 0, z: 0, w: 8, d: 8 }, entry: { x: 0, z: 1, yaw: 0 } })
 const rooms = [
   room('lobby', 'lobby', 'fxhash'),
-  room('2021', 'hall', '2021 · Nov–Dec'),
+  room('leg-a', 'hall', '2021 → 2022'),          // a corridor leg: walked, not listed
+  room('2021', 'era', '2021 · Nov–Dec'),
   room('tz1z', 'solo', 'Zed'),
-  room('2022-q1', 'hall', '2022 · Jan–Mar'),
+  room('2022-q1', 'era', '2022 · Jan–Mar'),
   room('tz1a', 'solo', 'Ada'),
 ]
 
@@ -32,7 +33,7 @@ test('the rooms menu lists eras in spine order, then artists alphabetically, and
   const names = screen.getAllByRole('button').map((b) => b.textContent).filter((t) => t !== 'Rooms')
   expect(names).toEqual(['2021 · Nov–Dec', '2022 · Jan–Mar', 'Ada', 'Zed'])
   fireEvent.click(screen.getByRole('button', { name: 'Ada' }))
-  expect(onTeleport).toHaveBeenCalledWith(rooms[4])
+  expect(onTeleport).toHaveBeenCalledWith(rooms[5])
   expect(screen.queryByRole('button', { name: 'Ada' })).toBeNull()   // menu closed
 })
 

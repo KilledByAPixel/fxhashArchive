@@ -24,7 +24,7 @@ export default function Hud({ rooms, roomTitle, caption, locked, mode, touch, on
   const [everLocked, setEverLocked] = useState(false)
   useEffect(() => { if (locked) setEverLocked(true) }, [locked])
 
-  const eras = rooms.filter((r) => r.kind === 'hall')
+  const eras = rooms.filter((r) => r.kind === 'era')
   const artists = rooms.filter((r) => r.kind === 'solo').sort((a, b) => a.title.localeCompare(b.title))
   const go = (r: Room) => { onTeleport(r); setOpen(false) }
 
