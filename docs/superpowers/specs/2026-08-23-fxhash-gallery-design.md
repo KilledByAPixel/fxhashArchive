@@ -160,9 +160,10 @@ the client.
 
 - every visible archived project is placed exactly once
 - no two rooms' floor rectangles overlap (halls, solo rooms, lobby)
-- every painting lies on an edge of its room's rectangle, offset 0.02 inward,
-  facing into the room; no two paintings on one edge are closer than `SPACING`,
-  and none is closer than `CORNER` to a corner
+- every painting lies on an edge of its room's rectangle, standing 0.02 m inward
+  of the wall's inside surface (i.e. `WALL_T/2 + 0.02` from the rectangle edge
+  itself, which is the wall's centre line), facing into the room; no two paintings
+  on one edge are closer than `SPACING`, and none is closer than `CORNER` to a corner
 - every door or opening joins exactly two rooms, and no wall segment crosses it
 - the same inputs produce byte-identical output
 
@@ -245,7 +246,8 @@ lines, and owning them keeps touch and the viewing handoff in one place.
 
 ### Loading
 
-`gallery.json` and both atlas files load in parallel. The small atlases are chosen
+`gallery.json` loads first — it names the atlas files — then both atlas files load
+in parallel. The small atlases are chosen
 when `renderer.capabilities.maxTextureSize < 4096` or the screen's shorter side is
 under 800 px. Textures: `SRGBColorSpace`, mipmaps on, anisotropy at the device
 maximum, `LinearMipmapLinearFilter`. The page shows the site's usual loading text
