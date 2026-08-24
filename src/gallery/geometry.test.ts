@@ -1,11 +1,11 @@
 import { test, expect } from 'vitest'
 import {
   tileUv, atlasFile, buildPaintingGeometry, buildFrameGeometry, buildWallGeometry, buildFloorGeometry, buildCeilingGeometry,
-  buildSignGeometry, buildPoolGeometry,
+  buildSignGeometry, buildPoolGeometry, buildLightStripGeometry,
 } from './geometry'
 import { POOL_W, POOL_H } from './pools'
 import type { AtlasMeta, Painting, Room, Sign, Wall } from './types'
-import { EYE_Y, PAINTING, WALL_T } from './constants'
+import { EYE_Y, PAINTING, WALL_T, WALL_H } from './constants'
 
 const atlas: AtlasMeta = { size: 4096, tile: 256, gutter: 4, cols: 15, files: ['a', 'b'], small: ['c', 'd'] }
 // A wall at x = -4 has its inside face at -4 + WALL_T/2 = -3.85; the painting
@@ -166,4 +166,13 @@ test('a portrait painting crops the tile sideways, and its frame follows its sha
   const frame = buildFrameGeometry([tall])
   expectBounds(frame, 2, 20 - PAINTING / 4 - 0.06, 20 + PAINTING / 4 + 0.06)
   expectBounds(frame, 1, EYE_Y - PAINTING / 2 - 0.06, EYE_Y + PAINTING / 2 + 0.06)
+})
+
+test('a light strip runs along each room\'s ceiling, a metre short of each end', () => {
+  const r: Room = { id: 'x', kind: 'hall', title: 'X', rect: { x: -4, z: 0, w: 8, d: 30 }, entry: { x: 0, z: 1, yaw: 0 } }
+  const g = buildLightStripGeometry([r])
+  expect(g.getAttribute('position').count).toBe(36)          // one box per room
+  expectBounds(g, 2, 1, 29)                                   // along the long axis, 1 m short of each end
+  expectBounds(g, 0, -0.15, 0.15)                             // 0.3 m wide, on the centreline
+  expectBounds(g, 1, WALL_H - 0.1, WALL_H - 0.02)             // hung just under the ceiling
 })

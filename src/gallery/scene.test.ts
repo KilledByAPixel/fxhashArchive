@@ -1,5 +1,5 @@
 import { test, expect } from 'vitest'
-import { AdditiveBlending, DirectionalLight, HemisphereLight, Mesh, MeshBasicMaterial, MeshLambertMaterial } from 'three'
+import { AdditiveBlending, DirectionalLight, HemisphereLight, Mesh, MeshBasicMaterial, MeshLambertMaterial, MeshStandardMaterial } from 'three'
 import { buildScene } from './scene'
 import type { Gallery, Painting } from './types'
 
@@ -45,7 +45,7 @@ test('a missing atlas leaves its paintings flat dark, not missing', () => {
 test('without a label texture there is no sign mesh; the rest of the building is there', () => {
   const built = buildScene(gallery, [null, null], null)
   const meshes = built.scene.children.filter((c) => c instanceof Mesh) as Mesh[]
-  expect(meshes.map((m) => m.name).sort()).toEqual(['ceilings', 'floors', 'frames', 'paintings-0', 'paintings-1', 'pools', 'walls'])
+  expect(meshes.map((m) => m.name).sort()).toEqual(['ceilings', 'floors', 'frames', 'lights', 'paintings-0', 'paintings-1', 'pools', 'walls'])
   built.dispose()
 })
 
@@ -58,7 +58,7 @@ test('the rooms are lit like a gallery: a sky, a key, a fill, and walls light en
   const built = buildScene(gallery, [null, null], null)
   expect(built.scene.children.filter((c) => c instanceof HemisphereLight).length).toBe(1)
   expect(built.scene.children.filter((c) => c instanceof DirectionalLight).length).toBe(2)
-  const walls = built.wallsMesh.material as MeshLambertMaterial
+  const walls = built.wallsMesh.material as MeshLambertMaterial | MeshStandardMaterial
   // Gallery white: the first fix's #7a746c (0.45) still read as a dim corridor.
   expect(lightness(walls.color.getHex())).toBeGreaterThanOrEqual(0.85)
   built.dispose()
@@ -86,5 +86,24 @@ test('the ceiling is a bright, unlit surface — a gallery ceiling, not a black 
   const m = ceiling.material as MeshBasicMaterial
   expect(m.type).toBe('MeshBasicMaterial')
   expect(lightness(m.color.getHex())).toBeGreaterThanOrEqual(0.8)
+  built.dispose()
+})
+
+test('a floor that can reflect, walls and frames that cast and take shadows, light strips, and a key light to move', () => {
+  const built = buildScene(gallery, [null, null], null)
+  const floor = built.scene.children.find((c) => c.name === 'floors') as Mesh
+  const m = floor.material as MeshStandardMaterial
+  expect(m.type).toBe('MeshStandardMaterial')
+  expect(m.roughness).toBeLessThanOrEqual(0.4)       // polished concrete: takes the room's reflection
+  expect(floor.receiveShadow).toBe(true)
+  expect(built.wallsMesh.receiveShadow).toBe(true)
+  expect(built.wallsMesh.castShadow).toBe(true)
+  const frames = built.scene.children.find((c) => c.name === 'frames') as Mesh
+  expect(frames.castShadow).toBe(true)
+  const lights = built.scene.children.find((c) => c.name === 'lights') as Mesh
+  expect(lights.geometry.getAttribute('position').count).toBe(gallery.rooms.length * 36)
+  expect((lights.material as MeshBasicMaterial).type).toBe('MeshBasicMaterial')   // it is the light; it is not lit
+  expect(built.keyLight.castShadow).toBe(true)
+  expect(built.keyLight.parent).toBe(built.scene)
   built.dispose()
 })

@@ -55,3 +55,23 @@ test('hints match the input: click to lock on a mouse, drag and tap on touch, no
   renderHud({ mode: 'view' })
   expect(screen.queryByText(/look around/i)).toBeNull()
 })
+
+test('a desktop visitor can switch floor reflections on; touch never sees the switch', () => {
+  const onReflections = vi.fn()
+  render(
+    <MemoryRouter>
+      <Hud rooms={rooms} caption={null} locked={false} mode="walk" touch={false} onTeleport={vi.fn()}
+        reflections={false} onReflections={onReflections} />
+    </MemoryRouter>,
+  )
+  fireEvent.click(screen.getByRole('button', { name: /reflections/i }))
+  expect(onReflections).toHaveBeenCalledWith(true)
+  cleanup()
+  render(
+    <MemoryRouter>
+      <Hud rooms={rooms} caption={null} locked={false} mode="walk" touch={true} onTeleport={vi.fn()}
+        reflections={false} onReflections={onReflections} />
+    </MemoryRouter>,
+  )
+  expect(screen.queryByRole('button', { name: /reflections/i })).toBeNull()
+})

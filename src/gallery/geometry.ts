@@ -162,3 +162,19 @@ export function buildSignGeometry(signs: Sign[], uvs: TileUv[]): BufferGeometry 
   })
   return m.build()
 }
+
+/**
+ * A strip of light along each room's ceiling: a thin white box on the
+ * centreline, a metre short of each end, hung just under the ceiling. The
+ * lamps the lighting pretends to have, made visible.
+ */
+export function buildLightStripGeometry(rooms: Room[]): BufferGeometry {
+  const m = new MeshArrays()
+  for (const { rect } of rooms) {
+    const alongZ = rect.d >= rect.w
+    const half = (alongZ ? rect.d : rect.w) / 2 - 1
+    if (half <= 0) continue
+    m.box(rect.x + rect.w / 2, WALL_H - 0.06, rect.z + rect.d / 2, alongZ ? 0.15 : half, 0.04, alongZ ? half : 0.15)
+  }
+  return m.build()
+}

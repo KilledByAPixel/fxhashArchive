@@ -13,13 +13,16 @@ interface Props {
   /** A coarse pointer: no pointer lock, different hints. */
   touch: boolean
   onTeleport: (room: Room) => void
+  /** Screen-space reflections on the floor: costly, so the visitor's choice. Desktop only. */
+  reflections?: boolean
+  onReflections?: (on: boolean) => void
 }
 
 /**
  * The little that sits over the canvas. Everything is pointer-events: none except
  * the controls, so the canvas still gets the clicks that lock the pointer.
  */
-export default function Hud({ rooms, roomTitle, caption, locked, mode, touch, onTeleport }: Props) {
+export default function Hud({ rooms, roomTitle, caption, locked, mode, touch, onTeleport, reflections = false, onReflections }: Props) {
   const [open, setOpen] = useState(false)
   const [everLocked, setEverLocked] = useState(false)
   useEffect(() => { if (locked) setEverLocked(true) }, [locked])
@@ -33,6 +36,11 @@ export default function Hud({ rooms, roomTitle, caption, locked, mode, touch, on
       <div className="gallery-hud-top">
         <Link to="/" className="gallery-back">← fxhash viewer</Link>
         <span className="gallery-room">{roomTitle}</span>
+        {onReflections && !touch && (
+          <button className="load-more gallery-rooms-button" onClick={() => onReflections(!reflections)} aria-pressed={reflections}>
+            Reflections: {reflections ? 'on' : 'off'}
+          </button>
+        )}
         <button className="load-more gallery-rooms-button" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
           Rooms
         </button>

@@ -13,12 +13,12 @@
 
 import {
   AdditiveBlending, Color, DirectionalLight, FogExp2, HemisphereLight, Mesh, MeshBasicMaterial,
-  MeshLambertMaterial, Scene, Texture,
+  MeshStandardMaterial, Scene, Texture,
 } from 'three'
 import type { Gallery, Painting } from './types'
 import {
-  atlasFile, buildCeilingGeometry, buildFloorGeometry, buildFrameGeometry, buildPaintingGeometry,
-  buildPoolGeometry, buildSignGeometry, buildWallGeometry, type TileUv,
+  atlasFile, buildCeilingGeometry, buildFloorGeometry, buildFrameGeometry, buildLightStripGeometry,
+  buildPaintingGeometry, buildPoolGeometry, buildSignGeometry, buildWallGeometry, type TileUv,
 } from './geometry'
 import { makePoolTexture, POOL_COLOR, POOL_OPACITY } from './pools'
 
@@ -29,6 +29,8 @@ export interface BuiltScene {
   paintingMeshes: Mesh[]
   /** paintingIndex[f][floor(faceIndex / 2)] is the painting behind a hit on paintingMeshes[f]. */
   paintingIndex: Painting[][]
+  /** The shadow-casting key light. The engine walks it along with the visitor so its shadow map stays sharp. */
+  keyLight: DirectionalLight
   dispose(): void
 }
 
@@ -53,8 +55,16 @@ export function buildScene(
     return mesh
   }
 
-  const wallsMesh = add('walls', new Mesh(buildWallGeometry(gallery.walls), new MeshLambertMaterial({ color: 0xe8e6e1 })))
-  add('floors', new Mesh(buildFloorGeometry(gallery.rooms), new MeshLambertMaterial({ color: 0x8f8880 })))
+  // Physically based where light matters: matte plaster walls, and a floor with
+  // just enough polish to carry the room's reflection from the environment map
+  // the engine installs (and true reflections when the visitor turns them on).
+  const wallsMesh = add('walls', new Mesh(buildWallGeometry(gallery.walls), new MeshStandardMaterial({ color: 0xe8e6e1, roughness: 0.95, metalness: 0 })))
+  wallsMesh.castShadow = true
+  wallsMesh.receiveShadow = true
+  const floors = add('floors', new Mesh(buildFloorGeometry(gallery.rooms), new MeshStandardMaterial({ color: 0x8f8880, roughness: 0.35, metalness: 0 })))
+  floors.receiveShadow = true
+  // The lamps: white strips along every ceiling, unlit because they are the light.
+  add('lights', new Mesh(buildLightStripGeometry(gallery.rooms), new MeshBasicMaterial({ color: 0xffffff, toneMapped: false })))
   // Unlit on purpose: a face that points down gets nothing from lights placed
   // above it, so no amount of lighting makes a Lambert ceiling bright. A flat
   // white is what a gallery ceiling looks like anyway.
@@ -72,7 +82,8 @@ export function buildScene(
     }),
   ))
 
-  add('frames', new Mesh(buildFrameGeometry(gallery.paintings), new MeshBasicMaterial({ color: 0x0b0b0b })))
+  const frames = add('frames', new Mesh(buildFrameGeometry(gallery.paintings), new MeshBasicMaterial({ color: 0x0b0b0b })))
+  frames.castShadow = true
 
   const paintingMeshes: Mesh[] = []
   const paintingIndex: Painting[][] = []
@@ -103,21 +114,36 @@ export function buildScene(
   const hemi = new HemisphereLight(0xffffff, 0x9a9a9a, 1.0)
   const key = new DirectionalLight(0xfff1dc, 0.6)
   key.position.set(2, 8, -3)
+  // Shadows come from the key alone. Its shadow camera is a 40 m box that the
+  // engine keeps centred on the visitor: one map over a 250 m museum would be
+  // 12 cm a texel; over 40 m it is 2 cm, and a frame's shadow reads as a frame.
+  key.castShadow = true
+  key.shadow.mapSize.set(2048, 2048)
+  key.shadow.camera.left = -20
+  key.shadow.camera.right = 20
+  key.shadow.camera.top = 20
+  key.shadow.camera.bottom = -20
+  key.shadow.camera.near = 0.5
+  key.shadow.camera.far = 60
+  key.shadow.bias = -0.0005
+  key.shadow.normalBias = 0.02
   const fill = new DirectionalLight(0xcfe0ff, 0.3)
   fill.position.set(-3, 6, 4)
-  scene.add(hemi, key, fill)
+  scene.add(hemi, key, key.target, fill)
 
   return {
     scene,
     wallsMesh,
     paintingMeshes,
     paintingIndex,
+    keyLight: key,
     dispose() {
       for (const m of meshes) {
         m.geometry.dispose()
         ;(m.material as MeshBasicMaterial).dispose()   // atlas and label textures are the loader's to dispose
       }
       poolTexture.dispose()   // ours: made here, disposed here
+      key.shadow.dispose()
       scene.clear()
     },
   }

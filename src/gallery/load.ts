@@ -12,6 +12,16 @@ import type { Gallery } from './types'
 export const chooseSmall = (maxTextureSize: number, screenShortSide: number) =>
   maxTextureSize < 4096 || screenShortSide < 800
 
+/**
+ * How much rendering a device gets. 'low' is the plain renderer: no shadows, no
+ * post-processing — phones and small GPUs. 'high' adds shadows, ambient
+ * occlusion and anti-aliasing. 'ultra' is 'high' with screen-space reflections
+ * on the floor, which costs real frame time and is the visitor's to switch on.
+ */
+export type Quality = 'low' | 'high' | 'ultra'
+export const chooseQuality = (touch: boolean, maxTextureSize: number): Quality =>
+  touch || maxTextureSize < 4096 ? 'low' : 'high'
+
 export const atlasUrl = (file: string) => `${import.meta.env.BASE_URL}data/${file}`
 
 /** Ask a throwaway context what the GPU allows, before choosing which atlases to fetch. */

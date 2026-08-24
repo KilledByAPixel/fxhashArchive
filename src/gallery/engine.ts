@@ -4,7 +4,18 @@
 // of a painting. Everything it decides comes from the tested modules it imports;
 // this file only sequences them. React never reaches in — it gets events out.
 
-import { Mesh, PerspectiveCamera, Plane, Raycaster, Texture, Vector2, Vector3, WebGLRenderer } from 'three'
+import {
+  ACESFilmicToneMapping, Mesh, PCFSoftShadowMap, PerspectiveCamera, Plane, PMREMGenerator, Raycaster, Texture,
+  Vector2, Vector3, WebGLRenderer,
+} from 'three'
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
+import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js'
+import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js'
+import { SSRPass } from 'three/examples/jsm/postprocessing/SSRPass.js'
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
+import type { Quality } from './load'
 import type { Gallery, Painting, Pose, Room, Wall } from './types'
 import { buildScene, type BuiltScene } from './scene'
 import { makeLabelTexture } from './labels'
@@ -54,20 +65,38 @@ export class GalleryEngine {
   private last = 0
   private labelTexture: Texture | null
   private cleanup: Array<() => void> = []
+  private environment: Texture | null = null
+  private composer: EffectComposer | null = null
+  private quality: Quality
 
   constructor(
     private canvas: HTMLCanvasElement,
     private gallery: Gallery,
     private atlases: (Texture | null)[],
     small: boolean,
+    quality: Quality,
     private events: EngineEvents,
   ) {
+    this.quality = quality
     this.renderer = new WebGLRenderer({ canvas, antialias: true })
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    // Filmic tone mapping for the room; the art opts out (toneMapped: false) and
+    // stays the pixels the artist's program produced.
+    this.renderer.toneMapping = ACESFilmicToneMapping
+    this.renderer.toneMappingExposure = 1.0
+    this.renderer.shadowMap.type = PCFSoftShadowMap
     this.camera = new PerspectiveCamera(FOV, 1, 0.1, 200)
     const labels = makeLabelTexture(gallery.signs, small ? 2048 : 4096)
     this.labelTexture = labels?.texture ?? null
     this.built = buildScene(gallery, atlases, labels)
+    // A generic lit room as the environment: what the polished floor reflects
+    // and what fills in the walls' shading between the lights.
+    const pmrem = new PMREMGenerator(this.renderer)
+    this.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
+    pmrem.dispose()
+    this.built.scene.environment = this.environment
+    this.built.scene.environmentIntensity = 0.5
+    this.setQuality(quality)
     this.walls = solidWalls(gallery.walls)
     this.state = fromPose(gallery.spawn)
     this.listen()
@@ -109,6 +138,44 @@ export class GalleryEngine {
     this.setMode('walk')
   }
 
+  /**
+   * Rebuild the render path for a quality level. 'low' renders straight; 'high'
+   * composes ambient occlusion and anti-aliasing; 'ultra' swaps the occlusion
+   * for screen-space reflections, which carry their own beauty pass and do not
+   * stack with it.
+   */
+  setQuality(quality: Quality): void {
+    this.quality = quality
+    this.renderer.shadowMap.enabled = quality !== 'low'
+    this.built.scene.traverse((o) => { if ((o as Mesh).isMesh && (o as Mesh).material) ((o as Mesh).material as { needsUpdate: boolean }).needsUpdate = true })
+    this.composer?.dispose()
+    this.composer = null
+    if (quality === 'low') return
+    const w = Math.max(1, this.canvas.clientWidth)
+    const h = Math.max(1, this.canvas.clientHeight)
+    const composer = new EffectComposer(this.renderer)
+    if (quality === 'ultra') {
+      const reflected = [...this.built.paintingMeshes, ...['frames', 'walls', 'lights'].map((n) => this.built.scene.getObjectByName(n) as Mesh).filter(Boolean)]
+      const ssr = new SSRPass({ renderer: this.renderer, scene: this.built.scene, camera: this.camera, width: w, height: h, groundReflector: null, selects: reflected })
+      ssr.opacity = 0.4
+      ssr.maxDistance = 6
+      composer.addPass(ssr)
+    } else {
+      composer.addPass(new RenderPass(this.built.scene, this.camera))
+      const gtao = new GTAOPass(this.built.scene, this.camera, w, h)
+      composer.addPass(gtao)
+    }
+    composer.addPass(new SMAAPass())
+    composer.addPass(new OutputPass())
+    this.composer = composer
+  }
+
+  /** Reflections on the floor: 'ultra' on, back to 'high' off. A 'low' device stays plain. */
+  setReflections(on: boolean): void {
+    if (this.quality === 'low') return
+    this.setQuality(on ? 'ultra' : 'high')
+  }
+
   requestLock(): void {
     // In Chrome this returns a promise that rejects if called again during the
     // ~1s cooldown after Escape released the lock; @types/three's lib.dom types it
@@ -121,6 +188,7 @@ export class GalleryEngine {
     const h = this.canvas.clientHeight
     if (w === 0 || h === 0) return
     this.renderer.setSize(w, h, false)
+    this.composer?.setSize(w, h)
     this.camera.aspect = w / h
     this.camera.updateProjectionMatrix()
     if (this.mode === 'view' && this.viewing) {
@@ -135,9 +203,11 @@ export class GalleryEngine {
     cancelAnimationFrame(this.raf)
     for (const off of this.cleanup) off()
     if (document.pointerLockElement === this.canvas) document.exitPointerLock()
+    this.composer?.dispose()
     this.built.dispose()
     for (const t of this.atlases) t?.dispose()
     this.labelTexture?.dispose()
+    this.environment?.dispose()
     this.renderer.dispose()
     // dispose() frees GL resources but keeps the context alive; without this, the
     // canvas holds one of the browser's few live WebGL contexts until it is GC'd,
@@ -177,7 +247,14 @@ export class GalleryEngine {
       this.state.x >= r.rect.x && this.state.x <= r.rect.x + r.rect.w &&
       this.state.z >= r.rect.z && this.state.z <= r.rect.z + r.rect.d) ?? null)
 
-    this.renderer.render(this.built.scene, this.camera)
+    // The key light walks with the visitor: same direction, shadow box centred on them.
+    const key = this.built.keyLight
+    key.position.set(this.state.x + 2, 8, this.state.z - 3)
+    key.target.position.set(this.state.x, 0, this.state.z)
+    key.target.updateMatrixWorld()
+
+    if (this.composer) this.composer.render()
+    else this.renderer.render(this.built.scene, this.camera)
     this.raf = requestAnimationFrame(this.frame)
   }
 

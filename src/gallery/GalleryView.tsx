@@ -8,7 +8,7 @@ import { loadGallery } from '../lib/data'
 import LoadError from '../components/LoadError'
 import type { Gallery, Painting, Pose, Room } from './types'
 import { GalleryEngine, type Mode } from './engine'
-import { chooseSmall, loadAtlases, probeCapabilities } from './load'
+import { chooseQuality, chooseSmall, loadAtlases, probeCapabilities } from './load'
 import { standingPose, type ScreenRect } from './approach'
 import { parseGalleryQuery } from './query'
 import Hud from './Hud'
@@ -35,6 +35,8 @@ export default function GalleryView() {
   const [locked, setLocked] = useState(false)
   const [mode, setMode] = useState<Mode>('walk')
   const [view, setView] = useState<{ painting: Painting; rect: ScreenRect } | null>(null)
+  const [reflections, setReflections] = useState(false)
+  const [quality, setQuality] = useState<'low' | 'high' | 'ultra'>('low')
   const touch = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
 
   useEffect(() => {
@@ -56,9 +58,11 @@ export default function GalleryView() {
       try {
         const caps = probeCapabilities()
         const small = chooseSmall(caps.maxTextureSize, Math.min(window.screen.width, window.screen.height))
+      const chosen = chooseQuality(touch, caps.maxTextureSize)
+      setQuality(chosen)
         const atlases = await loadAtlases(gallery, small, caps.maxAnisotropy)
         if (cancelled) { for (const t of atlases) t?.dispose(); return }
-        engine = new GalleryEngine(canvas, gallery, atlases, small, {
+        engine = new GalleryEngine(canvas, gallery, atlases, small, chosen, {
           onHover: setHovered,
           onRoom: setRoom,
           onLock: setLocked,
@@ -103,6 +107,8 @@ export default function GalleryView() {
           mode={mode}
           touch={touch}
           onTeleport={(r) => engineRef.current?.teleport(r.entry)}
+          reflections={reflections}
+          onReflections={quality === 'low' ? undefined : (on) => { setReflections(on); engineRef.current?.setReflections(on) }}
         />
       )}
       {view && <Viewer painting={view.painting} rect={view.rect} onBack={() => engineRef.current?.leaveView()} />}
