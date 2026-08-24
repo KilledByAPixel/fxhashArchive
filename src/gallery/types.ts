@@ -53,6 +53,13 @@ export interface Painting {
    * never recorded it.
    */
   preview?: string
+  /**
+   * This piece's own colour, derived from its thumbnail the same way a room's is
+   * (scripts/gallery-tint.mjs). Used by the sculpture generated from it, so an
+   * object takes the colour of the work it came from. Absent where the piece has
+   * no agreed colour, or none at all — those come out plaster white.
+   */
+  tint?: { hue: number; strength: number }
 }
 
 export interface Sign {

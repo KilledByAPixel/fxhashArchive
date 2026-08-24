@@ -3,6 +3,7 @@ import {
   plinths, plinthObstacles, buildSculptureGeometry,
   GRID, GRID_SPACING, PLINTH_SIDE, PLINTH_H, SCULPTURE_MIN_SIDE,
 } from './sculpture'
+import { FrontSide, Mesh, MeshBasicMaterial, Raycaster, Vector3 } from 'three'
 import { resolve } from './collide'
 import { PLAYER_RADIUS } from './constants'
 import type { Gallery, Painting, Room } from './types'
@@ -126,4 +127,84 @@ test('you cannot walk through a plinth', () => {
   // Standing well clear of every one of them, nothing moves you.
   const clear = { x: target.x, z: target.z + GRID_SPACING / 2 }
   expect(resolve(clear, [], undefined, obstacles)).toEqual(clear)
+})
+
+/**
+ * Raycast the mesh with a front-facing material, which is how the renderer sees
+ * it: a face wound inside out is culled, so a ray from outside passes straight
+ * through and hits nothing. This is the check that would have caught the plinths
+ * and the terrace skirts being built backwards — every normal was a sensible
+ * length pointing a sensible way, they were simply pointing in.
+ */
+const hits = (geo: ReturnType<typeof buildSculptureGeometry>, from: [number, number, number], to: [number, number, number]) => {
+  const mesh = new Mesh(geo, new MeshBasicMaterial({ side: FrontSide }))
+  mesh.updateMatrixWorld()
+  const origin = new Vector3(...from)
+  const dir = new Vector3(...to).sub(origin).normalize()
+  return new Raycaster(origin, dir, 0, 200).intersectObject(mesh, false).length
+}
+
+test('every face is wound outwards, so nothing is inside out', () => {
+  const list = plinths(G)
+  const geo = buildSculptureGeometry(list)
+  const p = list[0]
+  const roomZ = BIG.rect.z + BIG.rect.d / 2
+
+  // At the plinth's own height, from outside the room, straight at it.
+  expect(hits(geo, [p.x - 8, PLINTH_H / 2, p.z], [p.x, PLINTH_H / 2, p.z])).toBeGreaterThan(0)
+  // Its underside, which only the floor mirror ever looks at.
+  expect(hits(geo, [p.x, -3, p.z], [p.x, 0, p.z])).toBeGreaterThan(0)
+  // Its lid, and whatever stands on it.
+  expect(hits(geo, [p.x, 6, p.z], [p.x, PLINTH_H, p.z])).toBeGreaterThan(0)
+
+  // Both kinds of sculpture, side on, just above the plinth they stand on: a
+  // terrace's boundary cells always skirt the whole way down to the plinth top,
+  // and a vase is at its widest well below its shoulder.
+  for (const kind of ['vase', 'terrace'] as const) {
+    const s = list.find((q) => q.kind === kind)!
+    expect(hits(geo, [s.x - 8, PLINTH_H + 0.06, s.z], [s.x, PLINTH_H + 0.06, s.z])).toBeGreaterThan(0)
+    expect(hits(geo, [s.x, PLINTH_H + 3, s.z], [s.x, PLINTH_H + 0.06, s.z])).toBeGreaterThan(0)
+  }
+  expect(roomZ).toBeGreaterThan(0)
+})
+
+test('vases shade smooth and everything else shades flat', () => {
+  const list = plinths(G)
+  const geo = buildSculptureGeometry(list)
+  const n = geo.getAttribute('normal')
+  // Every normal is a unit vector, however it was arrived at.
+  for (let i = 0; i < n.count; i++) {
+    expect(Math.hypot(n.getX(i), n.getY(i), n.getZ(i))).toBeCloseTo(1, 5)
+  }
+  // A flat triangle has one normal repeated; a smooth one does not. The lathe is
+  // the only smooth thing here, so some triangles must disagree with themselves
+  // and plenty must not.
+  let varied = 0, uniform = 0
+  for (let t = 0; t < n.count; t += 3) {
+    const same = [1, 2].every((k) =>
+      Math.abs(n.getX(t) - n.getX(t + k)) < 1e-6 &&
+      Math.abs(n.getY(t) - n.getY(t + k)) < 1e-6 &&
+      Math.abs(n.getZ(t) - n.getZ(t + k)) < 1e-6)
+    if (same) uniform++
+    else varied++
+  }
+  expect(varied).toBeGreaterThan(100)    // the vases
+  expect(uniform).toBeGreaterThan(100)   // the plinths and the terraces
+})
+
+test('a sculpture is the colour of the piece it was generated from', () => {
+  const tinted = ART.map((p, i) => (i % 3 === 0 ? { ...p, tint: { hue: 210, strength: 1 } } : p))
+  const list = plinths(gallery([BIG], tinted))
+  expect(list.some((p) => p.tint)).toBe(true)
+  const geo = buildSculptureGeometry(list)
+  const c = geo.getAttribute('color')
+  const seen = new Set<string>()
+  for (let i = 0; i < c.count; i++) seen.add(`${c.getX(i).toFixed(4)},${c.getY(i).toFixed(4)},${c.getZ(i).toFixed(4)}`)
+  // Plinth stone, plaster for the untinted, and blue for the tinted: three at least.
+  expect(seen.size).toBeGreaterThanOrEqual(3)
+  // With no tints at all, everything is stone or plaster and nothing else.
+  const plain = buildSculptureGeometry(plinths(gallery([BIG], ART))).getAttribute('color')
+  const plainSeen = new Set<string>()
+  for (let i = 0; i < plain.count; i++) plainSeen.add(`${plain.getX(i).toFixed(4)},${plain.getY(i).toFixed(4)},${plain.getZ(i).toFixed(4)}`)
+  expect(plainSeen.size).toBe(2)
 })

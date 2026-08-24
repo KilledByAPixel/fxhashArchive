@@ -15,7 +15,7 @@ import { mkdir, writeFile, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import sharp from 'sharp'
 import { buildGallery, tileRect, ATLAS, ATLAS_SMALL, TILES_PER_ATLAS } from './gallery-lib.mjs'
-import { newTintAcc, addPixels, tintOf } from './gallery-tint.mjs'
+import { newTintAcc, addPixels, tintOf, mergeTintAcc } from './gallery-tint.mjs'
 import { readArchiveInputs } from './gallery-inputs.mjs'
 
 const DATA = 'public/data'
@@ -25,37 +25,46 @@ const QUALITY = 82   // matches compress-thumbnails.mjs
 const TINT_SAMPLE = 48
 
 /**
- * The colour of the art in each room, for the wash on its walls.
+ * The colour of every piece, and of the art in each room pooled.
+ *
+ * The rooms are for the wash on their walls; the individual pieces are for the
+ * sculpture, which is generated from a piece and takes that piece's colour, so
+ * the objects in a room are coloured by the very works hanging around them.
  *
  * Which room a piece hangs in is buildGallery's own decision, so this cannot run
- * before it: the building is laid out once to find out what hangs where, sampled
- * per room, then laid out again with the answer. buildGallery is pure, so the
- * second run reproduces the first exactly.
+ * before it: the building is laid out once to find out what hangs where, sampled,
+ * then laid out again with the answer. buildGallery is pure, so the second run
+ * reproduces the first exactly.
  */
-async function roomTints(gallery, thumbs) {
-  const accs = new Map()
+async function sampleTints(gallery, thumbs) {
+  const rooms = new Map()
+  const pieces = new Map()
   for (const p of gallery.paintings) {
     const path = thumbs[p.project]
     if (!path) continue
-    if (!accs.has(p.room)) accs.set(p.room, newTintAcc())
+    if (!rooms.has(p.room)) rooms.set(p.room, newTintAcc())
     try {
       const { data } = await sharp(path)
         .resize(TINT_SAMPLE, TINT_SAMPLE, { fit: 'cover' })
         .removeAlpha()
         .raw()
         .toBuffer({ resolveWithObject: true })
-      addPixels(accs.get(p.room), data)
+      const own = newTintAcc()
+      addPixels(own, data)
+      const tint = tintOf(own)
+      if (tint) pieces.set(p.project, tint)
+      mergeTintAcc(rooms.get(p.room), own)
     } catch (err) {
       // One unreadable thumbnail costs its room a vote, not its colour.
       console.warn(`tint: cannot sample ${p.project} (${p.name}): ${err.message}`)
     }
   }
-  const tints = new Map()
-  for (const [room, acc] of accs) {
+  const roomTints = new Map()
+  for (const [room, acc] of rooms) {
     const tint = tintOf(acc)
-    if (tint) tints.set(room, tint)
+    if (tint) roomTints.set(room, tint)
   }
-  return tints
+  return { tints: roomTints, pieceTints: pieces }
 }
 
 /**
@@ -96,8 +105,8 @@ async function main() {
   const generatedAt = new Date().toISOString()
   const inputs = { tokens, collaborations, volumes, sizes, previews, generatedAt }
   // Lay out, learn what colour each room's art is, lay out again with it.
-  const tints = await roomTints(buildGallery(inputs), thumbs)
-  const gallery = buildGallery({ ...inputs, tints })
+  const { tints, pieceTints } = await sampleTints(buildGallery(inputs), thumbs)
+  const gallery = buildGallery({ ...inputs, tints, pieceTints })
 
   for (const p of gallery.paintings) {
     if (!thumbs[p.project]) console.warn(`no thumbnail for ${p.project} (${p.name}); hanging a blank tile`)

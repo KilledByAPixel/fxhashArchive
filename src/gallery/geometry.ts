@@ -86,6 +86,11 @@ export class MeshArrays {
       this.normals.push(...normal)
       this.uvs.push(u, w)
     }
+    this.pushColor(color)
+  }
+
+  /** Six vertices' worth of colour, backfilling any plain quads written before the first coloured one. */
+  private pushColor(color: Rgb | null): void {
     if (color) {
       // The first coloured quad may arrive after plain ones. Backfill those with
       // white so the attribute lines up with the positions vertex for vertex.
@@ -97,6 +102,24 @@ export class MeshArrays {
     } else if (this.tinted) {
       for (let i = 0; i < 6; i++) this.colors.push(1, 1, 1)
     }
+  }
+
+  /**
+   * A quad from four corners with a normal given per corner, so a curved surface
+   * shades smoothly across it instead of faceting at every edge.
+   *
+   * Only the lathe needs this, and only because a vase is meant to look turned.
+   * Everything else in the building is flat by intent — walls, plinths, and the
+   * terrace, whose facets are the whole point of it.
+   */
+  smoothFace(corners: [Vec, Vec, Vec, Vec], normals: [Vec, Vec, Vec, Vec], color: Rgb | null = null): void {
+    const order: Array<[number, number, number]> = [[0, 0, 0], [1, 1, 0], [2, 1, 1], [0, 0, 0], [2, 1, 1], [3, 0, 1]]
+    for (const [i, u, v] of order) {
+      this.positions.push(...corners[i])
+      this.normals.push(...normals[i])
+      this.uvs.push(u, v)
+    }
+    this.pushColor(color)
   }
 
   /**
@@ -123,15 +146,7 @@ export class MeshArrays {
       this.normals.push(...normal)
       this.uvs.push(s, t)
     }
-    if (color) {
-      if (!this.tinted) {
-        this.tinted = true
-        while (this.colors.length < this.positions.length - 18) this.colors.push(1)
-      }
-      for (let i = 0; i < 6; i++) this.colors.push(color[0], color[1], color[2])
-    } else if (this.tinted) {
-      for (let i = 0; i < 6; i++) this.colors.push(1, 1, 1)
-    }
+    this.pushColor(color)
   }
 
   /**

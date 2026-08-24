@@ -23,6 +23,7 @@ import {
 } from './geometry'
 import { WALL_T } from './constants'
 import { makePoolTexture, POOL_COLOR, POOL_OPACITY } from './pools'
+import { linear, washed } from './palette'
 import { buildSculptureGeometry, plinths } from './sculpture'
 
 export interface BuiltScene {
@@ -92,16 +93,6 @@ export const TINT_HALL = 0.035
  */
 const PROBE = WALL_T / 2 + 0.1
 
-const hsvToRgb255 = (h: number, s: number, v: number): [number, number, number] => {
-  const c = v * s
-  const x = c * (1 - Math.abs(((h / 60) % 2) - 1))
-  const m = v - c
-  const [r, g, b] =
-    h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] :
-    h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x]
-  return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)]
-}
-
 /**
  * What colour to paint each face of each wall.
  *
@@ -119,22 +110,14 @@ export function wallPaint(rooms: Room[]): SolidFaceColor {
   // Era markers are rooms of zero area — a point in the corridor to teleport to —
   // and can contain nothing, so they are not candidates.
   const solid = rooms.filter((r) => r.rect.w > 0 && r.rect.d > 0)
-  const asLinear = (hex: number): Rgb => {
-    const c = new Color(hex)
-    return [c.r, c.g, c.b]
-  }
-  const base = asLinear(WALL)
-  // WALL's own HSV value — its brightest channel, whichever that is.
-  const wallValue = Math.max((WALL >> 16) & 0xff, (WALL >> 8) & 0xff, WALL & 0xff) / 255
+  const base = linear(WALL)
   const cache = new Map<string, Rgb>()
   const paintOf = (room: Room): Rgb => {
     const hit = cache.get(room.id)
     if (hit) return hit
-    const scale = room.kind === 'hall' ? TINT_HALL : TINT_SOLO
-    // Keep WALL's own value and add only saturation, so a tinted wall is exactly
-    // as bright as an untinted one — the room gains a colour, not a light level.
-    const [r, g, b] = hsvToRgb255(room.tint!.hue, room.tint!.strength * scale, wallValue)
-    const rgb = asLinear((r << 16) | (g << 8) | b)
+    // A hall is a whole era of unrelated artists averaged together, so it gets a
+    // fraction of what one artist's room does.
+    const rgb = washed(WALL, room.tint, room.kind === 'hall' ? TINT_HALL : TINT_SOLO)
     cache.set(room.id, rgb)
     return rgb
   }

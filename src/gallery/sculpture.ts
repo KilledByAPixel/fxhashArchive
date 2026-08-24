@@ -7,20 +7,27 @@
 // repeatedly quartered, each quarter nudged up or down by half as much as the
 // last, which is the subdivided cube.
 //
-// Low poly and one draw call, both deliberate. Low poly means flat shading is the
-// look rather than a compromise, so nothing here needs the smooth per-vertex
-// normals a finer lathe would; a twelve-sided vase is meant to read as facets.
-// One draw call means plinths and sculptures share a single material and tell
-// themselves apart with vertex colours — the same attribute the walls use for
-// their paint. Eighteen objects come to roughly three thousand triangles.
+// Low poly and one draw call, both deliberate. One draw call means plinths and
+// sculptures share a single material and tell themselves apart with vertex
+// colours — the same attribute the walls use for their paint. Eighteen objects
+// come to roughly three thousand triangles.
+//
+// Shading is split, and on purpose. The plinths and the terrace are flat-shaded,
+// because their facets ARE the shape: a terrace of blocks wants every edge to
+// read. The vase is smooth-shaded from the analytic normal of a surface of
+// revolution, because a vase is a turned thing and twelve visible flats make it
+// a prism instead. Low poly is the silhouette, not an excuse to fake the normals.
 //
 // The seeds are the room's own art: each plinth takes the fxhash project id of
 // one of the pieces hanging around it, so the objects are generated from the
 // work on the walls, and the room's contents are stable as long as its art is.
+// Each object is then coloured by that same piece, so a vase is the colour of
+// the picture it came from — which is hanging a few metres away.
 
-import { BufferGeometry, Color } from 'three'
+import { BufferGeometry } from 'three'
 import type { Gallery, Room } from './types'
 import { MeshArrays, type Rgb } from './geometry'
+import { linear, washed, type Tint } from './palette'
 import type { Obstacle } from './collide'
 
 /** A room needs a shorter side this long before it gets sculpture: only the 20 m one does. */
@@ -41,6 +48,15 @@ const SCULPTURE_H = 0.7
 export const PLINTH_COLOR = 0xb9b3a9
 /** The work itself, in plaster — lighter than its plinth so it carries. */
 export const SCULPTURE_COLOR = 0xe4e1d9
+/**
+ * How much colour a sculpture takes from the piece it was generated from.
+ *
+ * Far more than a wall takes: a wall is a background and wants a wash you would
+ * struggle to name, while a vase is an object at arm's length and can be
+ * properly coloured. Nine plaster-white objects in a row was the thing that
+ * looked unfinished. Set to 0 and they all go back to plaster.
+ */
+export const SCULPTURE_SAT = 0.4
 
 const VASE_RADIAL = 12
 const VASE_RINGS = 10
@@ -53,6 +69,8 @@ export interface Plinth {
   z: number
   seed: number
   kind: 'vase' | 'terrace'
+  /** The colour of the piece this was generated from; absent leaves it plaster. */
+  tint?: Tint
 }
 
 /**
@@ -84,16 +102,21 @@ export function plinths(gallery: Gallery): Plinth[] {
     if (room.kind !== 'solo') continue
     if (Math.min(room.rect.w, room.rect.d) < SCULPTURE_MIN_SIDE) continue
     const seeds = seedsFor(gallery, room, GRID * GRID)
+    const tintOf = new Map(gallery.paintings.filter((p) => p.tint).map((p) => [p.project, p.tint!]))
     const cx = room.rect.x + room.rect.w / 2
     const cz = room.rect.z + room.rect.d / 2
     for (let row = 0; row < GRID; row++) {
       for (let col = 0; col < GRID; col++) {
+        const seed = seeds[row * GRID + col]
         out.push({
           x: cx + (col - (GRID - 1) / 2) * GRID_SPACING,
           z: cz + (row - (GRID - 1) / 2) * GRID_SPACING,
-          seed: seeds[row * GRID + col],
+          seed,
           // Checkerboard: the corners and the centre are vases, the edges terraces.
           kind: (row + col) % 2 === 0 ? 'vase' : 'terrace',
+          // The seed is a project id, so the object is coloured by the very piece
+          // it was generated from — which is hanging on a wall a few metres away.
+          tint: tintOf.get(seed),
         })
       }
     }
@@ -117,42 +140,46 @@ export function plinthObstacles(list: Plinth[]): Obstacle[] {
 
 export function buildSculptureGeometry(list: Plinth[]): BufferGeometry {
   const m = new MeshArrays()
-  const asLinear = (hex: number): Rgb => {
-    const c = new Color(hex)
-    return [c.r, c.g, c.b]
-  }
-  const stone = asLinear(PLINTH_COLOR)
-  const plaster = asLinear(SCULPTURE_COLOR)
+  // The plinths stay one stone throughout: they are furniture, and nine coloured
+  // pedestals under nine coloured objects would be a fight rather than a room.
+  const stone = linear(PLINTH_COLOR)
   for (const p of list) {
     plinth(m, p.x, p.z, stone)
+    const color = washed(SCULPTURE_COLOR, p.tint, SCULPTURE_SAT)
     const rand = mulberry32(p.seed)
-    if (p.kind === 'vase') vase(m, p.x, PLINTH_H, p.z, rand, plaster)
-    else terrace(m, p.x, PLINTH_H, p.z, rand, plaster)
+    if (p.kind === 'vase') vase(m, p.x, PLINTH_H, p.z, rand, color)
+    else terrace(m, p.x, PLINTH_H, p.z, rand, color)
   }
   return m.build()
 }
 
 /**
  * A box with its top edge cut off: four sides up to the chamfer, four bands
- * leaning in to the inset top, four triangles closing the corners between them,
- * and a lid. The underside is built too — it is never seen directly, but the
- * floor mirror looks at the room from below and would otherwise see straight
- * through into an open box.
+ * leaning in to the inset top, and a lid. The underside is built too — it is
+ * never seen directly, but the floor mirror looks at the room from below and
+ * would otherwise see straight through into an open box.
  */
 function plinth(m: MeshArrays, cx: number, cz: number, color: Rgb): void {
   const h = PLINTH_SIDE / 2
   const i = h - CHAMFER          // half-width of the inset top
   const y = PLINTH_H - CHAMFER   // where the sides stop and the chamfer starts
-  const s: Array<[number, number]> = [[1, 1], [-1, 1], [-1, -1], [1, -1]]   // corners, counter-clockwise from above
+  // Corners, clockwise seen from above — which is what winds each side face
+  // outward. Anticlockwise turns the plinth inside out: the lid and the underside
+  // are built separately and stay right, so what you see is a box with its walls
+  // missing and the inside of the far ones showing through.
+  const s: Array<[number, number]> = [[1, 1], [1, -1], [-1, -1], [-1, 1]]
   for (let k = 0; k < 4; k++) {
     const [ax, az] = s[k]
     const [bx, bz] = s[(k + 1) % 4]
     // The side, full width, floor to the chamfer.
     m.face([ax * h, 0, az * h], [bx * h, 0, bz * h], [bx * h, y, bz * h], [ax * h, y, az * h], color)
-    // The chamfer band, leaning in to the lid.
+    // The chamfer band, leaning in to the lid. No corner piece is needed between
+    // consecutive bands: inset by the same amount in x and z, each band ends on
+    // exactly the edge the next one begins on, so the four of them already close
+    // the ring. There used to be a triangle here trying to fill a gap that does
+    // not exist, and it was built with two of its corners doubled — no area, no
+    // normal, and a NaN waiting for anything that normalises one.
     m.face([ax * h, y, az * h], [bx * h, y, bz * h], [bx * i, PLINTH_H, bz * i], [ax * i, PLINTH_H, az * i], color)
-    // The corner it leaves open, as a triangle.
-    m.face([ax * h, y, az * h], [ax * i, PLINTH_H, az * i], [ax * i, PLINTH_H, az * i], [ax * h, y, az * h], color)
   }
   // Lid and underside.
   m.face([-i, PLINTH_H, i], [i, PLINTH_H, i], [i, PLINTH_H, -i], [-i, PLINTH_H, -i], color)
@@ -197,10 +224,30 @@ function vase(m: MeshArrays, cx: number, y0: number, cz: number, rand: () => num
     const r = profile(t)
     return [Math.cos(a) * r, y0 + t * height, Math.sin(a) * r]
   }
+  /**
+   * The true normal of a surface of revolution, so the vase shades as a turned
+   * thing rather than a twelve-sided prism: the outward radial direction, tilted
+   * by how fast the profile is opening or closing. The slope is measured rather
+   * than differentiated, because `profile` clamps at both ends and a numerical
+   * difference does not care where the analytic one would go undefined.
+   */
+  const normalAt = (ring: number, seg: number): [number, number, number] => {
+    const t = ring / VASE_RINGS
+    const a = (seg / VASE_RADIAL) * Math.PI * 2
+    const d = 1e-4
+    const slope = ((profile(Math.min(1, t + d)) - profile(Math.max(0, t - d))) / (Math.min(1, t + d) - Math.max(0, t - d))) / height
+    const n: [number, number, number] = [Math.cos(a), -slope, Math.sin(a)]
+    const len = Math.hypot(n[0], n[1], n[2]) || 1
+    return [n[0] / len, n[1] / len, n[2] / len]
+  }
   for (let ring = 0; ring < VASE_RINGS; ring++) {
     for (let seg = 0; seg < VASE_RADIAL; seg++) {
       const next = (seg + 1) % VASE_RADIAL
-      m.face(at(ring, next), at(ring, seg), at(ring + 1, seg), at(ring + 1, next), color)
+      m.smoothFace(
+        [at(ring, next), at(ring, seg), at(ring + 1, seg), at(ring + 1, next)],
+        [normalAt(ring, next), normalAt(ring, seg), normalAt(ring + 1, seg), normalAt(ring + 1, next)],
+        color,
+      )
     }
   }
   // Lid: a fan of triangles over the top ring.
@@ -267,7 +314,11 @@ function terrace(m: MeshArrays, cx: number, y0: number, cz: number, rand: () => 
       for (const [nx, nz, a, b] of sides) {
         const below = y0 + height(nx, nz)
         if (below >= y) continue
-        m.face([a[0], below, a[2]], [b[0], below, b[2]], [b[0], y, b[2]], [a[0], y, a[2]], color)
+        // b before a: the pair names the edge, and taking them in that order is
+        // what winds the skirt outward. The lids above are built separately and
+        // were always right, so getting this backwards showed as a terrace of
+        // floating tops with the insides of the far walls behind them.
+        m.face([b[0], below, b[2]], [a[0], below, a[2]], [a[0], y, a[2]], [b[0], y, b[2]], color)
       }
     }
   }

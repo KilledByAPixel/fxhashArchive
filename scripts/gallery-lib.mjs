@@ -739,7 +739,7 @@ function nudgePortals(deficits, portals, legs) {
  * back into the lobby says you have come full circle. Nothing here depends on
  * input order — see byDate — so the same archive gives the same building.
  */
-export function buildGallery({ tokens, collaborations = {}, volumes = new Map(), sizes = new Map(), previews = new Map(), tints = new Map(), generatedAt }) {
+export function buildGallery({ tokens, collaborations = {}, volumes = new Map(), sizes = new Map(), previews = new Map(), tints = new Map(), pieceTints = new Map(), generatedAt }) {
   const visible = tokens.filter((t) => !HIDDEN_FLAGS.has(t.flag))
   const { solo, halls, artistCount } = assignRooms(visible, collaborations, { volumes })
   const shared = [...halls.values()].flat().sort(byDate)
@@ -832,6 +832,9 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
       year: Number(t.createdAt.slice(0, 4)), room, x: r6(point.x), z: r6(point.z), yaw: yawOf(normal), tile: 0,
       ...shapeOf(t),
       ...(previews.has(t.id) ? { preview: previews.get(t.id) } : {}),
+      // This piece's own colour, for the sculpture generated from it. Absent
+      // where the work has no agreed colour, or none at all.
+      ...(pieceTints.has(t.id) ? { tint: pieceTints.get(t.id) } : {}),
     })
   /** A sign on a wall at `point` (on the wall line), facing `normal`, stood off like a painting. */
   const sign = (kind, text, point, normal, y, w, h) =>

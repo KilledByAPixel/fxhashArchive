@@ -69,6 +69,21 @@ export function addPixels(acc, rgb) {
   }
 }
 
+/**
+ * Fold one accumulator into another. A room's colour is its pieces' colours
+ * pooled, so each piece is sampled once into its own accumulator and that is
+ * added here — rather than walking every thumbnail's pixels twice, once for the
+ * piece and once for the room it hangs in.
+ */
+export function mergeTintAcc(into, from) {
+  into.cx += from.cx
+  into.cy += from.cy
+  into.w += from.w
+  into.chroma += from.chroma
+  into.n += from.n
+  return into
+}
+
 const smoothstep = (a, b, x) => {
   const t = Math.max(0, Math.min(1, (x - a) / (b - a)))
   return t * t * (3 - 2 * t)
