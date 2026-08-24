@@ -13,11 +13,11 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js'
 import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js'
-import { SSRPass } from 'three/examples/jsm/postprocessing/SSRPass.js'
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 import type { Quality } from './load'
 import type { Gallery, Painting, Pose, Room, Wall } from './types'
 import { buildScene, hidden, type BuiltScene } from './scene'
+import { makeFloorMirror, type FloorMirror } from './mirror'
 import { makeLabelTexture } from './labels'
 import { solidWalls, type Point } from './collide'
 import {
@@ -67,6 +67,7 @@ export class GalleryEngine {
   private cleanup: Array<() => void> = []
   private environment: Texture | null = null
   private composer: EffectComposer | null = null
+  private mirror: FloorMirror | null = null
   private quality: Quality
 
   constructor(
@@ -139,11 +140,9 @@ export class GalleryEngine {
 
   /**
    * Rebuild the render path for a quality level. 'low' renders straight; 'high'
-   * composes ambient occlusion and anti-aliasing; 'ultra' renders through
-   * SSRPass instead of a plain RenderPass — it carries its own beauty pass and
-   * paints the room's reflection onto the floor — and then the occlusion and
-   * anti-aliasing exactly as 'high' does, so turning reflections on adds them
-   * rather than trading the occlusion away.
+   * composes ambient occlusion and anti-aliasing. Reflections are not a tier —
+   * the mirror is a thing in the room, not a pass — so setReflections is
+   * independent of this and survives it.
    */
   setQuality(quality: Quality): void {
     this.quality = quality
@@ -154,17 +153,7 @@ export class GalleryEngine {
     const w = Math.max(1, this.canvas.clientWidth)
     const h = Math.max(1, this.canvas.clientHeight)
     const composer = new EffectComposer(this.renderer)
-    if (quality === 'ultra') {
-      // `selects` names the surfaces that reflect, not what they show: the floor
-      // alone. (The first build listed the paintings and walls here — the things
-      // meant to appear in the reflection — and so nothing reflected at all.)
-      const ssr = new SSRPass({ renderer: this.renderer, scene: this.built.scene, camera: this.camera, width: w, height: h, groundReflector: null, selects: [this.built.floorsMesh] })
-      ssr.opacity = 0.4
-      ssr.maxDistance = 10   // metres of ray: a wall's pictures reach the floor a few metres out
-      composer.addPass(ssr)
-    } else {
-      composer.addPass(new RenderPass(this.built.scene, this.camera))
-    }
+    composer.addPass(new RenderPass(this.built.scene, this.camera))
     // The occlusion pass takes its own depth and normals from the scene, and the
     // signs were in them: each quad's silhouette darkened the plaster behind it,
     // drawing a faint outline around every name and every plaque. They are out
@@ -173,17 +162,41 @@ export class GalleryEngine {
     const gtao = new GTAOPass(this.built.scene, this.camera, w, h)
     const takeAo = gtao.render.bind(gtao)
     const signs = this.built.signsMesh
-    gtao.render = (...args: Parameters<typeof takeAo>) => hidden(signs, () => takeAo(...args))
+    const mirror = () => this.mirror
+    // The mirror is out of the occlusion pass for the same reason the signs are:
+    // it is not a surface in the room, it is the room drawn again on the floor.
+    gtao.render = (...args: Parameters<typeof takeAo>) =>
+      hidden(signs, () => hidden(mirror(), () => takeAo(...args)))
     composer.addPass(gtao)
     composer.addPass(new SMAAPass())
     composer.addPass(new OutputPass())
     this.composer = composer
   }
 
-  /** Reflections on the floor: 'ultra' on, back to 'high' off. A 'low' device stays plain. */
+  /**
+   * Reflections on the floor: a mirror over the whole building, or none.
+   *
+   * Screen-space reflections were here, and could only reflect what was already
+   * on the screen — so the reflection tore away at the edges of the view, which
+   * is the artifact the technique is known for. This renders the room a second
+   * time from under the floor instead: slower, and nothing missing. A 'low'
+   * device never offers it.
+   */
   setReflections(on: boolean): void {
-    if (this.quality === 'low') return
-    this.setQuality(on ? 'ultra' : 'high')
+    if (this.quality === 'low' && on) return
+    if (on === Boolean(this.mirror)) return
+    if (!on) {
+      this.built.scene.remove(this.mirror!)
+      this.mirror!.dispose()
+      this.mirror = null
+      return
+    }
+    // Half the canvas, capped: a reflection in concrete is low-frequency, and
+    // the softness of a small target flatters it.
+    const w = Math.min(1024, Math.max(1, Math.round(this.canvas.clientWidth / 2)))
+    const h = Math.min(512, Math.max(1, Math.round(this.canvas.clientHeight / 2)))
+    this.mirror = makeFloorMirror(this.gallery.rooms, w, h)
+    this.built.scene.add(this.mirror)
   }
 
   requestLock(): void {
@@ -214,6 +227,7 @@ export class GalleryEngine {
     for (const off of this.cleanup) off()
     if (document.pointerLockElement === this.canvas) document.exitPointerLock()
     this.composer?.dispose()
+    this.mirror?.dispose()
     this.built.dispose()
     for (const t of this.atlases) t?.dispose()
     this.labelTexture?.dispose()

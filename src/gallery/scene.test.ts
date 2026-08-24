@@ -118,13 +118,6 @@ test('nothing casts or takes a shadow: there is no sun inside a building', () =>
 })
 
 
-test('the floor is exposed on its own: it is the one surface that reflects', () => {
-  const built = buildScene(gallery, [null, null], null)
-  expect(built.floorsMesh.name).toBe('floors')
-  expect(built.floorsMesh.parent).toBe(built.scene)
-  built.dispose()
-})
-
 test('the signs are ink on the wall: their own mesh, casting nothing', () => {
   const built = buildScene(gallery, [null, null], { texture: new Texture(), uvs: gallery.signs.map(() => ({ u0: 0, u1: 1, v0: 0, v1: 1 })) })
   expect(built.signsMesh).toBeTruthy()

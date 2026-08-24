@@ -26,8 +26,6 @@ export interface BuiltScene {
   scene: Scene
   /** The one merged walls mesh, so picking can be blocked by it — see engine.ts paintingAt. */
   wallsMesh: Mesh
-  /** The one merged floor mesh: the surface screen-space reflections are drawn on. */
-  floorsMesh: Mesh
   /** The one signs mesh, so a pass that must not see it can take it out — see hidden(). Null without labels. */
   signsMesh: Mesh | null
   paintingMeshes: Mesh[]
@@ -64,7 +62,7 @@ export function buildScene(
   // just enough polish to carry the room's reflection from the environment map
   // the engine installs (and true reflections when the visitor turns them on).
   const wallsMesh = add('walls', new Mesh(buildWallGeometry(gallery.walls), new MeshStandardMaterial({ color: WALL, roughness: 0.95, metalness: 0 })))
-  const floors = add('floors', new Mesh(buildFloorGeometry(gallery.rooms), new MeshStandardMaterial({ color: 0x8f8880, roughness: 0.35, metalness: 0 })))
+  add('floors', new Mesh(buildFloorGeometry(gallery.rooms), new MeshStandardMaterial({ color: 0x8f8880, roughness: 0.35, metalness: 0 })))
   // The lamps: white strips along every ceiling, unlit because they are the light.
   add('lights', new Mesh(buildLightStripGeometry(gallery.rooms), new MeshBasicMaterial({ color: 0xffffff, toneMapped: false })))
   // Unlit on purpose: a face that points down gets nothing from lights placed
@@ -138,7 +136,6 @@ export function buildScene(
   return {
     scene,
     wallsMesh,
-    floorsMesh: floors,
     signsMesh,
     paintingMeshes,
     paintingIndex,

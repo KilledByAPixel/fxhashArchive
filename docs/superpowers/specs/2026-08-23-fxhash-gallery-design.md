@@ -430,14 +430,27 @@ until the scene's first frame.
 - Quality, chosen by device (`chooseQuality`): `low` — the plain renderer, no
   shadows, no post-processing — for touch devices and GPUs whose max texture is
   under 4096; `high` — shadows, then an `EffectComposer` of render → GTAO
-  (ambient occlusion) → SMAA → output; `ultra` — `high` rendered through
-  `SSRPass` in place of the plain render pass: screen-space reflections of the
-  room on the floor (`selects` names the surfaces that *reflect* — the floor
-  alone; the first build listed the paintings and walls there, the things meant
-  to appear in the reflection, and nothing reflected — opacity 0.4, rays to
-  10 m), then the same occlusion and anti-aliasing as `high`, so the switch adds
-  reflections rather than trading the occlusion away. It costs real frame time
-  and is a switch in the HUD that only desktop visitors see.
+  (ambient occlusion) → SMAA → output. There is no third tier: reflections are
+  not a pass.
+- Reflections are a **mirror**, not screen-space. Screen-space reflections were
+  tried and removed: they can only reflect what is already on the screen, so a
+  reflection tore away at the edges of the view — the artifact the technique is
+  known for. In its place, `src/gallery/mirror.ts` lays one plane over the whole
+  floor (every floor is at y = 0, so one plane serves the building) and three's
+  `Reflector` renders the room a second time from a camera mirrored through it.
+  Nothing is missing from it, because it is the same scene, walls and all. The
+  plane sits `MIRROR_Y` (4 mm) up, is laid down by rotating the *object* — the
+  Reflector reads its plane from the object's world rotation, taking local +z as
+  the normal — and carries a shader of its own so the reflection can be faint
+  (opacity 0.22) and die away with distance (0.035 per metre). That shader does
+  no tone mapping and no colour-space conversion, because three skips tone
+  mapping whenever it renders into a render target — which is what the Reflector
+  draws into and what the composer draws this into — so values stay linear and
+  `OutputPass` maps them once at the end. It costs a second pass over the
+  geometry each frame, and is a switch in the HUD that only desktop visitors see.
+  Its target is half the canvas and capped at 1024 × 512: a reflection in
+  concrete is low-frequency, and the softness flatters it. Like the signs, the
+  mirror is taken out of the occlusion pass — it is not a surface in the room.
 - Spot pools: the lamplight a museum throws on the wall around each picture. Not
   a light per painting (four hundred lights is the shader melting) but one radial
   falloff texture, computed once, on an additive quad 2.4 × 3 m behind every

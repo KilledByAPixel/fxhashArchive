@@ -15,10 +15,10 @@ export const chooseSmall = (maxTextureSize: number, screenShortSide: number) =>
 /**
  * How much rendering a device gets. 'low' is the plain renderer: no shadows, no
  * post-processing — phones and small GPUs. 'high' adds shadows, ambient
- * occlusion and anti-aliasing. 'ultra' is 'high' with screen-space reflections
+ * occlusion and anti-aliasing. Reflections are no longer a tier: they are a
  * on the floor, which costs real frame time and is the visitor's to switch on.
  */
-export type Quality = 'low' | 'high' | 'ultra'
+export type Quality = 'low' | 'high'
 export const chooseQuality = (touch: boolean, maxTextureSize: number): Quality =>
   touch || maxTextureSize < 4096 ? 'low' : 'high'
 

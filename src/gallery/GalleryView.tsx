@@ -8,7 +8,7 @@ import { loadGallery } from '../lib/data'
 import LoadError from '../components/LoadError'
 import type { Gallery, Painting, Pose, Room } from './types'
 import { GalleryEngine, type Mode } from './engine'
-import { chooseQuality, chooseSmall, loadAtlases, probeCapabilities } from './load'
+import { chooseQuality, chooseSmall, loadAtlases, probeCapabilities, type Quality } from './load'
 import { standingPose, type ScreenRect } from './approach'
 import { parseGalleryQuery } from './query'
 import Hud from './Hud'
@@ -36,7 +36,7 @@ export default function GalleryView() {
   const [mode, setMode] = useState<Mode>('walk')
   const [view, setView] = useState<{ painting: Painting; rect: ScreenRect } | null>(null)
   const [reflections, setReflections] = useState(false)
-  const [quality, setQuality] = useState<'low' | 'high' | 'ultra'>('low')
+  const [quality, setQuality] = useState<Quality>('low')
   const touch = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
 
   useEffect(() => {
