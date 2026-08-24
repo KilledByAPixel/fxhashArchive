@@ -27,6 +27,14 @@ export const toPose = (s: PlayerState): Pose => ({ x: s.x, z: s.z, yaw: s.yaw })
 
 const PITCH_LIMIT = (85 * Math.PI) / 180
 
+/**
+ * The most a single move may cover. The collider only knows where you are, not
+ * where you were, so a move longer than a wall is thick plus the collision
+ * radius can land on the far side and be pushed the wrong way — at RUN_SPEED a
+ * 50 ms frame is a metre. Anything longer than this is taken in pieces.
+ */
+export const SUB_STEP = 0.25
+
 /** One frame of walking. Diagonals are normalised so nobody is faster sideways-and-forward. */
 export function integrate(s: PlayerState, keys: Keys, dt: number, walls: Wall[]): PlayerState {
   const fx = Math.sin(s.yaw), fz = Math.cos(s.yaw)
@@ -38,8 +46,13 @@ export function integrate(s: PlayerState, keys: Keys, dt: number, walls: Wall[])
   if (keys.left) { dx -= rx; dz -= rz }
   const len = Math.hypot(dx, dz)
   if (len === 0) return s
-  const step = (keys.run ? RUN_SPEED : WALK_SPEED) * dt
-  const p = resolve({ x: s.x + (dx / len) * step, z: s.z + (dz / len) * step }, walls)
+  const total = (keys.run ? RUN_SPEED : WALK_SPEED) * dt
+  const pieces = Math.max(1, Math.ceil(total / SUB_STEP))
+  const step = total / pieces
+  let p: Point = { x: s.x, z: s.z }
+  for (let i = 0; i < pieces; i++) {
+    p = resolve({ x: p.x + (dx / len) * step, z: p.z + (dz / len) * step }, walls)
+  }
   return { ...s, x: p.x, z: p.z }
 }
 

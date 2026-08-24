@@ -67,3 +67,18 @@ test('key mapping and pose conversion', () => {
   expect(anyMove(keys({ back: true }))).toBe(true)
   expect(toPose(fromPose({ x: 1, z: 2, yaw: 3 }))).toEqual({ x: 1, z: 2, yaw: 3 })
 })
+
+test('Shift is four times the run speed the gallery shipped with', () => {
+  expect(RUN_SPEED).toBe(20)
+})
+
+test('running into a wall on a hitchy frame still stops at the radius', () => {
+  // At 20 m/s a 50 ms frame is a 1 m move — more than a wall is thick, and more
+  // than the collision radius. Taken as one step the visitor lands on the far
+  // side and the collider pushes them the wrong way; the integrator has to
+  // sub-step so no single move can skip a wall.
+  const wall: Wall = { x1: -4, z1: 2, x2: 4, z2: 2, y0: 0, y1: 4 }
+  let s = at(0, 1)
+  for (let i = 0; i < 10; i++) s = integrate(s, keys({ forward: true, run: true }), 0.05, [wall])
+  expect(s.z).toBeCloseTo(2 - COLLISION_RADIUS, 9)
+})
