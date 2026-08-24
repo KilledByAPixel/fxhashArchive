@@ -33,6 +33,22 @@ export const ROOM_MID = 8
 export const ROOM_GAP = 1
 export const CORNER = 1
 export const LOBBY = 8
+
+/**
+ * Ceilings. WALL_H is the corridor's, and the corridor keeps it: a hall is 8 m
+ * wide and better low, and every era sign in the building is hung against it.
+ *
+ * Rooms are the problem. They were all WALL_H too, which is fine for the 8 m
+ * squares and absurd for KilledByAPixel's 20 m one — five times wider than it
+ * is tall, which reads as a car park rather than a gallery. So a room's ceiling
+ * rises with its floor, and the lobby, which is the first room anyone stands in,
+ * is simply given the height of a lobby.
+ */
+export const LOBBY_H = 6
+export const ROOM_H_MIN = 4.5
+export const ROOM_H_MAX = 6.5
+/** Metres of ceiling per metre of room side, past the ROOM_MID minimum. */
+export const ROOM_H_SLOPE = 0.12
 /**
  * How far a painting or sign stands off the wall's inside face, so it never
  * z-fights with it. Measured from that face, not from the room rectangle's edge:
@@ -211,7 +227,7 @@ const add = (p, q, k = 1) => ({ x: p.x + q.x * k, z: p.z + q.z * k })
 const neg = (v) => ({ x: -v.x, z: -v.z })
 /** The yaw naming a direction: (sin yaw, cos yaw) = (x, z). */
 const yawOf = (v) => r6(Math.atan2(v.x, v.z))
-const seg = (p, q, y0 = 0) => ({ x1: r6(p.x), z1: r6(p.z), x2: r6(q.x), z2: r6(q.z), y0, y1: WALL_H })
+const seg = (p, q, y0 = 0, y1 = WALL_H) => ({ x1: r6(p.x), z1: r6(p.z), x2: r6(q.x), z2: r6(q.z), y0, y1: r6(y1) })
 const rectOf = (corners) => {
   const xs = corners.map((c) => c.x), zs = corners.map((c) => c.z)
   const x = Math.min(...xs), z = Math.min(...zs)
@@ -219,22 +235,41 @@ const rectOf = (corners) => {
 }
 
 /**
+ * How high a room's ceiling is. Halls and the zero-area era markers keep the
+ * corridor's height; a solo room's rises with the shorter of its sides, so the
+ * 8 m squares barely move and the 20 m one gains two metres.
+ */
+export function ceilingHeight(kind, rect) {
+  if (kind === 'lobby') return LOBBY_H
+  if (kind !== 'solo') return WALL_H
+  const side = Math.min(rect.w, rect.d)
+  return r6(Math.min(ROOM_H_MAX, ROOM_H_MIN + Math.max(0, side - ROOM_MID) * ROOM_H_SLOPE))
+}
+
+/**
+ * A sign hung just under a ceiling `h` high: the rule that used to be the bare
+ * number 3.5. It reproduces every previously hand-tuned height exactly at
+ * WALL_H, which is what makes it safe to apply to rooms that have grown.
+ */
+const underCeiling = (h, signH) => r6(h - 0.1 - signH / 2)
+
+/**
  * A straight wall from p toward q, with door gaps given as distances from p.
  * Each gap becomes a lintel from `gap.top` to the ceiling, so the renderer draws
  * it and the collider, which ignores anything with y0 > 0, lets people through.
  */
-function wallBetween(p, q, gaps = []) {
+function wallBetween(p, q, gaps = [], h = WALL_H) {
   const len = Math.hypot(q.x - p.x, q.z - p.z)
   const dir = { x: (q.x - p.x) / len, z: (q.z - p.z) / len }
   const at = (a) => add(p, dir, a)
   const out = []
   let cursor = 0
   for (const g of [...gaps].sort((a, b) => a.from - b.from)) {
-    if (g.from > cursor) out.push(seg(at(cursor), at(g.from)))
-    out.push(seg(at(g.from), at(g.to), g.top))
+    if (g.from > cursor) out.push(seg(at(cursor), at(g.from), 0, h))
+    out.push(seg(at(g.from), at(g.to), g.top, h))
     cursor = g.to
   }
-  if (len > cursor) out.push(seg(at(cursor), at(len)))
+  if (len > cursor) out.push(seg(at(cursor), at(len), 0, h))
   return out
 }
 
@@ -704,7 +739,7 @@ function nudgePortals(deficits, portals, legs) {
  * back into the lobby says you have come full circle. Nothing here depends on
  * input order — see byDate — so the same archive gives the same building.
  */
-export function buildGallery({ tokens, collaborations = {}, volumes = new Map(), sizes = new Map(), previews = new Map(), generatedAt }) {
+export function buildGallery({ tokens, collaborations = {}, volumes = new Map(), sizes = new Map(), previews = new Map(), tints = new Map(), generatedAt }) {
   const visible = tokens.filter((t) => !HIDDEN_FLAGS.has(t.flag))
   const { solo, halls, artistCount } = assignRooms(visible, collaborations, { volumes })
   const shared = [...halls.values()].flat().sort(byDate)
@@ -822,13 +857,16 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
     rect: { x: -HX, z: 0, w: LOBBY, d: LOBBY }, entry: { x: 0, z: LOBBY / 2, yaw: 0 },
   })
   walls.push(
-    ...wallBetween({ x: -HX, z: 0 }, { x: -HX, z: LOBBY }),
-    ...wallBetween({ x: -HX, z: 0 }, { x: HX, z: 0 }),
-    ...wallBetween({ x: -HX, z: LOBBY }, { x: HX, z: LOBBY }, opening(HX)),
-    ...wallBetween({ x: HX, z: 0 }, { x: HX, z: LOBBY }, opening(LOBBY / 2)),
+    ...wallBetween({ x: -HX, z: 0 }, { x: -HX, z: LOBBY }, [], LOBBY_H),
+    ...wallBetween({ x: -HX, z: 0 }, { x: HX, z: 0 }, [], LOBBY_H),
+    ...wallBetween({ x: -HX, z: LOBBY }, { x: HX, z: LOBBY }, opening(HX), LOBBY_H),
+    ...wallBetween({ x: HX, z: 0 }, { x: HX, z: LOBBY }, opening(LOBBY / 2), LOBBY_H),
   )
-  sign('title', 'fxhash', { x: 0, z: LOBBY }, { x: 0, z: -1 }, 3.65, 3, 0.5)
-  sign('title', `${visible.length} archived works · ${artistCount} artists · ${span[0]}–${span[1]}`, { x: 0, z: LOBBY }, { x: 0, z: -1 }, 3.25, 3, 0.25)
+  // The title rides the lobby's ceiling; the count hangs off the title, 0.4 below
+  // it, which is exactly where both sat when the lobby was WALL_H tall.
+  const titleY = underCeiling(LOBBY_H, 0.5)
+  sign('title', 'fxhash archive', { x: 0, z: LOBBY }, { x: 0, z: -1 }, titleY, 3, 0.5)
+  sign('title', `${visible.length} archived works · ${artistCount} artists · ${span[0]}–${span[1]}`, { x: 0, z: LOBBY }, { x: 0, z: -1 }, r6(titleY - 0.4), 3, 0.25)
   sign('title', `You have walked the whole of fxhash, ${span[0]}–${span[1]} — the lobby is ahead`, { x: HX, z: LOBBY / 2 }, { x: 1, z: 0 }, 3.5, 3.6, 0.4)
   // The lobby face of the same lintel, read on the way out into leg D. Leg D is
   // the last leg of the loop, so walking out through here is walking the whole
@@ -941,17 +979,26 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
         hang(a.projects[k++], a.id, add(at(local.u, local.v), normal, WALL_OFFSET), normal)
       }
     }
+    const rect = rectOf([at(0, 0), at(s, 0), at(0, s), at(s, s)])
+    const roomH = ceilingHeight('solo', rect)
     rooms.push({
-      id: a.id, kind: 'solo', title: a.name, rect: rectOf([at(0, 0), at(s, 0), at(0, s), at(s, s)]),
+      id: a.id, kind: 'solo', title: a.name, rect,
       entry: { x: r6(at(s / 2, 1.5).x), z: r6(at(s / 2, 1.5).z), yaw: yawOf(V) },
     })
     walls.push(
-      ...wallBetween(at(0, 0), at(0, s)),
-      ...wallBetween(at(0, s), at(s, s)),
-      ...wallBetween(at(s, 0), at(s, s)),
+      ...wallBetween(at(0, 0), at(0, s), [], roomH),
+      ...wallBetween(at(0, s), at(s, s), [], roomH),
+      ...wallBetween(at(s, 0), at(s, s), [], roomH),
     )
-    sign('room', a.name, at(s / 2, 0), neg(V), 3.5, 4.8, 0.8)   // above the door, seen from the corridor
-    sign('room', a.name, at(s / 2, s), neg(V), 3.5, 4.8, 0.8)   // on the wall facing the door, inside
+    // The fourth side is the corridor's own wall, and it stops at WALL_H. A room
+    // taller than the corridor would therefore stand open above its own doorway,
+    // looking out over the top of that wall into the void above the corridor
+    // ceiling — so the band between the two heights is filled in here.
+    if (roomH > WALL_H) walls.push(seg(at(0, 0), at(s, 0), WALL_H, roomH))
+    // Read from the corridor, whose ceiling has not moved: stays where it was.
+    sign('room', a.name, at(s / 2, 0), neg(V), 3.5, 4.8, 0.8)
+    // Read from inside, so it rides this room's ceiling, however high that is.
+    sign('room', a.name, at(s / 2, s), neg(V), underCeiling(roomH, 0.8), 4.8, 0.8)
   }
 
   // Plaques: under the lower-right corner, as a visitor facing the painting sees
@@ -967,6 +1014,15 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
       z: r6(p.z + rz * shift - Math.cos(p.yaw) * pull),
       yaw: p.yaw, w: 0.5, h: 0.12,
     })
+  }
+
+  // Ceiling and colour, applied in one pass so that no rooms.push above can
+  // forget either. A room with no tint is a room whose art has no agreed colour
+  // (or no colour at all) and simply keeps the building's white.
+  for (const room of rooms) {
+    room.h = ceilingHeight(room.kind, room.rect)
+    const tint = tints.get(room.id)
+    if (tint) room.tint = tint
   }
 
   paintings.sort((a, b) => a.project - b.project)

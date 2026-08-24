@@ -11,6 +11,21 @@ export interface TileUv { u0: number; u1: number; v0: number; v1: number }
 const FULL: TileUv = { u0: 0, u1: 1, v0: 0, v1: 1 }
 
 type Vec = [number, number, number]
+/** A vertex colour, linear, as three.js consumes a `color` attribute. */
+export type Rgb = [number, number, number]
+/**
+ * What colour a single face of a wall should be, asked per face so that a wall
+ * between two rooms can be one colour on the room side and another on the
+ * corridor side — they are different faces of the same box. Null means "leave
+ * it the material's own colour".
+ */
+export type FaceColor = (centre: Vec, normal: Vec) => Rgb | null
+/**
+ * A FaceColor that always paints. The walls are described entirely by their
+ * attribute — untinted faces included — so their painter never declines, and
+ * saying so spares every caller a null check it would never take.
+ */
+export type SolidFaceColor = (centre: Vec, normal: Vec) => Rgb
 
 /**
  * Where a tile's image sits in its atlas, as texture coordinates. Textures load
@@ -45,12 +60,15 @@ export class MeshArrays {
   private positions: number[] = []
   private normals: number[] = []
   private uvs: number[] = []
+  private colors: number[] = []
+  /** Whether any quad has asked for a colour. Until one does, no attribute is built. */
+  private tinted = false
 
   /**
    * A quad from its centre and half-extent vectors, facing `normal`. Corners wind
    * counter-clockwise as seen from the front, which is what three.js culls by.
    */
-  quad(c: Vec, right: Vec, up: Vec, normal: Vec, uv: TileUv = FULL): void {
+  quad(c: Vec, right: Vec, up: Vec, normal: Vec, uv: TileUv = FULL, color: Rgb | null = null): void {
     const at = (sx: number, sy: number): Vec => [
       c[0] + right[0] * sx + up[0] * sy,
       c[1] + right[1] * sx + up[1] * sy,
@@ -66,16 +84,37 @@ export class MeshArrays {
       this.normals.push(...normal)
       this.uvs.push(u, w)
     }
+    if (color) {
+      // The first coloured quad may arrive after plain ones. Backfill those with
+      // white so the attribute lines up with the positions vertex for vertex.
+      if (!this.tinted) {
+        this.tinted = true
+        while (this.colors.length < this.positions.length - 18) this.colors.push(1)
+      }
+      for (let i = 0; i < 6; i++) this.colors.push(color[0], color[1], color[2])
+    } else if (this.tinted) {
+      for (let i = 0; i < 6; i++) this.colors.push(1, 1, 1)
+    }
   }
 
-  /** An axis-aligned box from its centre and half-extents. */
-  box(cx: number, cy: number, cz: number, hx: number, hy: number, hz: number): void {
-    this.quad([cx + hx, cy, cz], [0, 0, -hz], [0, hy, 0], [1, 0, 0])
-    this.quad([cx - hx, cy, cz], [0, 0, hz], [0, hy, 0], [-1, 0, 0])
-    this.quad([cx, cy, cz + hz], [hx, 0, 0], [0, hy, 0], [0, 0, 1])
-    this.quad([cx, cy, cz - hz], [-hx, 0, 0], [0, hy, 0], [0, 0, -1])
-    this.quad([cx, cy + hy, cz], [hx, 0, 0], [0, 0, -hz], [0, 1, 0])
-    this.quad([cx, cy - hy, cz], [hx, 0, 0], [0, 0, hz], [0, -1, 0])
+  /**
+   * An axis-aligned box from its centre and half-extents. `colorOf` is asked once
+   * per face, with that face's own centre and outward normal, so the six sides of
+   * a wall can differ — which is what lets one merged mesh carry a different
+   * colour of paint on each side of the same wall.
+   */
+  box(cx: number, cy: number, cz: number, hx: number, hy: number, hz: number, colorOf?: FaceColor): void {
+    const faces: Array<[Vec, Vec, Vec, Vec]> = [
+      [[cx + hx, cy, cz], [0, 0, -hz], [0, hy, 0], [1, 0, 0]],
+      [[cx - hx, cy, cz], [0, 0, hz], [0, hy, 0], [-1, 0, 0]],
+      [[cx, cy, cz + hz], [hx, 0, 0], [0, hy, 0], [0, 0, 1]],
+      [[cx, cy, cz - hz], [-hx, 0, 0], [0, hy, 0], [0, 0, -1]],
+      [[cx, cy + hy, cz], [hx, 0, 0], [0, 0, -hz], [0, 1, 0]],
+      [[cx, cy - hy, cz], [hx, 0, 0], [0, 0, hz], [0, -1, 0]],
+    ]
+    for (const [c, right, up, normal] of faces) {
+      this.quad(c, right, up, normal, FULL, colorOf ? colorOf(c, normal) : null)
+    }
   }
 
   build(): BufferGeometry {
@@ -83,6 +122,10 @@ export class MeshArrays {
     g.setAttribute('position', new Float32BufferAttribute(this.positions, 3))
     g.setAttribute('normal', new Float32BufferAttribute(this.normals, 3))
     g.setAttribute('uv', new Float32BufferAttribute(this.uvs, 2))
+    if (this.tinted) {
+      while (this.colors.length < this.positions.length) this.colors.push(1)
+      g.setAttribute('color', new Float32BufferAttribute(this.colors, 3))
+    }
     return g
   }
 }
@@ -111,12 +154,13 @@ export function buildFrameGeometry(paintings: Painting[]): BufferGeometry {
  * Every segment as a box WALL_T thick, lengthened by half a thickness at each end
  * so two walls meeting at a corner close it instead of leaving a notch.
  */
-export function buildWallGeometry(walls: Wall[]): BufferGeometry {
+export function buildWallGeometry(walls: Wall[], colorOf?: FaceColor): BufferGeometry {
   const m = new MeshArrays()
   for (const w of walls) {
     m.box(
       (w.x1 + w.x2) / 2, (w.y0 + w.y1) / 2, (w.z1 + w.z2) / 2,
       Math.abs(w.x2 - w.x1) / 2 + WALL_T / 2, (w.y1 - w.y0) / 2, Math.abs(w.z2 - w.z1) / 2 + WALL_T / 2,
+      colorOf,
     )
   }
   return m.build()
@@ -131,11 +175,11 @@ export function buildFloorGeometry(rooms: Room[]): BufferGeometry {
   return m.build()
 }
 
-/** A ceiling at WALL_H facing down, per room. */
+/** A ceiling facing down, per room, at that room's own height. */
 export function buildCeilingGeometry(rooms: Room[]): BufferGeometry {
   const m = new MeshArrays()
-  for (const { rect } of rooms) {
-    m.quad([rect.x + rect.w / 2, WALL_H, rect.z + rect.d / 2], [rect.w / 2, 0, 0], [0, 0, rect.d / 2], [0, -1, 0])
+  for (const { rect, h } of rooms) {
+    m.quad([rect.x + rect.w / 2, h ?? WALL_H, rect.z + rect.d / 2], [rect.w / 2, 0, 0], [0, 0, rect.d / 2], [0, -1, 0])
   }
   return m.build()
 }
@@ -163,18 +207,38 @@ export function buildSignGeometry(signs: Sign[], uvs: TileUv[]): BufferGeometry 
   return m.build()
 }
 
+/** One strip per this many metres of room width, so wide rooms get a rank of them. */
+export const STRIP_SPACING = 6
+/** However wide the room, never more than this many strips. */
+const STRIP_MAX = 4
+
 /**
- * A strip of light along each room's ceiling: a thin white box on the
- * centreline, a metre short of each end, hung just under the ceiling. The
+ * Strips of light along each room's ceiling: thin white boxes running the long
+ * way, a metre short of each end, hung just under that room's own ceiling. The
  * lamps the lighting pretends to have, made visible.
+ *
+ * There used to be exactly one, on the centreline, whatever the room. That is
+ * right for an 8 m corridor and wrong for a 20 m room, which got a single lamp
+ * down the middle of a space wide enough for three and read as flat and empty
+ * because of it. Rooms narrower than STRIP_SPACING × 2 still get their one.
  */
 export function buildLightStripGeometry(rooms: Room[]): BufferGeometry {
   const m = new MeshArrays()
-  for (const { rect } of rooms) {
+  for (const { rect, h } of rooms) {
     const alongZ = rect.d >= rect.w
+    const across = alongZ ? rect.w : rect.d
     const half = (alongZ ? rect.d : rect.w) / 2 - 1
     if (half <= 0) continue
-    m.box(rect.x + rect.w / 2, WALL_H - 0.06, rect.z + rect.d / 2, alongZ ? 0.15 : half, 0.04, alongZ ? half : 0.15)
+    const y = (h ?? WALL_H) - 0.06
+    const n = Math.max(1, Math.min(STRIP_MAX, Math.floor(across / STRIP_SPACING)))
+    for (let i = 0; i < n; i++) {
+      // Evenly spread across the short axis; a single strip lands on the centreline.
+      const off = ((i + 0.5) / n - 0.5) * across
+      m.box(
+        rect.x + rect.w / 2 + (alongZ ? off : 0), y, rect.z + rect.d / 2 + (alongZ ? 0 : off),
+        alongZ ? 0.15 : half, 0.04, alongZ ? half : 0.15,
+      )
+    }
   }
   return m.build()
 }

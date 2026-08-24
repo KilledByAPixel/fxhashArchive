@@ -15,11 +15,13 @@ import {
   AdditiveBlending, Color, DirectionalLight, FogExp2, HemisphereLight, Mesh, MeshBasicMaterial,
   MeshStandardMaterial, Object3D, Scene, Texture,
 } from 'three'
-import type { Gallery, Painting } from './types'
+import type { Gallery, Painting, Room } from './types'
 import {
   atlasFile, buildCeilingGeometry, buildFloorGeometry, buildFrameGeometry, buildLightStripGeometry,
-  buildPaintingGeometry, buildPoolGeometry, buildSignGeometry, buildWallGeometry, type TileUv,
+  buildPaintingGeometry, buildPoolGeometry, buildSignGeometry, buildWallGeometry,
+  type Rgb, type SolidFaceColor, type TileUv,
 } from './geometry'
+import { WALL_T } from './constants'
 import { makePoolTexture, POOL_COLOR, POOL_OPACITY } from './pools'
 
 export interface BuiltScene {
@@ -51,9 +53,102 @@ export const WALL = 0xe8e6e1
  * the room with nothing above it to explain the light. The shine belongs to the
  * mirror, which reflects what is actually standing there; the surface under it
  * is plain dark concrete.
+ *
+ * It went darker still — 0x5f5b56 to 0x2a2724 — and that is not a free number.
+ * The mirror is a fixed-opacity overlay, so halving what lies under it doubles
+ * the reflection's share of what you see: at 0.22 this floor would have become
+ * polished black glass with the paintings swimming in it. OPACITY in mirror.ts
+ * came down to match, and the two have to move together.
  */
-export const FLOOR = 0x5f5b56
+export const FLOOR = 0x2a2724
 const FLOOR_ROUGHNESS = 0.8
+
+/**
+ * How much colour a room takes from the art hung in it, as an HSV saturation at
+ * full strength — the room's own `tint.strength` scales it down from there.
+ *
+ * This is the knob. Set both to 0 and every wall in the building is flat WALL
+ * again, exactly as it was before any of this existed.
+ *
+ * The hue itself is decided in the build (scripts/gallery-tint.mjs) because only
+ * the build has the thumbnails; how hard it is pushed is decided here, because
+ * this is the file you can edit and see the result in the same second.
+ */
+export const TINT_SOLO = 0.10
+/**
+ * The corridor's share, held right back. A hall is a whole era's worth of
+ * unrelated artists averaged together, so its hue means much less than a single
+ * artist's does — and a corridor you walk the length of is the wrong place to
+ * notice paint. It should read as "this stretch is warmer than that one", never
+ * as a colour.
+ */
+export const TINT_HALL = 0.035
+
+/**
+ * How far past a wall face to look when asking which room that face is in. Has
+ * to clear the wall's own half-thickness; beyond that, smaller is safer, since a
+ * long probe from a corner can reach into a room the face does not belong to.
+ */
+const PROBE = WALL_T / 2 + 0.1
+
+const hsvToRgb255 = (h: number, s: number, v: number): [number, number, number] => {
+  const c = v * s
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1))
+  const m = v - c
+  const [r, g, b] =
+    h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] :
+    h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x]
+  return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)]
+}
+
+/**
+ * What colour to paint each face of each wall.
+ *
+ * A face is assigned to a room by standing just off it and asking which room's
+ * floor that point is over — which is what makes a wall between an artist's room
+ * and the corridor come out tinted on the room side and white on the corridor
+ * side, with no bookkeeping: those are two different faces of the same box.
+ *
+ * Every face gets an explicit colour, untinted ones included, so the material's
+ * own colour is white and the walls are entirely described by the attribute.
+ * That is a little more memory than tinting by multiplier, and much easier to
+ * reason about — a wall's colour is the number in the buffer.
+ */
+export function wallPaint(rooms: Room[]): SolidFaceColor {
+  // Era markers are rooms of zero area — a point in the corridor to teleport to —
+  // and can contain nothing, so they are not candidates.
+  const solid = rooms.filter((r) => r.rect.w > 0 && r.rect.d > 0)
+  const asLinear = (hex: number): Rgb => {
+    const c = new Color(hex)
+    return [c.r, c.g, c.b]
+  }
+  const base = asLinear(WALL)
+  // WALL's own HSV value — its brightest channel, whichever that is.
+  const wallValue = Math.max((WALL >> 16) & 0xff, (WALL >> 8) & 0xff, WALL & 0xff) / 255
+  const cache = new Map<string, Rgb>()
+  const paintOf = (room: Room): Rgb => {
+    const hit = cache.get(room.id)
+    if (hit) return hit
+    const scale = room.kind === 'hall' ? TINT_HALL : TINT_SOLO
+    // Keep WALL's own value and add only saturation, so a tinted wall is exactly
+    // as bright as an untinted one — the room gains a colour, not a light level.
+    const [r, g, b] = hsvToRgb255(room.tint!.hue, room.tint!.strength * scale, wallValue)
+    const rgb = asLinear((r << 16) | (g << 8) | b)
+    cache.set(room.id, rgb)
+    return rgb
+  }
+  return (centre, normal) => {
+    // A face pointing straight up or down cannot be probed sideways into a room.
+    // Those are wall tops (hidden by the ceiling) and door-reveal undersides, and
+    // plain white is right for both.
+    if (normal[1] !== 0) return base
+    const px = centre[0] + normal[0] * PROBE
+    const pz = centre[2] + normal[2] * PROBE
+    const room = solid.find((r) =>
+      px >= r.rect.x && px <= r.rect.x + r.rect.w && pz >= r.rect.z && pz <= r.rect.z + r.rect.d)
+    return room?.tint ? paintOf(room) : base
+  }
+}
 
 export function buildScene(
   gallery: Gallery,
@@ -76,7 +171,12 @@ export function buildScene(
   // Physically based where light matters: matte plaster walls, and a floor with
   // just enough polish to carry the room's reflection from the environment map
   // the engine installs (and true reflections when the visitor turns them on).
-  const wallsMesh = add('walls', new Mesh(buildWallGeometry(gallery.walls), new MeshStandardMaterial({ color: WALL, roughness: 0.95, metalness: 0 })))
+  // White material, colour in the attribute: see wallPaint. Every face carries an
+  // explicit colour, so `color` here must be white or it would multiply them all.
+  const wallsMesh = add('walls', new Mesh(
+    buildWallGeometry(gallery.walls, wallPaint(gallery.rooms)),
+    new MeshStandardMaterial({ color: 0xffffff, roughness: 0.95, metalness: 0, vertexColors: true }),
+  ))
   add('floors', new Mesh(buildFloorGeometry(gallery.rooms), new MeshStandardMaterial({ color: FLOOR, roughness: FLOOR_ROUGHNESS, metalness: 0 })))
   // The lamps: white strips along every ceiling, unlit because they are the light.
   add('lights', new Mesh(buildLightStripGeometry(gallery.rooms), new MeshBasicMaterial({ color: 0xffffff, toneMapped: false })))
@@ -133,7 +233,10 @@ export function buildScene(
   // not flat. Kept modest: off-white walls under strong lights clip to pure
   // white and the room loses its edges. Directional lights aim at the origin,
   // so only their direction matters.
-  const hemi = new HemisphereLight(0xffffff, 0x9a9a9a, 1.0)
+  // The ground half of this is a stand-in for light bouncing off the floor, so it
+  // has to follow the floor. It was 0x9a9a9a against light concrete; against the
+  // dark stone FLOOR is now, that much bounce is light arriving from nowhere.
+  const hemi = new HemisphereLight(0xffffff, 0x6b6660, 1.0)
   // Only the direction of these two matters — a directional light has no place,
   // and this one points steeply down, the way light comes off a ceiling.
   //

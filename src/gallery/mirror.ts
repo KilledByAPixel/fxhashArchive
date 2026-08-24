@@ -24,8 +24,16 @@ import type { Room } from './types'
  */
 export const MIRROR_Y = 0.004
 
-/** How much of the room comes back off the floor. Polished concrete, not a mirror. */
-const OPACITY = 0.22
+/**
+ * How much of the room comes back off the floor. Polished concrete, not a mirror.
+ *
+ * Tied to FLOOR in scene.ts, and the two must move together: this is a fixed
+ * alpha over the concrete, so darkening the concrete raises the reflection's
+ * share of the pixel without touching this number. When the floor went from
+ * 0x5f5b56 to 0x2a2724 the reflection roughly doubled its hold on what you see,
+ * which is black-glass territory; 0.12 puts it back to the sheen it was.
+ */
+const OPACITY = 0.12
 /** Reflection lost per metre of distance, so the far end of a corridor keeps its haze. */
 const FADE = 0.035
 /** The reflection is the room's own light, slightly cooled and dimmed by the floor. */

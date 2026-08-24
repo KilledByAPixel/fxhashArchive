@@ -13,6 +13,19 @@ export interface Room {
   rect: FloorRect
   /** Just inside the door, facing in — where the Rooms menu lands you. */
   entry: Pose
+  /**
+   * Ceiling height in metres. The corridor keeps WALL_H; rooms rise with their
+   * floor area. Absent on data built before per-room heights, which is why every
+   * reader falls back to WALL_H rather than trusting it.
+   */
+  h?: number
+  /**
+   * The colour of the art hung in this room — a hue in degrees and how strongly
+   * the room agrees on it, from scripts/gallery-tint.mjs. Absent when the art
+   * has no agreed colour, or none at all, in which case the room stays white.
+   * How far this is actually pushed onto the plaster is scene.ts's call.
+   */
+  tint?: { hue: number; strength: number }
 }
 
 /** A solid wall segment. Lintels over doors have y0 > 0 and block nobody. */

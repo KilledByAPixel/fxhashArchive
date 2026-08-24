@@ -1,7 +1,7 @@
 import { test, expect } from 'vitest'
 import {
   tileUv, atlasFile, buildPaintingGeometry, buildFrameGeometry, buildWallGeometry, buildFloorGeometry, buildCeilingGeometry,
-  buildSignGeometry, buildPoolGeometry, buildLightStripGeometry,
+  buildSignGeometry, buildPoolGeometry, buildLightStripGeometry, type FaceColor,
 } from './geometry'
 import { POOL_W, POOL_H } from './pools'
 import type { AtlasMeta, Painting, Room, Sign, Wall } from './types'
@@ -175,4 +175,61 @@ test('a light strip runs along each room\'s ceiling, a metre short of each end',
   expectBounds(g, 2, 1, 29)                                   // along the long axis, 1 m short of each end
   expectBounds(g, 0, -0.15, 0.15)                             // 0.3 m wide, on the centreline
   expectBounds(g, 1, WALL_H - 0.1, WALL_H - 0.02)             // hung just under the ceiling
+})
+
+test('a ceiling sits at its own room\'s height, and falls back to WALL_H without one', () => {
+  const rect = { x: -10, z: 0, w: 20, d: 20 }
+  const tall: Room = { id: 'a', kind: 'solo', title: 'A', rect, entry: { x: 0, z: 1, yaw: 0 }, h: 5.94 }
+  expectBounds(buildCeilingGeometry([tall]), 1, 5.94, 5.94)
+  // Data built before per-room heights has no `h`; the building must still close.
+  const legacy: Room = { id: 'b', kind: 'solo', title: 'B', rect, entry: { x: 0, z: 1, yaw: 0 } }
+  expectBounds(buildCeilingGeometry([legacy]), 1, WALL_H, WALL_H)
+})
+
+test('a wide room gets a rank of light strips; a corridor keeps its single one', () => {
+  // 20 m across at STRIP_SPACING 6 is three strips, evenly spread over the short
+  // axis — the 20 x 20 room used to get one lamp down the middle and read flat.
+  const wide: Room = { id: 'a', kind: 'solo', title: 'A', rect: { x: -10, z: 0, w: 20, d: 20 }, entry: { x: 0, z: 1, yaw: 0 }, h: 6 }
+  const g = buildLightStripGeometry([wide])
+  expect(g.getAttribute('position').count).toBe(3 * 36)
+  expectBounds(g, 0, -20 / 3 - 0.15, 20 / 3 + 0.15)
+  expectBounds(g, 1, 6 - 0.1, 6 - 0.02)          // under this room's ceiling, not WALL_H
+  // 8 m of corridor is still one strip on the centreline: unchanged by any of this.
+  const hall: Room = { id: 'h', kind: 'hall', title: 'H', rect: { x: -4, z: 0, w: 8, d: 30 }, entry: { x: 0, z: 1, yaw: 0 }, h: WALL_H }
+  const one = buildLightStripGeometry([hall])
+  expect(one.getAttribute('position').count).toBe(36)
+  expectBounds(one, 0, -0.15, 0.15)
+})
+
+test('walls carry no colour attribute unless something asks for one', () => {
+  const w: Wall = { x1: -4, z1: 0, x2: -4, z2: 10, y0: 0, y1: WALL_H }
+  expect(buildWallGeometry([w]).getAttribute('color')).toBeUndefined()
+})
+
+test('each face of a wall takes its own colour, so one wall is two colours', () => {
+  // This is what lets an artist's room be tinted on the inside and leave the
+  // corridor white: the two sides are different faces of the same box, and the
+  // whole building stays one mesh and one draw call.
+  const w: Wall = { x1: -4, z1: 0, x2: -4, z2: 10, y0: 0, y1: WALL_H }
+  const colorOf: FaceColor = (_c, n) => (n[0] > 0 ? [1, 0, 0] : [0, 0, 1])
+  const g = buildWallGeometry([w], colorOf)
+  const color = g.getAttribute('color')
+  expect(color.count).toBe(g.getAttribute('position').count)
+  // Face order is +x, -x, +z, -z, +y, -y — the first six vertices are the +x face.
+  const at = (i: number) => [color.array[i * 3], color.array[i * 3 + 1], color.array[i * 3 + 2]]
+  expect(at(0)).toEqual([1, 0, 0])
+  expect(at(6)).toEqual([0, 0, 1])
+})
+
+test('a colour arriving late backfills the quads before it rather than shifting them', () => {
+  // Two walls, only the second tinted: the attribute still has to line up with
+  // the positions vertex for vertex, or every colour lands on the wrong wall.
+  const a: Wall = { x1: -4, z1: 0, x2: -4, z2: 10, y0: 0, y1: WALL_H }
+  const b: Wall = { x1: 4, z1: 0, x2: 4, z2: 10, y0: 0, y1: WALL_H }
+  const colorOf: FaceColor = (c) => (c[0] > 0 ? [0, 1, 0] : null)
+  const g = buildWallGeometry([a, b], colorOf)
+  const color = g.getAttribute('color')
+  expect(color.count).toBe(g.getAttribute('position').count)
+  expect(Array.from(color.array.slice(0, 3))).toEqual([1, 1, 1])       // the untinted wall
+  expect(Array.from(color.array.slice(36 * 3, 36 * 3 + 3))).toEqual([0, 1, 0])   // the tinted one
 })

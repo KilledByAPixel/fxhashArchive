@@ -1,7 +1,7 @@
 import { test, expect } from 'vitest'
-import { AdditiveBlending, DirectionalLight, HemisphereLight, Mesh, MeshBasicMaterial, MeshLambertMaterial, MeshStandardMaterial, Texture } from 'three'
-import { buildScene, hidden, FLOOR, WALL } from './scene'
-import type { Gallery, Painting } from './types'
+import { AdditiveBlending, Color, DirectionalLight, HemisphereLight, Mesh, MeshBasicMaterial, MeshLambertMaterial, MeshStandardMaterial, Texture } from 'three'
+import { buildScene, hidden, wallPaint, FLOOR, WALL, TINT_SOLO, TINT_HALL } from './scene'
+import type { Gallery, Painting, Room } from './types'
 
 const painting = (tile: number): Painting => ({
   project: tile, slug: 'p', name: 'P', artist: 'A', year: 2022, room: 'h', x: -3.98, z: 20, yaw: Math.PI / 2, tile, w: 1.2, h: 1.2,
@@ -146,4 +146,71 @@ test('hidden() takes an object out of one pass and always puts it back', () => {
   hidden(m, () => {})
   expect(m.visible).toBe(false)          // restores what it was, not a blanket true
   expect(hidden(null, () => 'no mesh, no trouble')).toBe('no mesh, no trouble')
+})
+
+const roomAt = (over: Partial<Room> & Pick<Room, 'id' | 'kind' | 'rect'>): Room =>
+  ({ title: over.id, entry: { x: 0, z: 0, yaw: 0 }, ...over })
+const linearOf = (hex: number) => { const c = new Color(hex); return [c.r, c.g, c.b] }
+/** How far a painted face has strayed from plain gallery white. */
+const fromWhite = (c: readonly number[]) => {
+  const base = linearOf(WALL)
+  return Math.abs(c[0] - base[0]) + Math.abs(c[1] - base[1]) + Math.abs(c[2] - base[2])
+}
+// A corridor with an artist's room hung off its east side. The wall between them
+// stands on x = 4: its +x face looks into the room, its -x face into the corridor.
+const HALL = roomAt({ id: 'h', kind: 'hall', rect: { x: -4, z: 0, w: 8, d: 30 } })
+const SOLO = roomAt({ id: 's', kind: 'solo', rect: { x: 4, z: 10, w: 8, d: 8 }, tint: { hue: 102, strength: 1 } })
+
+test('a wall is painted face by face, so a tinted room leaves the corridor white', () => {
+  const paint = wallPaint([HALL, SOLO])
+  const inside = paint([4.15, 2, 14], [1, 0, 0])
+  const corridor = paint([3.85, 2, 14], [-1, 0, 0])
+  expect(corridor).toEqual(linearOf(WALL))
+  expect(fromWhite(inside)).toBeGreaterThan(0)
+  // Hue 102 is green, so green is the channel left at full value.
+  expect(inside[1]).toBeGreaterThan(inside[0])
+  expect(inside[1]).toBeGreaterThan(inside[2])
+})
+
+test('a tinted wall is the same brightness as a white one, only more coloured', () => {
+  // The room gains a colour, not a light level: the tint keeps WALL's own value,
+  // so a tinted room must not read as darker or brighter than an untinted one.
+  const inside = wallPaint([HALL, SOLO])([4.15, 2, 14], [1, 0, 0])
+  expect(Math.max(...inside)).toBeCloseTo(Math.max(...linearOf(WALL)), 5)
+})
+
+test('the corridor takes only a fraction of the colour a room does', () => {
+  const tint = { hue: 234, strength: 1 }
+  const paint = wallPaint([{ ...HALL, tint }, { ...SOLO, tint }])
+  const hallFace = paint([3.85, 2, 14], [-1, 0, 0])
+  const soloFace = paint([4.15, 2, 14], [1, 0, 0])
+  expect(fromWhite(hallFace)).toBeGreaterThan(0)
+  expect(fromWhite(hallFace)).toBeLessThan(fromWhite(soloFace))
+  expect(TINT_HALL).toBeLessThan(TINT_SOLO)
+})
+
+test('faces with nothing to face stay white', () => {
+  const paint = wallPaint([HALL, SOLO])
+  // Pointing up or down: a wall top under a ceiling, or a door reveal's underside.
+  expect(paint([4, 4, 14], [0, 1, 0])).toEqual(linearOf(WALL))
+  expect(paint([4, 3, 14], [0, -1, 0])).toEqual(linearOf(WALL))
+  // Pointing out of the building entirely.
+  expect(paint([12.15, 2, 14], [1, 0, 0])).toEqual(linearOf(WALL))
+})
+
+test('zero-area era markers are never mistaken for a room to take colour from', () => {
+  const marker = roomAt({ id: 'e', kind: 'era', rect: { x: 4.4, z: 14, w: 0, d: 0 }, tint: { hue: 0, strength: 1 } })
+  const paint = wallPaint([HALL, marker])
+  expect(paint([4.15, 2, 14], [1, 0, 0])).toEqual(linearOf(WALL))
+})
+
+test('the walls mesh reads its colour from the attribute, not the material', () => {
+  const built = buildScene(gallery, [null, null], null)
+  const m = built.wallsMesh.material as MeshStandardMaterial
+  expect(m.vertexColors).toBe(true)
+  // White, or it would multiply every colour the attribute carries.
+  expect(m.color.getHex()).toBe(0xffffff)
+  expect(built.wallsMesh.geometry.getAttribute('color').count)
+    .toBe(built.wallsMesh.geometry.getAttribute('position').count)
+  built.dispose()
 })

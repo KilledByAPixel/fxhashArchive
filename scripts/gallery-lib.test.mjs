@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs'
 import {
   ERAS, eraOf, isCollab, creditOf, assignRooms, SOLO_MIN, wallSegments, freeRuns, hangOnRun, GAP, WALL_H, DOOR_H, SPACING, CORNER, ROOM_MIN, ROOM_MID, WALL_T,
   buildGallery, tileRect, ATLAS, ATLAS_SMALL, TILES_PER_ATLAS, WALL_OFFSET, SIGN_OFFSET, PAINTING, EYE_Y, HIDDEN_FLAGS,
+  ceilingHeight, LOBBY, LOBBY_H, ROOM_H_MIN, ROOM_H_MAX, ROOM_H_SLOPE,
 } from './gallery-lib.mjs'
 import { readArchiveInputs } from './gallery-inputs.mjs'
 
@@ -266,6 +267,15 @@ function checkInvariants(g, expectedIds) {
     for (const s of solid) {
       const sameLine = (h.x1 === h.x2 && s.x1 === s.x2 && s.x1 === h.x1) || (h.z1 === h.z2 && s.z1 === s.z2 && s.z1 === h.z1)
       if (!sameLine) continue
+      // Same line is not enough — they must also share height to be in each
+      // other's way. A raised wall used to mean one thing, a lintel over a
+      // doorway, and those always overlapped a solid wall's 0–WALL_H band, so
+      // ignoring y was safe. It is not any more: a room taller than the corridor
+      // carries a band of wall from WALL_H up to its own ceiling, sitting
+      // directly on top of the corridor wall along its whole door side. That
+      // overlaps the line by design and blocks no doorway, because it starts
+      // where the wall below it stops.
+      if (Math.min(h.y1, s.y1) - Math.max(h.y0, s.y0) <= 1e-6) continue
       const [a1, a2] = h.x1 === h.x2 ? [h.z1, h.z2] : [h.x1, h.x2]
       const [b1, b2] = h.x1 === h.x2 ? [s.z1, s.z2] : [s.x1, s.x2]
       expect(Math.min(a2, b2) - Math.max(a1, b1)).toBeLessThanOrEqual(1e-6)
@@ -728,4 +738,68 @@ test('the wall text is also handed to the client, line for line', () => {
     expect(g.signs.some((s) => s.kind === 'title' && s.text === p.heading)).toBe(true)
     expect(p.lines.length).toBeGreaterThanOrEqual(3)
   }
+})
+
+const T = '2026-08-23T00:00:00.000Z'
+
+test('ceilings rise with a room\'s floor; the corridor keeps its own', () => {
+  // The corridor is deliberately left alone: it is 8 m wide, better low, and
+  // every era sign in the building is hung against WALL_H.
+  expect(ceilingHeight('hall', { x: 0, z: 0, w: 8, d: 100 })).toBe(WALL_H)
+  expect(ceilingHeight('era', { x: 0, z: 0, w: 0, d: 0 })).toBe(WALL_H)
+  expect(ceilingHeight('lobby', { x: 0, z: 0, w: LOBBY, d: LOBBY })).toBe(LOBBY_H)
+  // Rooms at or under the minimum size sit at the floor of the range.
+  expect(ceilingHeight('solo', { x: 0, z: 0, w: 6, d: 6 })).toBe(ROOM_H_MIN)
+  expect(ceilingHeight('solo', { x: 0, z: 0, w: ROOM_MID, d: ROOM_MID })).toBe(ROOM_H_MIN)
+  // The 20 m room, which is the whole reason for this.
+  expect(ceilingHeight('solo', { x: 0, z: 0, w: 20, d: 20 })).toBeCloseTo(ROOM_H_MIN + 12 * ROOM_H_SLOPE, 6)
+  expect(ceilingHeight('solo', { x: 0, z: 0, w: 500, d: 500 })).toBe(ROOM_H_MAX)
+  // The shorter side decides, so a long thin room is not treated as a large one.
+  expect(ceilingHeight('solo', { x: 0, z: 0, w: ROOM_MID, d: 40 })).toBe(ROOM_H_MIN)
+})
+
+test('every room carries its height, and a tall room is closed above its doorway', () => {
+  const g = buildGallery({ tokens: fixture(), collaborations, generatedAt: T })
+  for (const r of g.rooms) expect(r.h).toBe(ceilingHeight(r.kind, r.rect))
+  // The fourth side of a room is the corridor's wall and stops at WALL_H, so a
+  // taller room needs the band above it filled or it stands open over its own
+  // door, looking across the top of that wall. Exactly one header per tall room.
+  const tall = g.rooms.filter((r) => r.kind === 'solo' && r.h > WALL_H)
+  expect(tall.length).toBeGreaterThan(0)
+  expect(g.walls.filter((w) => w.y0 === WALL_H).length).toBe(tall.length)
+  for (const r of tall) expect(g.walls.some((w) => w.y0 === WALL_H && w.y1 === r.h)).toBe(true)
+})
+
+test('a room takes the colour it is handed, and stays white without one', () => {
+  const tokens = fixture()
+  const plain = buildGallery({ tokens, collaborations, generatedAt: T })
+  expect(plain.rooms.some((r) => r.tint)).toBe(false)
+  const id = plain.rooms.find((r) => r.kind === 'solo').id
+  const tint = { hue: 102.2, strength: 0.613 }
+  const g = buildGallery({ tokens, collaborations, generatedAt: T, tints: new Map([[id, tint]]) })
+  expect(g.rooms.find((r) => r.id === id).tint).toEqual(tint)
+  expect(g.rooms.filter((r) => r.tint).length).toBe(1)
+})
+
+test('the lobby names the archive, riding the lobby\'s own ceiling', () => {
+  const g = buildGallery({ tokens: fixture(), collaborations, generatedAt: T })
+  const title = g.signs.find((s) => s.text === 'fxhash archive')
+  expect(title).toBeTruthy()
+  expect(title.y + title.h / 2).toBeCloseTo(LOBBY_H - 0.1, 6)
+  // The count hangs off the title, not off the ceiling, so the two stay a pair.
+  const count = g.signs.find((s) => /archived works/.test(s.text))
+  expect(title.y - count.y).toBeCloseTo(0.4, 6)
+})
+
+test('a room\'s name hangs under the corridor\'s ceiling outside and its own inside', () => {
+  const g = buildGallery({ tokens: fixture(), collaborations, generatedAt: T })
+  const room = g.rooms.find((r) => r.kind === 'solo')
+  const both = g.signs.filter((s) => s.kind === 'room' && s.text === room.title)
+  expect(both.length).toBe(2)
+  const [outside, inside] = both.map((s) => s.y).sort((a, b) => a - b)
+  // Read from the corridor, whose ceiling has not moved: unchanged at 3.5.
+  expect(outside).toBe(3.5)
+  // Read from inside, so it follows this room up.
+  expect(inside).toBeCloseTo(room.h - 0.1 - 0.4, 6)
+  expect(inside).toBeGreaterThan(outside)
 })
