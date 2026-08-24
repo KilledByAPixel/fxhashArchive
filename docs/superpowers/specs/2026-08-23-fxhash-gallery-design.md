@@ -333,10 +333,17 @@ until the scene's first frame.
 ### Scene
 
 - Walls: one box per `Wall` segment (length × (y1 − y0) × WALL_T), merged into one
-  geometry. Floor and ceiling: one plane each per room, merged. `MeshLambertMaterial`,
-  dark neutral — walls around `#2a2a2a`, floor and ceiling `#1a1a1a`, the hemisphere
-  light telling them apart — so the pictures are the light in the room, as on the
-  rest of the site.
+  geometry. Floor and ceiling: one plane each per room, merged. Physically based
+  where light matters: walls `MeshStandardMaterial` `#e8e6e1`, roughness 0.95;
+  floor `#8f8880`, roughness 0.35 — polished concrete that carries the room's
+  reflection from the environment map; ceiling an unlit flat `#d9d9d9` (a face
+  that points down gets nothing from lights above it). Walls and floor receive
+  shadows; walls and frames cast them.
+- Lamps: a white unlit strip along every ceiling, a metre short of each end —
+  the light's visible source.
+- Environment: three's `RoomEnvironment` through a `PMREMGenerator`, intensity
+  0.5, made once by the engine: what the floor reflects and what fills the
+  walls' shading between the lights.
 - Paintings: one quad per painting, `w × h` metres, with UVs into the picture
   inside its atlas tile, merged into one mesh per atlas — two draw calls for all
   420. Frames and plaques follow the same `w × h`. `MeshBasicMaterial` (unlit) with the
@@ -344,12 +351,21 @@ until the scene's first frame.
   thin dark box 0.06 wider than the painting each side, all frames merged.
 - Signs and plaques: one runtime canvas atlas (2048²) drawn at load from the
   `signs` list, then one merged quad mesh. System font, light grey on transparent.
-- Lights: a warm `HemisphereLight` (sky `#fff4e6`, ground `#3a3a3a`, 1.6), a
-  warm key `DirectionalLight` (`#fff1dc`, 1.2) angled down the spine, and a cool
-  fill (`#cfe0ff`, 0.4) from the other side; `FogExp2` in the background colour
-  (`#151515`, density 0.018) for depth. Walls `#7a746c`, floors `#3a3634`,
-  ceilings `#2b2b2b` — the first build's `#2a2a2a` walls under a near-black
-  ground light rendered as black on every monitor.
+- Lights: a white `HemisphereLight` (sky `#ffffff`, ground `#9a9a9a`, 1.0), a
+  warm key `DirectionalLight` (`#fff1dc`, 0.6) angled down the spine, and a cool
+  fill (`#cfe0ff`, 0.3) from the other side; `FogExp2` in the background colour
+  (`#5c5a57`, density 0.012), a haze rather than a dark. The key casts the
+  shadows: PCF-soft, a 2048² map over a 40 m orthographic box the engine keeps
+  centred on the visitor each frame, so texels are 2 cm rather than the 12 cm
+  one map over the whole museum would give. Renderer tone mapping is ACES
+  filmic; every material that shows art has `toneMapped: false`.
+- Quality, chosen by device (`chooseQuality`): `low` — the plain renderer, no
+  shadows, no post-processing — for touch devices and GPUs whose max texture is
+  under 4096; `high` — shadows, then an `EffectComposer` of render → GTAO
+  (ambient occlusion) → SMAA → output; `ultra` — `high` with the occlusion
+  swapped for `SSRPass` screen-space reflections of the paintings, frames,
+  walls and lamps on the floor (opacity 0.4, 6 m), which costs real frame time
+  and is a switch in the HUD that only desktop visitors see.
 - Spot pools: the lamplight a museum throws on the wall around each picture. Not
   a light per painting (four hundred lights is the shader melting) but one radial
   falloff texture, computed once, on an additive quad 2.4 × 3 m behind every
@@ -486,7 +502,8 @@ frame handoff both ways and stepping an edition with the keys; the same on a pho
 
 - Site size: about 6–9 MB against the 66 MiB of GitHub Pages headroom — the script
   reports the real figure and it goes in the commit message.
-- JS: three.js is its own chunk, ~150 KB gzipped, loaded only on `/gallery`.
+- JS: three.js and the post-processing passes are their own chunk, ~195 KB
+  gzipped (675 KB raw), loaded only on `/gallery`.
 - Runtime: under ten draw calls, a few thousand triangles; target 60 fps on
   integrated graphics, scene built within 200 ms of the data arriving.
 - GPU memory: the two large atlases are ~170 MB with mipmaps; the small pair is
