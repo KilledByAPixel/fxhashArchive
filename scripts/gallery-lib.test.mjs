@@ -714,3 +714,18 @@ test('the return lintel names the direction of time on both faces', () => {
   // and it names the end you would be walking into
   expect(leaving.text).toContain(String(last))
 })
+
+// The lobby's wall text is data as well as geometry, so the HUD's About panel and
+// the walls themselves say the same thing and cannot drift apart.
+
+test('the wall text is also handed to the client, line for line', () => {
+  const g = loop()
+  expect(g.about.map((p) => p.heading)).toEqual(['About this gallery', 'How to walk it'])
+  const onTheWall = g.signs.filter((s) => s.kind === 'panel').map((s) => s.text).sort()
+  const inTheData = g.about.flatMap((p) => p.lines).sort()
+  expect(inTheData).toEqual(onTheWall)
+  for (const p of g.about) {
+    expect(g.signs.some((s) => s.kind === 'title' && s.text === p.heading)).toBe(true)
+    expect(p.lines.length).toBeGreaterThanOrEqual(3)
+  }
+})

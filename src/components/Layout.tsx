@@ -1,4 +1,5 @@
 import { Link, Outlet } from 'react-router-dom'
+import { REPO_URL } from '../lib/links'
 
 export default function Layout() {
   return (
@@ -18,7 +19,7 @@ export default function Layout() {
         Unofficial read-only archive viewer. Data: snapshot + TzKT + IPFS.
         {' · '}
         <a
-          href="https://github.com/KilledByAPixel/fxhashArchive"
+          href={REPO_URL}
           target="_blank"
           rel="noopener noreferrer"
         >

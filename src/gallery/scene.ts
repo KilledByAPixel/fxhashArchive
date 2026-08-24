@@ -40,6 +40,21 @@ export const BACKGROUND = 0x5c5a57
 /** Gallery white. Exported because the signs' text has to be readable against it — see labels.ts. */
 export const WALL = 0xe8e6e1
 
+/**
+ * The floor. This is the knob for how dark the ground is.
+ *
+ * Matte, not polished, and that is a change of mind: the floor used to be
+ * roughness 0.35 so it could fake a reflection out of the environment map. Now
+ * that a real mirror lies on it (mirror.ts), that fake was worse than useless —
+ * RoomEnvironment is a generic studio box with bright panels in it, and a
+ * glossy floor turned those into a hard specular glare sitting in the middle of
+ * the room with nothing above it to explain the light. The shine belongs to the
+ * mirror, which reflects what is actually standing there; the surface under it
+ * is plain dark concrete.
+ */
+export const FLOOR = 0x5f5b56
+const FLOOR_ROUGHNESS = 0.8
+
 export function buildScene(
   gallery: Gallery,
   atlasTextures: (Texture | null)[],
@@ -62,7 +77,7 @@ export function buildScene(
   // just enough polish to carry the room's reflection from the environment map
   // the engine installs (and true reflections when the visitor turns them on).
   const wallsMesh = add('walls', new Mesh(buildWallGeometry(gallery.walls), new MeshStandardMaterial({ color: WALL, roughness: 0.95, metalness: 0 })))
-  add('floors', new Mesh(buildFloorGeometry(gallery.rooms), new MeshStandardMaterial({ color: 0x8f8880, roughness: 0.35, metalness: 0 })))
+  add('floors', new Mesh(buildFloorGeometry(gallery.rooms), new MeshStandardMaterial({ color: FLOOR, roughness: FLOOR_ROUGHNESS, metalness: 0 })))
   // The lamps: white strips along every ceiling, unlit because they are the light.
   add('lights', new Mesh(buildLightStripGeometry(gallery.rooms), new MeshBasicMaterial({ color: 0xffffff, toneMapped: false })))
   // Unlit on purpose: a face that points down gets nothing from lights placed

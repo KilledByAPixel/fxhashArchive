@@ -59,16 +59,30 @@ test('steps the edition with the buttons and the arrow keys, wrapping', async ()
   expect(await screen.findByText(/never signed/)).toBeTruthy()
 })
 
-test('the untouched toggle drops the runner; Back and Escape leave', async () => {
+test('Escape leaves, and there is no Back button or runner toggle crowding the bar', async () => {
   const onBack = vi.fn()
   renderViewer(onBack)
   await screen.findByTitle('Zartz #1 (archived copy)')
-  fireEvent.click(screen.getByRole('button', { name: /untouched/ }))
-  expect((await screen.findByTitle('Zartz #1 (archived copy)')).getAttribute('src')).toContain('/5/index.html?fxhash=seed10')
-  fireEvent.click(screen.getByRole('button', { name: 'Back' }))
-  expect(onBack).toHaveBeenCalledTimes(1)
+  // Clicking anywhere off the piece already leaves, so Back was a control too
+  // many; and the choice of runner belongs on the project page, not on a wall.
+  expect(screen.queryByRole('button', { name: 'Back' })).toBeNull()
+  expect(screen.queryByRole('button', { name: /untouched/ })).toBeNull()
   fireEvent.keyDown(window, { code: 'Escape' })
-  expect(onBack).toHaveBeenCalledTimes(2)
+  expect(onBack).toHaveBeenCalledTimes(1)
+})
+
+test('the bar is two rows: what the piece is, then what you can do with it', async () => {
+  renderViewer()
+  await screen.findByTitle('Zartz #1 (archived copy)')
+  const title = document.querySelector('.gallery-bar-title') as HTMLElement
+  const actions = document.querySelector('.gallery-bar-actions') as HTMLElement
+  expect(title.textContent).toContain('Zartz #1')
+  expect(title.textContent).toContain('KilledByAPixel')
+  expect(title.querySelector('button')).toBeNull()      // nothing to press on the title row
+  expect(actions.querySelector('button[aria-label="‹"]')).toBeTruthy()
+  expect(actions.querySelector('button[aria-label="›"]')).toBeTruthy()
+  expect(actions.textContent).toContain('Random')
+  expect(actions.textContent).toContain('Project page')
 })
 
 test('links to the project page', async () => {
@@ -100,4 +114,42 @@ test('without a preview seed the first edition opens, as before', async () => {
   renderViewer()
   await screen.findByTitle('Zartz #1 (archived copy)')
   expect(screen.queryByText(/preview/)).toBeNull()
+})
+
+// Frank, round twelve: on the bar under the running piece, say who holds this
+// edition now and link to them. It is the one fact on the wall that this
+// repository cannot keep — ownership is only true at the moment it is asked —
+// so it is fetched on its own and the bar is complete without it.
+import * as tzkt from '../lib/tzkt'
+
+const HOLDER = 'tz1fepn7jZsCYBqCDhpM63hzh9g2Ytqk4Tpv'
+
+test('the bar says who holds the edition now, and links them to the explorer', async () => {
+  vi.spyOn(data, 'loadIterationContract').mockResolvedValue('KT1KEa8z6vWXDJrVqtMrAeDVzsvxat3kHaCE')
+  vi.spyOn(tzkt, 'fetchOwner').mockResolvedValue({ address: HOLDER, alias: 'fxhash' })
+  renderViewer()
+  const link = await screen.findByRole('link', { name: 'fxhash' })
+  expect(link.getAttribute('href')).toBe(`https://tzkt.io/${HOLDER}`)
+  // on the second row, with the other things you can act on
+  expect(document.querySelector('.gallery-bar-actions')!.contains(link)).toBe(true)
+  expect(tzkt.fetchOwner).toHaveBeenCalledWith('KT1KEa8z6vWXDJrVqtMrAeDVzsvxat3kHaCE', '10')
+})
+
+test('the preview has no owner to show: it was never minted', async () => {
+  const contract = vi.spyOn(data, 'loadIterationContract').mockResolvedValue('KT1KEa8z6vWXDJrVqtMrAeDVzsvxat3kHaCE')
+  vi.spyOn(tzkt, 'fetchOwner').mockResolvedValue({ address: HOLDER, alias: 'fxhash' })
+  const withPreview = { ...painting, preview: '?fxhash=prevseed' }
+  render(<MemoryRouter><Viewer painting={withPreview} rect={rect} onBack={vi.fn()} /></MemoryRouter>)
+  await screen.findByTitle('Zartz #0 (archived copy)')
+  expect(screen.queryByRole('link', { name: 'fxhash' })).toBeNull()
+  expect(contract).not.toHaveBeenCalled()
+})
+
+test('no chain, no trouble: the bar still works when the lookup fails', async () => {
+  vi.spyOn(data, 'loadIterationContract').mockResolvedValue('KT1KEa8z6vWXDJrVqtMrAeDVzsvxat3kHaCE')
+  vi.spyOn(tzkt, 'fetchOwner').mockRejectedValue(new Error('offline'))
+  renderViewer()
+  await screen.findByTitle('Zartz #1 (archived copy)')
+  expect(screen.getByText(/KilledByAPixel/)).toBeTruthy()   // the bar is complete without it
+  expect(screen.queryByRole('link', { name: 'fxhash' })).toBeNull()
 })

@@ -56,11 +56,19 @@ export interface AtlasMeta {
   small: string[]    // same layout at half scale, for phones
 }
 
+/** A block of the lobby's wall text: a heading and the lines under it. */
+export interface AboutPanel {
+  heading: string
+  lines: string[]
+}
+
 export interface Gallery {
   generatedAt: string
   counts: { paintings: number; artists: number; soloRooms: number; years: [number, number] }
   atlas: AtlasMeta
   spawn: Pose
+  /** What the lobby walls say, so the HUD can say it too. Absent on data built before it existed. */
+  about?: AboutPanel[]
   rooms: Room[]
   walls: Wall[]
   paintings: Painting[]

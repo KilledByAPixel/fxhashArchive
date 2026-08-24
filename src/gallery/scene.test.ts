@@ -1,6 +1,6 @@
 import { test, expect } from 'vitest'
 import { AdditiveBlending, DirectionalLight, HemisphereLight, Mesh, MeshBasicMaterial, MeshLambertMaterial, MeshStandardMaterial, Texture } from 'three'
-import { buildScene, hidden } from './scene'
+import { buildScene, hidden, FLOOR, WALL } from './scene'
 import type { Gallery, Painting } from './types'
 
 const painting = (tile: number): Painting => ({
@@ -89,12 +89,19 @@ test('the ceiling is a bright, unlit surface — a gallery ceiling, not a black 
   built.dispose()
 })
 
-test('a floor that can reflect, and light strips that are the light rather than lit', () => {
+test('a matte, dark floor, and light strips that are the light rather than lit', () => {
   const built = buildScene(gallery, [null, null], null)
   const floor = built.scene.children.find((c) => c.name === 'floors') as Mesh
   const m = floor.material as MeshStandardMaterial
   expect(m.type).toBe('MeshStandardMaterial')
-  expect(m.roughness).toBeLessThanOrEqual(0.4)       // polished concrete: takes the room's reflection
+  // Matte on purpose. A glossy floor takes a specular off scene.environment —
+  // RoomEnvironment, a studio box with bright panels — and drops a hard glare in
+  // the middle of a room that has nothing above it to explain the light. The
+  // mirror reflects what is really standing there; the floor under it does not
+  // pretend to.
+  expect(m.roughness).toBeGreaterThanOrEqual(0.6)
+  expect(m.color.getHex()).toBe(FLOOR)
+  expect(m.color.getHex()).toBeLessThan(WALL)        // the ground is darker than the walls
   const lights = built.scene.children.find((c) => c.name === 'lights') as Mesh
   expect(lights.geometry.getAttribute('position').count).toBe(gallery.rooms.length * 36)
   expect((lights.material as MeshBasicMaterial).type).toBe('MeshBasicMaterial')   // it is the light; it is not lit

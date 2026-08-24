@@ -55,3 +55,41 @@ test('hints match the input: click to lock on a mouse, drag and tap on touch, no
   renderHud({ mode: 'view' })
   expect(screen.queryByText(/look around/i)).toBeNull()
 })
+
+// Frank, round thirteen: Rooms sat alone in the corner. Beside it now is About —
+// the same words the lobby wall carries, so someone who walked straight past the
+// wall text can still find out what this is, and a way to the source.
+import { REPO_URL } from '../lib/links'
+import type { AboutPanel } from './types'
+
+const about: AboutPanel[] = [
+  { heading: 'About this gallery', lines: ['The 420 fxhash projects whose code this archive holds,', 'hung in the order they were made, 2021 to 2024.'] },
+  { heading: 'How to walk it', lines: ['W A S D to walk, the mouse to look, hold Shift to run.'] },
+]
+
+test('About sits beside Rooms, says what the place is, and points at the source', () => {
+  renderHud({ about })
+  expect(screen.queryByRole('heading', { name: 'About this gallery' })).toBeNull()   // shut to begin with
+  fireEvent.click(screen.getByRole('button', { name: 'About' }))
+  expect(screen.getByRole('heading', { name: 'About this gallery' })).toBeTruthy()
+  expect(screen.getByRole('heading', { name: 'How to walk it' })).toBeTruthy()
+  // the wall's lines, run together as the prose they already are
+  expect(screen.getByText(/hung in the order they were made/)).toBeTruthy()
+  expect(screen.getByRole('link', { name: /source/i }).getAttribute('href')).toBe(REPO_URL)
+})
+
+test('one panel at a time: they share a corner, so opening either shuts the other', () => {
+  renderHud({ about })
+  fireEvent.click(screen.getByRole('button', { name: 'About' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Rooms' }))
+  expect(screen.queryByRole('heading', { name: 'About this gallery' })).toBeNull()
+  expect(screen.getByRole('heading', { name: 'Eras' })).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'About' }))
+  expect(screen.queryByRole('heading', { name: 'Eras' })).toBeNull()
+})
+
+test('no About text, no About button — the gallery still opens on old data', () => {
+  renderHud()
+  expect(screen.queryByRole('button', { name: 'About' })).toBeNull()
+  expect(screen.getByRole('button', { name: 'Rooms' })).toBeTruthy()
+})

@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PieceFrame, { archivedSrc } from '../components/PieceFrame'
-import { loadIterationIds, loadProjectIteration, loadSummary, type LocalIteration } from '../lib/data'
+import TzktLink from '../components/ChainLinks'
+import { loadIterationContract, loadIterationIds, loadProjectIteration, loadSummary, type LocalIteration } from '../lib/data'
+import { fetchOwner, type Owner } from '../lib/tzkt'
 import type { Painting } from './types'
 import { coverRect, type ScreenRect } from './approach'
 
@@ -39,14 +41,13 @@ export default function Viewer({ painting, rect, onBack }: Props) {
   const [hasRunner, setHasRunner] = useState<boolean | undefined>(undefined)
   const [pos, setPos] = useState(first)
   const [local, setLocal] = useState<LocalIteration | null | undefined>(undefined)
-  const [raw, setRaw] = useState(false)
+  const [owner, setOwner] = useState<Owner | null>(null)
 
   useEffect(() => {
     let cancelled = false
     setIds(undefined)
     setHasRunner(undefined)
     setPos(first)
-    setRaw(false)
     loadSummary().then(
       (s) => { if (!cancelled) setHasRunner(s.runners.includes(painting.project)) },
       () => { if (!cancelled) setHasRunner(false) },
@@ -72,6 +73,22 @@ export default function Viewer({ painting, rect, onBack }: Props) {
     return () => { cancelled = true }
   }, [painting.project, tokenId])
 
+  // Who holds this edition right now — the one fact on the wall this repository
+  // cannot keep, because it is only true at the moment it is asked. So it is
+  // fetched on its own, after the piece is already running, and every failure is
+  // silent: the museum works with no chain, no IPFS and no network at all, and
+  // the bar has to be complete without it. The preview has no owner to look up.
+  useEffect(() => {
+    setOwner(null)
+    if (!Number.isFinite(tokenId)) return
+    let cancelled = false
+    loadIterationContract(painting.project)
+      .then((contract) => (contract ? fetchOwner(contract, String(tokenId)) : null))
+      .then((found) => { if (!cancelled) setOwner(found) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [painting.project, tokenId])
+
   const count = ids?.length ?? 0
   const positions = count - first + 1                      // #first … #count
   const step = (delta: number) => {
@@ -90,7 +107,7 @@ export default function Viewer({ painting, rect, onBack }: Props) {
   })
 
   const label = `${painting.name} #${pos}`
-  const useRunner = hasRunner === true && !raw
+  const useRunner = hasRunner === true
   const src = hasRunner === undefined ? null
     : pos === 0 && preview ? archivedSrc(painting.project, hashOf(preview), preview, useRunner)
     : local?.seed ? archivedSrc(painting.project, local.seed, local.query, useRunner) : null
@@ -118,23 +135,24 @@ export default function Viewer({ painting, rect, onBack }: Props) {
       {/* 4 px under the frame: inside the black mat the frame quad draws around the
           painting. At 12 px the text sat half over the lit wall below and read as
           spilling off the picture. */}
+      {/* Two rows, deliberately: what the piece is, then what you can do with it.
+          One wrapping row put the ‹ beside the title and the › on the line below,
+          which read as though the arrows belonged to different things. There is no
+          Back button — clicking anywhere off the piece leaves, and so does Escape. */}
       <div className="gallery-bar" style={{ left: box.left, top: box.top + box.height + 4, width: box.width }}>
-        <span>
+        <div className="gallery-bar-title">
           <strong>{label}</strong>
           {pos === 0 && <span className="muted"> · the preview</span>}
           {count > 0 && <span className="muted"> of {count}</span>}
           {' · '}{painting.artist} · {painting.year}
-        </span>
-        {positions > 1 && <button className="load-more" onClick={() => step(-1)} aria-label="‹">‹</button>}
-        {positions > 1 && <button className="load-more" onClick={() => step(1)} aria-label="›">›</button>}
-        {count > 1 && <button className="load-more" onClick={random}>Random</button>}
-        <Link to={`/token/${painting.slug}`}>Project page</Link>
-        {hasRunner && src && (
-          <button className="link-button" onClick={() => setRaw((r) => !r)}>
-            {raw ? 'put the compatibility script back' : "run the artist's file untouched"}
-          </button>
-        )}
-        <button className="load-more" onClick={onBack}>Back</button>
+        </div>
+        <div className="gallery-bar-actions">
+          {positions > 1 && <button className="load-more" onClick={() => step(-1)} aria-label="‹">‹</button>}
+          {positions > 1 && <button className="load-more" onClick={() => step(1)} aria-label="›">›</button>}
+          {count > 1 && <button className="load-more" onClick={random}>Random</button>}
+          <Link to={`/token/${painting.slug}`}>Project page</Link>
+          {owner && <span className="muted">held by <TzktLink address={owner.address} alias={owner.alias} /></span>}
+        </div>
       </div>
     </div>
   )

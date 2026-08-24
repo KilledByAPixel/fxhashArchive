@@ -5,7 +5,7 @@ import Layout from './Layout'
 
 afterEach(cleanup)
 
-const REPO_URL = 'https://github.com/KilledByAPixel/fxhashArchive'
+import { REPO_URL } from '../lib/links'
 
 function renderLayout() {
   return render(

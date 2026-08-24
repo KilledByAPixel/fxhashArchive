@@ -105,6 +105,7 @@ export default function GalleryView() {
           locked={locked}
           mode={mode}
           touch={touch}
+          about={gallery.about}
           onTeleport={(r) => engineRef.current?.teleport(r.entry)}
         />
       )}

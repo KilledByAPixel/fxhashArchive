@@ -204,6 +204,9 @@ img { max-width: 100%; }
 .gallery-rooms ul { list-style: none; margin: 0; padding: 0; }
 .gallery-rooms .link-button { color: #eee; text-decoration: none; padding: 0.2rem 0; display: block; text-align: left; }
 .gallery-rooms-button { margin: 0; padding: 0.4rem 0.9rem; }
+.gallery-about { max-width: 24rem; color: #ccc; font-size: 0.85rem; line-height: 1.5; }
+.gallery-about p { margin: 0 0 0.75rem; }
+.gallery-about a { color: #eee; }
 .gallery-crosshair {
   position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px;
   border-radius: 50%; background: rgba(255, 255, 255, 0.8);
@@ -230,9 +233,14 @@ img { max-width: 100%; }
 }
 /* Sits on the frame's black mat just under the painting; the backing keeps it
    legible wherever it spills — the walls are white now. */
+/* Two rows, not one wrapping row: what the piece is, then what you can do with
+   it. Wrapping put the ‹ beside the title and the › on the line below. */
 .gallery-bar {
-  position: fixed; pointer-events: auto; display: flex; flex-wrap: wrap; gap: 0.5rem 0.75rem;
-  align-items: center; color: #ccc; font-size: 0.9rem;
+  position: fixed; pointer-events: auto; display: flex; flex-direction: column; gap: 0.3rem;
+  align-items: flex-start; color: #ccc; font-size: 0.9rem;
   background: rgba(0, 0, 0, 0.7); padding: 0.3rem 0.6rem; box-sizing: border-box; border-radius: 0 0 6px 6px;
+}
+.gallery-bar-actions {
+  display: flex; flex-wrap: wrap; gap: 0.4rem 0.75rem; align-items: center;
 }
 .gallery-bar .load-more { margin: 0; padding: 0.3rem 0.7rem; }

@@ -808,7 +808,7 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
    * lobby's two blank walls carry these — the walls you are not already facing
    * when you arrive, since the one ahead is the way in.
    */
-  const panel = (point, normal, heading, lines) => {
+  const panel = (point, normal, { heading, lines }) => {
     sign('title', heading, point, normal, 3, 4, 0.4)
     lines.forEach((text, i) => sign('panel', text, point, normal, 2.35 - i * 0.38, 7, 0.28))
   }
@@ -842,18 +842,31 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
   // The two walls you are not facing when you arrive: behind you, what the place
   // is; beside you, how to walk it. The east side is the way back in and carries
   // the full-circle sign, and the north is the way out.
-  panel({ x: 0, z: 0 }, { x: 0, z: 1 }, 'About this gallery', [
-    `The ${visible.length} fxhash projects whose code this archive holds,`,
-    `hung in the order they were made, ${span[0]} to ${span[1]}.`,
-    'An artist with three or more archived works — or two much collected —',
-    'has a room; the rest line the corridor, which loops back to here.',
-  ])
-  panel({ x: -HX, z: LOBBY / 2 }, { x: 1, z: 0 }, 'How to walk it', [
-    'W A S D to walk, the mouse to look, hold Shift to run.',
-    'Click a painting and you step up to it — it runs there on the wall,',
-    'from the seed behind the picture you walked up to. ‹ › page the editions.',
-    'Esc steps back; the Rooms menu jumps to any era or artist.',
-  ])
+// The wall text, written once and used twice: hung in the lobby, and handed to
+  // the client so the HUD's About panel says the same thing. Someone who walks
+  // straight past the wall can still read it, and the two cannot drift.
+  const about = [
+    {
+      heading: 'About this gallery',
+      lines: [
+        `The ${visible.length} fxhash projects whose code this archive holds,`,
+        `hung in the order they were made, ${span[0]} to ${span[1]}.`,
+        'An artist with three or more archived works — or two much collected —',
+        'has a room; the rest line the corridor, which loops back to here.',
+      ],
+    },
+    {
+      heading: 'How to walk it',
+      lines: [
+        'W A S D to walk, the mouse to look, hold Shift to run.',
+        'Click a painting and you step up to it — it runs there on the wall,',
+        'from the seed behind the picture you walked up to. ‹ › page the editions.',
+        'Esc steps back; the Rooms menu jumps to any era or artist.',
+      ],
+    },
+  ]
+  panel({ x: 0, z: 0 }, { x: 0, z: 1 }, about[0])
+  panel({ x: -HX, z: LOBBY / 2 }, { x: 1, z: 0 }, about[1])
 
   // Era markers: something to teleport to a metre past each portal, and the
   // era's name on the lintel facing you. The first era's name is on the pier
@@ -969,6 +982,7 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
       small: Array.from({ length: fileCount }, (_, i) => `gallery/atlas-${i}-small.webp`),
     },
     spawn: { x: 0, z: LOBBY / 2, yaw: 0 },
+    about,
     rooms, walls, paintings, signs,
   }
 }
