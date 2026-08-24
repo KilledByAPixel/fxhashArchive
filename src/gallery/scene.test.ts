@@ -59,7 +59,8 @@ test('the rooms are lit like a gallery: a sky, a key, a fill, and walls light en
   expect(built.scene.children.filter((c) => c instanceof HemisphereLight).length).toBe(1)
   expect(built.scene.children.filter((c) => c instanceof DirectionalLight).length).toBe(2)
   const walls = built.wallsMesh.material as MeshLambertMaterial
-  expect(lightness(walls.color.getHex())).toBeGreaterThanOrEqual(0.4)
+  // Gallery white: the first fix's #7a746c (0.45) still read as a dim corridor.
+  expect(lightness(walls.color.getHex())).toBeGreaterThanOrEqual(0.85)
   built.dispose()
 })
 
@@ -73,5 +74,17 @@ test('every painting gets a spot pool: one additive quad each, in one mesh', () 
   expect(m.transparent).toBe(true)
   expect(m.depthWrite).toBe(false)
   expect(m.map).not.toBeNull()
+  built.dispose()
+})
+
+test('the ceiling is a bright, unlit surface — a gallery ceiling, not a black void', () => {
+  // A downward-facing plane gets nothing from lights placed above it, so lighting
+  // the ceiling "properly" cannot make it bright; an unlit flat colour is what a
+  // white gallery ceiling looks like anyway.
+  const built = buildScene(gallery, [null, null], null)
+  const ceiling = built.scene.children.find((c) => c.name === 'ceilings') as Mesh
+  const m = ceiling.material as MeshBasicMaterial
+  expect(m.type).toBe('MeshBasicMaterial')
+  expect(lightness(m.color.getHex())).toBeGreaterThanOrEqual(0.8)
   built.dispose()
 })

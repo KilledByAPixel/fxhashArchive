@@ -9,12 +9,12 @@ export const WALL_H = 4
 export const FOV = 70
 export const WALK_SPEED = 3
 /**
- * Shift. The halls are up to 105 m long, and 5 m/s — the first value — made
- * crossing one a chore; Frank asked for four times that. Fast enough that a
- * single frame can move further than a wall is thick, which is why `integrate`
- * sub-steps: see SUB_STEP in controls.ts.
+ * Shift. Tune this freely — the tests only ask that it beats walking. 5 made
+ * the long corridors a chore and 20 felt like teleporting; 10 is about three
+ * times a walk. Whatever it is, a single frame can move further than a wall is
+ * thick, which is why `integrate` sub-steps: see SUB_STEP in controls.ts.
  */
-export const RUN_SPEED = 20
+export const RUN_SPEED = 10
 export const PLAYER_RADIUS = 0.4
 /** At the viewing pose the painting fills this much of the viewport's shorter side. */
 export const FILL = 0.75

@@ -4,11 +4,12 @@
 //
 // The first build had #2a2a2a walls under a near-black ground light — "dark
 // neutral, so the pictures are the light" taken literally — and a vertical wall
-// got about six percent of the light, which every monitor shows as black. The
-// walls are now a warm mid grey under a warm sky, a warm key light angled down
-// the spine, a cool fill from the other side, and a pool of lamplight on the
-// wall behind every painting. The pictures are still the brightest thing in the
-// room; the room just exists now.
+// got about six percent of the light, which every monitor shows as black; a
+// second pass at #7a746c still read as a dim corridor. So: gallery white. Walls
+// off-white, a light concrete floor, a flat white ceiling, a white sky with a
+// mid-grey ground so undersides are not dark, a warm key down the spine and a
+// cool fill from the other side, and a pool of warm lamplight on the wall
+// behind every painting. The pictures are still the brightest thing in the room.
 
 import {
   AdditiveBlending, Color, DirectionalLight, FogExp2, HemisphereLight, Mesh, MeshBasicMaterial,
@@ -31,7 +32,8 @@ export interface BuiltScene {
   dispose(): void
 }
 
-export const BACKGROUND = 0x151515
+/** Also the fog colour: a haze the far end of a corridor softens into, not a dark it vanishes into. */
+export const BACKGROUND = 0x5c5a57
 
 export function buildScene(
   gallery: Gallery,
@@ -41,7 +43,7 @@ export function buildScene(
   const scene = new Scene()
   scene.background = new Color(BACKGROUND)
   // Exponential fog in the background colour: the long halls fade rather than end.
-  scene.fog = new FogExp2(BACKGROUND, 0.018)
+  scene.fog = new FogExp2(BACKGROUND, 0.012)
 
   const meshes: Mesh[] = []
   const add = (name: string, mesh: Mesh) => {
@@ -51,9 +53,12 @@ export function buildScene(
     return mesh
   }
 
-  const wallsMesh = add('walls', new Mesh(buildWallGeometry(gallery.walls), new MeshLambertMaterial({ color: 0x7a746c })))
-  add('floors', new Mesh(buildFloorGeometry(gallery.rooms), new MeshLambertMaterial({ color: 0x3a3634 })))
-  add('ceilings', new Mesh(buildCeilingGeometry(gallery.rooms), new MeshLambertMaterial({ color: 0x2b2b2b })))
+  const wallsMesh = add('walls', new Mesh(buildWallGeometry(gallery.walls), new MeshLambertMaterial({ color: 0xe8e6e1 })))
+  add('floors', new Mesh(buildFloorGeometry(gallery.rooms), new MeshLambertMaterial({ color: 0x8f8880 })))
+  // Unlit on purpose: a face that points down gets nothing from lights placed
+  // above it, so no amount of lighting makes a Lambert ceiling bright. A flat
+  // white is what a gallery ceiling looks like anyway.
+  add('ceilings', new Mesh(buildCeilingGeometry(gallery.rooms), new MeshBasicMaterial({ color: 0xd9d9d9 })))
 
   // Lamplight on the wall behind each painting, drawn before the frames and
   // paintings so it sits under them. Additive, so it brightens the wall it lands
@@ -89,14 +94,16 @@ export function buildScene(
     ))
   }
 
-  // A warm sky over a grey floor; a warm key from above and ahead, down the
-  // spine; a cool fill from behind and to the side so the shadowed faces of
-  // walls and door reveals are not flat. Directional lights aim at the origin,
+  // A white sky over a mid-grey ground, so nothing that faces sideways or down
+  // goes dark; a warm key from above and ahead, down the spine; a cool fill from
+  // behind and to the side so the shadowed faces of walls and door reveals are
+  // not flat. Kept modest: off-white walls under strong lights clip to pure
+  // white and the room loses its edges. Directional lights aim at the origin,
   // so only their direction matters.
-  const hemi = new HemisphereLight(0xfff4e6, 0x3a3a3a, 1.6)
-  const key = new DirectionalLight(0xfff1dc, 1.2)
+  const hemi = new HemisphereLight(0xffffff, 0x9a9a9a, 1.0)
+  const key = new DirectionalLight(0xfff1dc, 0.6)
   key.position.set(2, 8, -3)
-  const fill = new DirectionalLight(0xcfe0ff, 0.4)
+  const fill = new DirectionalLight(0xcfe0ff, 0.3)
   fill.position.set(-3, 6, 4)
   scene.add(hemi, key, fill)
 

@@ -16,7 +16,8 @@ import { DataTexture, LinearFilter, RGBAFormat, SRGBColorSpace } from 'three'
 /** Wider and taller than the 1.32 m frame, so the frame sits inside the light. */
 export const POOL_W = 2.4
 export const POOL_H = 3.0
-export const POOL_OPACITY = 0.55
+/** On white walls a pool reads as warmth, not a spotlight; any more and it clips. */
+export const POOL_OPACITY = 0.35
 /** Warm — tungsten, not daylight. */
 export const POOL_COLOR = 0xffe9c8
 /** How far behind the painting plane the pool sits: past the frame, short of the wall. */
