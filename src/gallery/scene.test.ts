@@ -89,24 +89,34 @@ test('the ceiling is a bright, unlit surface — a gallery ceiling, not a black 
   built.dispose()
 })
 
-test('a floor that can reflect, walls and frames that cast and take shadows, light strips, and a key light to move', () => {
+test('a floor that can reflect, and light strips that are the light rather than lit', () => {
   const built = buildScene(gallery, [null, null], null)
   const floor = built.scene.children.find((c) => c.name === 'floors') as Mesh
   const m = floor.material as MeshStandardMaterial
   expect(m.type).toBe('MeshStandardMaterial')
   expect(m.roughness).toBeLessThanOrEqual(0.4)       // polished concrete: takes the room's reflection
-  expect(floor.receiveShadow).toBe(true)
-  expect(built.wallsMesh.receiveShadow).toBe(true)
-  expect(built.wallsMesh.castShadow).toBe(true)
-  const frames = built.scene.children.find((c) => c.name === 'frames') as Mesh
-  expect(frames.castShadow).toBe(true)
   const lights = built.scene.children.find((c) => c.name === 'lights') as Mesh
   expect(lights.geometry.getAttribute('position').count).toBe(gallery.rooms.length * 36)
   expect((lights.material as MeshBasicMaterial).type).toBe('MeshBasicMaterial')   // it is the light; it is not lit
-  expect(built.keyLight.castShadow).toBe(true)
-  expect(built.keyLight.parent).toBe(built.scene)
   built.dispose()
 })
+
+// Frank, round eight: the shadows read "as if the roof was not there" — which is
+// exactly what they were. The key light stood at y = 8 above a ceiling at 4, so
+// it threw long angled sun-shadows into a closed building. A room lit by strips
+// in its own ceiling has no such light and no such shadows; what grounds things
+// here is the ambient occlusion, which measures the room itself.
+test('nothing casts or takes a shadow: there is no sun inside a building', () => {
+  const built = buildScene(gallery, [null, null], null)
+  const flagged: string[] = []
+  built.scene.traverse((o) => {
+    if ((o as Mesh).castShadow) flagged.push(`${o.name || o.type} casts`)
+    if ((o as Mesh).receiveShadow) flagged.push(`${o.name || o.type} receives`)
+  })
+  expect(flagged).toEqual([])
+  built.dispose()
+})
+
 
 test('the floor is exposed on its own: it is the one surface that reflects', () => {
   const built = buildScene(gallery, [null, null], null)

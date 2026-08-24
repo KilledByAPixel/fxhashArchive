@@ -5,7 +5,7 @@
 // this file only sequences them. React never reaches in — it gets events out.
 
 import {
-  ACESFilmicToneMapping, Mesh, PCFSoftShadowMap, PerspectiveCamera, Plane, PMREMGenerator, Raycaster, Texture,
+  ACESFilmicToneMapping, Mesh, PerspectiveCamera, Plane, PMREMGenerator, Raycaster, Texture,
   Vector2, Vector3, WebGLRenderer,
 } from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
@@ -84,7 +84,6 @@ export class GalleryEngine {
     // stays the pixels the artist's program produced.
     this.renderer.toneMapping = ACESFilmicToneMapping
     this.renderer.toneMappingExposure = 1.0
-    this.renderer.shadowMap.type = PCFSoftShadowMap
     this.camera = new PerspectiveCamera(FOV, 1, 0.1, 200)
     const labels = makeLabelTexture(gallery.signs, small ? 2048 : 4096)
     this.labelTexture = labels?.texture ?? null
@@ -148,7 +147,6 @@ export class GalleryEngine {
    */
   setQuality(quality: Quality): void {
     this.quality = quality
-    this.renderer.shadowMap.enabled = quality !== 'low'
     this.built.scene.traverse((o) => { if ((o as Mesh).isMesh && (o as Mesh).material) ((o as Mesh).material as { needsUpdate: boolean }).needsUpdate = true })
     this.composer?.dispose()
     this.composer = null
@@ -259,11 +257,6 @@ export class GalleryEngine {
       this.state.x >= r.rect.x && this.state.x <= r.rect.x + r.rect.w &&
       this.state.z >= r.rect.z && this.state.z <= r.rect.z + r.rect.d) ?? null)
 
-    // The key light walks with the visitor: same direction, shadow box centred on them.
-    const key = this.built.keyLight
-    key.position.set(this.state.x + 2, 8, this.state.z - 3)
-    key.target.position.set(this.state.x, 0, this.state.z)
-    key.target.updateMatrixWorld()
 
     if (this.composer) this.composer.render()
     else this.renderer.render(this.built.scene, this.camera)
