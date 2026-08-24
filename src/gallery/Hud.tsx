@@ -26,8 +26,26 @@ export default function Hud({ rooms, roomTitle, caption, locked, mode, touch, on
   // Both panels hang off the same corner, so at most one is ever open.
   const [panel, setPanel] = useState<'rooms' | 'about' | null>(null)
   const open = panel === 'rooms'
-  const [everLocked, setEverLocked] = useState(false)
-  useEffect(() => { if (locked) setEverLocked(true) }, [locked])
+  /**
+   * Whether the visitor has done anything yet. The opening hint stands until
+   * they have, then goes for good.
+   *
+   * On a mouse that is the pointer locking, which is what the first click does.
+   * A touch screen never locks the pointer — the engine returns early for a
+   * touch pointerType on purpose — so waiting on `locked` there meant waiting
+   * forever, and the hint written for touch readers was the one hint no touch
+   * reader could dismiss. A tap is the touch equivalent of that first click, and
+   * any tap counts: the HUD is pointer-events: none but for its buttons, so the
+   * taps that matter land on the canvas and only a window listener sees them.
+   */
+  const [acted, setActed] = useState(false)
+  useEffect(() => { if (locked) setActed(true) }, [locked])
+  useEffect(() => {
+    if (!touch || acted) return
+    const done = () => setActed(true)
+    window.addEventListener('pointerdown', done, { once: true })
+    return () => window.removeEventListener('pointerdown', done)
+  }, [touch, acted])
   // Clicking back into the room takes the mouse pointer, and with it any way to
   // close a panel you left open. So the room closes it for you.
   useEffect(() => { if (locked) setPanel(null) }, [locked])
@@ -79,13 +97,14 @@ export default function Hud({ rooms, roomTitle, caption, locked, mode, touch, on
       {mode === 'walk' && locked && <div className="gallery-crosshair" aria-hidden="true" />}
       {mode === 'walk' && caption && <p className="gallery-caption">{caption}</p>}
       {mode === 'walk' && !touch && !locked && <p className="gallery-hint">Click to look around</p>}
-      {/* There is no touch hint. There was one, and it never went away: it hid
-          itself once the pointer had locked, and a touch screen never locks the
-          pointer, so the one reader it was written for was the one reader who
-          could not dismiss it. Dragging and tapping are what anyone tries first
-          anyway, and the About panel says it in full for anyone who wants telling. */}
-      {mode === 'walk' && !touch && !everLocked && (
-        <p className="gallery-hint gallery-hint-bottom">WASD to walk · click a painting to see it run</p>
+      {/* One opening hint each, in the reader's own controls, and both gone the
+          moment they do anything. See `acted` for why touch cannot use `locked`. */}
+      {mode === 'walk' && !acted && (
+        <p className="gallery-hint gallery-hint-bottom">
+          {touch
+            ? 'Drag to look · tap the floor to walk · tap a painting to see it run'
+            : 'WASD to walk · click a painting to see it run'}
+        </p>
       )}
     </div>
   )

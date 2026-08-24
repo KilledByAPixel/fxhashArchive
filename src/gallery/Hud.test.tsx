@@ -44,22 +44,49 @@ test('shows where you are and what the crosshair is on', () => {
   expect(screen.getByRole('link', { name: /fxhash archive/ }).getAttribute('href')).toBe('/')
 })
 
-test('hints are for the mouse only, and none at all while viewing', () => {
+test('the opening hint is in the reader\'s own controls, and none at all while viewing', () => {
   renderHud()
   expect(screen.getByText(/click to look around/i)).toBeTruthy()
   expect(screen.getByText(/WASD to walk/i)).toBeTruthy()
   cleanup()
-  // A touch screen gets no hint at all. The one it used to get hid itself once
-  // the pointer had locked, and touch never locks the pointer — so it stayed on
-  // screen for the whole visit, over the art, for the only reader who ever saw
-  // it. Drag and tap need no teaching; About says it in full for anyone unsure.
   renderHud({ touch: true })
-  expect(screen.queryByText(/click to look around/i)).toBeNull()
-  expect(screen.queryByText(/drag to look/i)).toBeNull()
+  expect(screen.queryByText(/click to look around/i)).toBeNull()   // no pointer to lock
+  expect(screen.getByText(/drag to look/i)).toBeTruthy()
   expect(screen.queryByText(/WASD/i)).toBeNull()
   cleanup()
   renderHud({ mode: 'view' })
   expect(screen.queryByText(/look around/i)).toBeNull()
+})
+
+test('the opening hint goes on the first tap, because touch never locks the pointer', () => {
+  // This is the bug it is guarding: the hint hid itself on `locked`, a touch
+  // screen never locks the pointer, and so the one hint written for touch
+  // readers sat over the art for the whole visit with no way to dismiss it.
+  renderHud({ touch: true })
+  expect(screen.getByText(/drag to look/i)).toBeTruthy()
+  fireEvent.pointerDown(window)
+  expect(screen.queryByText(/drag to look/i)).toBeNull()
+  // And it stays gone — it is an opening hint, not a thing that comes back.
+  fireEvent.pointerDown(window)
+  expect(screen.queryByText(/drag to look/i)).toBeNull()
+})
+
+test('on a mouse the hint goes when the pointer locks, and a stray tap does not count', () => {
+  const hud = (locked: boolean) => (
+    <MemoryRouter>
+      <Hud rooms={rooms} caption={null} locked={locked} mode="walk" touch={false} onTeleport={vi.fn()} />
+    </MemoryRouter>
+  )
+  const { rerender } = render(hud(false))
+  expect(screen.getByText(/WASD to walk/i)).toBeTruthy()
+  // A mouse reader has a pointer to lock, so that — not any old pointerdown —
+  // is what says they have started. A click that fails to lock leaves the hint.
+  fireEvent.pointerDown(window)
+  expect(screen.getByText(/WASD to walk/i)).toBeTruthy()
+  rerender(hud(true))
+  expect(screen.queryByText(/WASD to walk/i)).toBeNull()
+  rerender(hud(false))
+  expect(screen.queryByText(/WASD to walk/i)).toBeNull()   // stays gone once unlocked again
 })
 
 // Frank, round thirteen: Rooms sat alone in the corner. Beside it now is About —
@@ -150,6 +177,10 @@ test('About names the controls the reader actually has', () => {
   cleanup()
 
   renderHud({ about: aboutBoth, touch: true })
+  // Reaching the About button at all means having tapped, which is what puts the
+  // opening hint away — otherwise its wording and the panel's both answer to
+  // /Drag to look/. fireEvent.click does not raise pointerdown, so say it here.
+  fireEvent.pointerDown(window)
   fireEvent.click(screen.getByRole('button', { name: 'About' }))
   expect(screen.getByText(/Drag to look/)).toBeTruthy()
   expect(screen.queryByText(/W A S D/)).toBeNull()
