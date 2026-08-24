@@ -80,6 +80,13 @@ export interface AtlasMeta {
 export interface AboutPanel {
   heading: string
   lines: string[]
+  /**
+   * The same block for someone on a touch screen, where present. Only the
+   * controls need it — a wall says the desktop controls because that is what is
+   * painted on it, and a phone has no W, no mouse and no Esc. Never hung on
+   * anything: the wall always uses `lines`.
+   */
+  touch?: string[]
 }
 
 export interface Gallery {

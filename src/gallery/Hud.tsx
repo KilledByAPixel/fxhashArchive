@@ -66,8 +66,10 @@ export default function Hud({ rooms, roomTitle, caption, locked, mode, touch, on
             <section key={p.heading}>
               <h4>{p.heading}</h4>
               {/* The lines are broken to fit a 7 m wall; run together they are the
-                  sentences they always were. */}
-              <p>{p.lines.join(' ')}</p>
+                  sentences they always were. On a touch screen the controls block
+                  has its own wording — the wall's copy names keys this reader has
+                  none of — and every other block reads the same either way. */}
+              <p>{(touch && p.touch ? p.touch : p.lines).join(' ')}</p>
             </section>
           ))}
           <p><a href={REPO_URL} target="_blank" rel="noreferrer noopener">The source, and the archive behind it</a></p>
@@ -77,9 +79,11 @@ export default function Hud({ rooms, roomTitle, caption, locked, mode, touch, on
       {mode === 'walk' && locked && <div className="gallery-crosshair" aria-hidden="true" />}
       {mode === 'walk' && caption && <p className="gallery-caption">{caption}</p>}
       {mode === 'walk' && !touch && !locked && <p className="gallery-hint">Click to look around</p>}
-      {mode === 'walk' && touch && !everLocked && (
-        <p className="gallery-hint gallery-hint-bottom">Drag to look · tap the floor to walk · tap a painting to see it run</p>
-      )}
+      {/* There is no touch hint. There was one, and it never went away: it hid
+          itself once the pointer had locked, and a touch screen never locks the
+          pointer, so the one reader it was written for was the one reader who
+          could not dismiss it. Dragging and tapping are what anyone tries first
+          anyway, and the About panel says it in full for anyone who wants telling. */}
       {mode === 'walk' && !touch && !everLocked && (
         <p className="gallery-hint gallery-hint-bottom">WASD to walk · click a painting to see it run</p>
       )}

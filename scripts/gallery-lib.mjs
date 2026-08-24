@@ -923,6 +923,18 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
         'from the seed behind the picture you walked up to. ‹ › page the editions.',
         'Esc steps back; the Rooms menu jumps to any era or artist.',
       ],
+      // The one panel that cannot be true for everyone at once. A wall is a wall
+      // and says the desktop controls, because that is what is painted on it;
+      // someone reading the same words in the HUD on a phone has no W, no mouse
+      // and no Esc, and was being told to use all three. Both readings are
+      // written here, together, so they cannot drift the way they would if the
+      // client kept its own copy. `touch` is never hung on anything.
+      touch: [
+        'Drag to look, tap the floor to walk there.',
+        'Tap a painting and you step up to it — it runs there on the wall,',
+        'from the seed behind the picture you walked up to. ‹ › page the editions.',
+        'Tap again to step back; the Rooms menu jumps to any era or artist.',
+      ],
     },
   ]
   panel({ x: 0, z: 0 }, { x: 0, z: 1 }, about[0])

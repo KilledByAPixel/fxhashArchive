@@ -44,13 +44,19 @@ test('shows where you are and what the crosshair is on', () => {
   expect(screen.getByRole('link', { name: /fxhash archive/ }).getAttribute('href')).toBe('/')
 })
 
-test('hints match the input: click to lock on a mouse, drag and tap on touch, nothing while viewing', () => {
+test('hints are for the mouse only, and none at all while viewing', () => {
   renderHud()
   expect(screen.getByText(/click to look around/i)).toBeTruthy()
+  expect(screen.getByText(/WASD to walk/i)).toBeTruthy()
   cleanup()
+  // A touch screen gets no hint at all. The one it used to get hid itself once
+  // the pointer had locked, and touch never locks the pointer — so it stayed on
+  // screen for the whole visit, over the art, for the only reader who ever saw
+  // it. Drag and tap need no teaching; About says it in full for anyone unsure.
   renderHud({ touch: true })
   expect(screen.queryByText(/click to look around/i)).toBeNull()
-  expect(screen.getByText(/drag to look/i)).toBeTruthy()
+  expect(screen.queryByText(/drag to look/i)).toBeNull()
+  expect(screen.queryByText(/WASD/i)).toBeNull()
   cleanup()
   renderHud({ mode: 'view' })
   expect(screen.queryByText(/look around/i)).toBeNull()
@@ -122,4 +128,38 @@ test('the About panel\'s way to the source opens a new tab too', () => {
   const link = screen.getByRole('link', { name: /source/i })
   expect(link.getAttribute('target')).toBe('_blank')
   expect(link.getAttribute('rel')).toContain('noopener')
+})
+
+// Frank, on a phone: the About panel was telling a touch screen to press W and
+// hit Escape. The wall in the lobby still says that, because that is what is
+// painted on it — but the reader holding the phone gets the other wording.
+const aboutBoth: AboutPanel[] = [
+  { heading: 'About this gallery', lines: ['The 420 fxhash projects whose code this archive holds,'] },
+  {
+    heading: 'How to walk it',
+    lines: ['W A S D to walk, the mouse to look, hold Shift to run.'],
+    touch: ['Drag to look, tap the floor to walk there.'],
+  },
+]
+
+test('About names the controls the reader actually has', () => {
+  renderHud({ about: aboutBoth })
+  fireEvent.click(screen.getByRole('button', { name: 'About' }))
+  expect(screen.getByText(/W A S D to walk/)).toBeTruthy()
+  expect(screen.queryByText(/Drag to look/)).toBeNull()
+  cleanup()
+
+  renderHud({ about: aboutBoth, touch: true })
+  fireEvent.click(screen.getByRole('button', { name: 'About' }))
+  expect(screen.getByText(/Drag to look/)).toBeTruthy()
+  expect(screen.queryByText(/W A S D/)).toBeNull()
+  // Only the controls differ: everything else reads the same either way.
+  expect(screen.getByText(/420 fxhash projects/)).toBeTruthy()
+})
+
+test('a panel with no touch wording reads the same on a phone as on a wall', () => {
+  // Old gallery.json has no `touch` on anything, and must not come out blank.
+  renderHud({ about, touch: true })
+  fireEvent.click(screen.getByRole('button', { name: 'About' }))
+  expect(screen.getByText(/W A S D to walk/)).toBeTruthy()
 })
