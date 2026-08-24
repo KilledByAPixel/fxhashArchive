@@ -57,5 +57,15 @@ export async function readArchiveInputs(dataDir = 'public/data') {
   const log = await readFile(join(dataDir, 'thumbs', 'previews.json'), 'utf8').then(JSON.parse).catch(() => ({}))
   const sizes = new Map(Object.entries(log).map(([id, v]) => [Number(id), { w: v.w, h: v.h }]))
 
-  return { tokens, collaborations, thumbs, volumes, sizes }
+  // What fxhash ran each project's preview with, as snapshot-previews.mjs captured
+  // it — the query the gallery opens a painting on, so the piece matches the wall.
+  // Only the archived projects are looked up; a project the capture has nothing
+  // for (the first metadata format) is simply absent.
+  const previews = new Map()
+  for (const f of (await readdir(join(dataDir, 'previews')).catch(() => [])).filter((f) => /^\d{4}\.json$/.test(f))) {
+    const rows = JSON.parse(await readFile(join(dataDir, 'previews', f), 'utf8'))
+    for (const [id, q] of Object.entries(rows)) if (found.has(Number(id)) && typeof q === 'string' && q) previews.set(Number(id), q)
+  }
+
+  return { tokens, collaborations, thumbs, volumes, sizes, previews }
 }

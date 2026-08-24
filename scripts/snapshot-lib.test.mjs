@@ -80,3 +80,23 @@ test('isTruncatedSnapshot lets a legitimate first run through', () => {
   expect(isTruncatedSnapshot(27430, { tokenCount: 'lots' })).toBe(false)
   expect(isTruncatedSnapshot(27430, { tokenCount: 0 })).toBe(false)
 })
+
+// ---- the preview seed --------------------------------------------------------------
+// The thumbnail of every project is one particular iteration, run from a hash the
+// artist chose at mint; what fxhash used is in the project metadata's artifactUri.
+import { previewQueryOf } from './snapshot-lib.mjs'
+
+test('previewQueryOf keeps what fxhash ran the preview with: the query, and the params fragment', () => {
+  expect(previewQueryOf({
+    previewHash: 'oozQ4d', artifactUri: 'ipfs://Qmecuq/?fxhash=oozQ4d&fxiteration=35&fxminter=tz1vm#0x82ffb4',
+  })).toBe('?fxhash=oozQ4d&fxiteration=35&fxminter=tz1vm#0x82ffb4')
+  expect(previewQueryOf({ previewHash: 'ooWF8d', artifactUri: 'ipfs://Qmd951/?fxhash=ooWF8d&fxiteration=1&fxminter=tz1Ng' }))
+    .toBe('?fxhash=ooWF8d&fxiteration=1&fxminter=tz1Ng')
+})
+
+test('previewQueryOf falls back to the hash alone, and to nothing for the first metadata format', () => {
+  expect(previewQueryOf({ previewHash: 'ooABC', artifactUri: 'ipfs://QmX' })).toBe('?fxhash=ooABC')
+  expect(previewQueryOf({ artifactUri: 'ipfs://QmV17Zn' })).toBeNull()   // 2021: no preview hash was ever recorded
+  expect(previewQueryOf({})).toBeNull()
+  expect(previewQueryOf(null)).toBeNull()
+})

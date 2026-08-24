@@ -67,3 +67,28 @@ test('links to the project page', async () => {
   await screen.findByTitle('Zartz #1 (archived copy)')
   expect(screen.getByRole('link', { name: /project page/i }).getAttribute('href')).toBe('/token/zartz')
 })
+
+// ---- the preview, as #0 ----------------------------------------------------------
+// Frank: the thumbnail on the wall is one particular iteration, so the piece should
+// open on that one and match the wall, with the minted editions to either side.
+
+test('opens on the preview seed when the painting has one; the editions follow, and ‹ from #0 wraps to the last', async () => {
+  const withPreview = { ...painting, preview: '?fxhash=prevseed&fxiteration=1&fxminter=tz1x#0x82ff' }
+  render(<MemoryRouter><Viewer painting={withPreview} rect={rect} onBack={vi.fn()} /></MemoryRouter>)
+  const frame = await screen.findByTitle('Zartz #0 (archived copy)')
+  expect(frame.getAttribute('src')).toContain('data/generators/5/_run.html?fxhash=prevseed&fxiteration=1&fxminter=tz1x#0x82ff')
+  expect(screen.getByText(/preview/)).toBeTruthy()
+  expect(screen.getByText(/of 3/)).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: '›' }))
+  expect((await screen.findByTitle('Zartz #1 (archived copy)')).getAttribute('src')).toContain('seed10')
+  fireEvent.keyDown(window, { code: 'ArrowLeft' })
+  await screen.findByTitle('Zartz #0 (archived copy)')
+  fireEvent.keyDown(window, { code: 'ArrowLeft' })
+  expect(await screen.findByText(/never signed/)).toBeTruthy()   // #3, the last
+})
+
+test('without a preview seed the first edition opens, as before', async () => {
+  renderViewer()
+  await screen.findByTitle('Zartz #1 (archived copy)')
+  expect(screen.queryByText(/preview/)).toBeNull()
+})

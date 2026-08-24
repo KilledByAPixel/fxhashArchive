@@ -55,8 +55,8 @@ async function writeAtlas(file, paintings, thumbs, atlas) {
 }
 
 async function main() {
-  const { tokens, collaborations, thumbs, volumes, sizes } = await readArchiveInputs(DATA)
-  const gallery = buildGallery({ tokens, collaborations, volumes, sizes, generatedAt: new Date().toISOString() })
+  const { tokens, collaborations, thumbs, volumes, sizes, previews } = await readArchiveInputs(DATA)
+  const gallery = buildGallery({ tokens, collaborations, volumes, sizes, previews, generatedAt: new Date().toISOString() })
 
   for (const p of gallery.paintings) {
     if (!thumbs[p.project]) console.warn(`no thumbnail for ${p.project} (${p.name}); hanging a blank tile`)

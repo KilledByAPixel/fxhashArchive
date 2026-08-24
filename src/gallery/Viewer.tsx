@@ -12,26 +12,40 @@ interface Props {
   onBack: () => void
 }
 
+/** The hash inside a captured `?fxhash=…` query; '' if it carries none. */
+const hashOf = (query: string) => new URLSearchParams(query.split('#')[0].slice(1)).get('fxhash') ?? ''
+
 /**
  * The piece, running on the wall.
  *
  * Once the camera is square to a painting its image is an axis-aligned rectangle,
  * so the same sandboxed PieceFrame the project page uses is simply positioned over
  * it. Underneath, the painting quad stays — a heavy piece shows its preview while
- * it boots. Stepping walks the real edition: ids and seeds from this repository,
- * as on the project page, so every piece shown was minted.
+ * it boots.
+ *
+ * Positions run #0, #1 … #N. #0 is the preview: the iteration fxhash's thumbnail
+ * shows, run from the query the artist minted it with, so the piece opens on the
+ * very image you walked up to — when the archive holds that query; the first
+ * metadata format never recorded it, and those open on #1. From #1 on, stepping
+ * walks the minted editions: ids and seeds from this repository, as on the
+ * project page. Random picks among the editions only.
  */
 export default function Viewer({ painting, rect, onBack }: Props) {
+  const preview = painting.preview ?? null
+  const first = preview ? 0 : 1
   const [ids, setIds] = useState<string[] | null | undefined>(undefined)
-  const [hasRunner, setHasRunner] = useState(false)
-  const [index, setIndex] = useState(0)
+  // undefined until the summary answers: the frame waits for it, or the preview
+  // would load once from the artist's file and again through the runner.
+  const [hasRunner, setHasRunner] = useState<boolean | undefined>(undefined)
+  const [pos, setPos] = useState(first)
   const [local, setLocal] = useState<LocalIteration | null | undefined>(undefined)
   const [raw, setRaw] = useState(false)
 
   useEffect(() => {
     let cancelled = false
     setIds(undefined)
-    setIndex(0)
+    setHasRunner(undefined)
+    setPos(first)
     setRaw(false)
     loadSummary().then(
       (s) => { if (!cancelled) setHasRunner(s.runners.includes(painting.project)) },
@@ -42,9 +56,9 @@ export default function Viewer({ painting, rect, onBack }: Props) {
       () => { if (!cancelled) setIds(null) },
     )
     return () => { cancelled = true }
-  }, [painting.project, painting.slug])
+  }, [painting.project, painting.slug, first])
 
-  const current = ids?.[index]
+  const current = pos >= 1 ? ids?.[pos - 1] : undefined
   const tokenId = current ? Number(current.split('-')[1]) : NaN
 
   useEffect(() => {
@@ -59,8 +73,11 @@ export default function Viewer({ painting, rect, onBack }: Props) {
   }, [painting.project, tokenId])
 
   const count = ids?.length ?? 0
-  const step = (delta: number) => { if (count) setIndex((i) => (i + delta + count) % count) }
-  const random = () => { if (count) setIndex(Math.floor(Math.random() * count)) }
+  const positions = count - first + 1                      // #first … #count
+  const step = (delta: number) => {
+    if (positions > 1) setPos((p) => first + ((((p - first + delta) % positions) + positions) % positions))
+  }
+  const random = () => { if (count) setPos(1 + Math.floor(Math.random() * count)) }
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -72,14 +89,19 @@ export default function Viewer({ painting, rect, onBack }: Props) {
     return () => window.removeEventListener('keydown', onKey)
   })
 
-  const label = `${painting.name} #${index + 1}`
-  const src = local?.seed ? archivedSrc(painting.project, local.seed, local.query, hasRunner && !raw) : null
+  const label = `${painting.name} #${pos}`
+  const useRunner = hasRunner === true && !raw
+  const src = hasRunner === undefined ? null
+    : pos === 0 && preview ? archivedSrc(painting.project, hashOf(preview), preview, useRunner)
+    : local?.seed ? archivedSrc(painting.project, local.seed, local.query, useRunner) : null
   const box = { left: rect.left, top: rect.top, width: rect.width, height: rect.height }
 
   return (
     <div className="gallery-viewer">
       <div className="gallery-frame" style={box}>
-        {ids === undefined || (current && local === undefined) ? (
+        {pos === 0 && src ? (
+          <PieceFrame src={src} label={label} source="archived" />
+        ) : hasRunner === undefined || ids === undefined || (current && local === undefined) ? (
           <div className="gallery-frame-note">Loading seed…</div>
         ) : ids === null || count === 0 ? (
           <div className="gallery-frame-note">No editions are recorded for this project, so there is nothing to run.</div>
@@ -97,11 +119,13 @@ export default function Viewer({ painting, rect, onBack }: Props) {
           spilling off the picture. */}
       <div className="gallery-bar" style={{ left: rect.left, top: rect.top + rect.height + 4, width: rect.width }}>
         <span>
-          <strong>{label}</strong>{count > 0 && <span className="muted"> of {count}</span>}
+          <strong>{label}</strong>
+          {pos === 0 && <span className="muted"> · the preview</span>}
+          {count > 0 && <span className="muted"> of {count}</span>}
           {' · '}{painting.artist} · {painting.year}
         </span>
-        {count > 1 && <button className="load-more" onClick={() => step(-1)} aria-label="‹">‹</button>}
-        {count > 1 && <button className="load-more" onClick={() => step(1)} aria-label="›">›</button>}
+        {positions > 1 && <button className="load-more" onClick={() => step(-1)} aria-label="‹">‹</button>}
+        {positions > 1 && <button className="load-more" onClick={() => step(1)} aria-label="›">›</button>}
         {count > 1 && <button className="load-more" onClick={random}>Random</button>}
         <Link to={`/token/${painting.slug}`}>Project page</Link>
         {hasRunner && src && (

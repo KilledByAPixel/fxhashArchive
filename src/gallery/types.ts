@@ -33,6 +33,13 @@ export interface Painting {
   /** Size on the wall in metres: the preview's proportions, PAINTING on the long side. */
   w: number
   h: number
+  /**
+   * The query fxhash ran this project's preview with — `?fxhash=…` and, for
+   * fx(params) work, a `#0x…` fragment — so the piece can open on the very
+   * iteration the thumbnail shows. Absent for the first metadata format, which
+   * never recorded it.
+   */
+  preview?: string
 }
 
 export interface Sign {

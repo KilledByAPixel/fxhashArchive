@@ -79,3 +79,23 @@ export function isTruncatedSnapshot(tokenCount, prevMeta) {
   if (typeof prev !== 'number' || !Number.isFinite(prev) || prev <= 0) return false
   return tokenCount < prev * MIN_RETAINED_RATIO
 }
+
+/**
+ * What fxhash ran a project's preview with, as the query the archived generator takes.
+ *
+ * The thumbnail of every project is one iteration the artist chose at mint, from a
+ * hash that is not any minted token's. Metadata from 0.2 on records it as
+ * `previewHash`, and the project's own `artifactUri` carries the whole query fxhash
+ * used — `?fxhash=…&fxiteration=…&fxminter=…` and, for fx(params) work, the chosen
+ * parameters in a `#0x…` fragment. That query is kept whole, as scripts/snapshot-seeds.mjs
+ * keeps it for iterations; the hash alone when the URI has no query; and nothing for
+ * the first metadata format, which never recorded which hash the preview came from.
+ */
+export function previewQueryOf(metadata) {
+  const md = metadata ?? {}
+  const uri = typeof md.artifactUri === 'string' ? md.artifactUri : ''
+  const mark = uri.indexOf('?')
+  if (mark >= 0 && uri.slice(mark).includes('fxhash=')) return uri.slice(mark)
+  const hash = typeof md.previewHash === 'string' && md.previewHash.trim()
+  return hash ? `?fxhash=${hash}` : null
+}

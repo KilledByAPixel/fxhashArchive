@@ -1,0 +1,7 @@
+{
+  "generatedAt": "2026-08-24T04:27:36.409Z",
+  "note": "The query fxhash ran each project's preview with, from its metadata on fxhash's API. Chunked by projectId / 250.",
+  "chunk": 250,
+  "projectsSeen": 27430,
+  "withPreview": 23326
+}
