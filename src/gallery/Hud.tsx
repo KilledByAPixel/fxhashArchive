@@ -28,6 +28,9 @@ export default function Hud({ rooms, roomTitle, caption, locked, mode, touch, on
   const open = panel === 'rooms'
   const [everLocked, setEverLocked] = useState(false)
   useEffect(() => { if (locked) setEverLocked(true) }, [locked])
+  // Clicking back into the room takes the mouse pointer, and with it any way to
+  // close a panel you left open. So the room closes it for you.
+  useEffect(() => { if (locked) setPanel(null) }, [locked])
 
   const eras = rooms.filter((r) => r.kind === 'era')
   const artists = rooms.filter((r) => r.kind === 'solo').sort((a, b) => a.title.localeCompare(b.title))

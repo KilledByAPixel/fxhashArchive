@@ -93,3 +93,25 @@ test('no About text, no About button — the gallery still opens on old data', (
   expect(screen.queryByRole('button', { name: 'About' })).toBeNull()
   expect(screen.getByRole('button', { name: 'Rooms' })).toBeTruthy()
 })
+
+// Frank: with a panel open, clicking back into the room takes the mouse pointer
+// away — and with it any way to close the panel you just opened. So the room
+// takes it back: whichever panel is open shuts the moment the pointer locks.
+test('clicking back into the room shuts whichever panel is open', () => {
+  const hud = (locked: boolean) => (
+    <MemoryRouter>
+      <Hud rooms={rooms} about={about} caption={null} locked={locked} mode="walk" touch={false} onTeleport={vi.fn()} />
+    </MemoryRouter>
+  )
+  const { rerender } = render(hud(false))
+  fireEvent.click(screen.getByRole('button', { name: 'Rooms' }))
+  expect(screen.getByRole('heading', { name: 'Eras' })).toBeTruthy()
+  rerender(hud(true))
+  expect(screen.queryByRole('heading', { name: 'Eras' })).toBeNull()
+
+  rerender(hud(false))
+  fireEvent.click(screen.getByRole('button', { name: 'About' }))
+  expect(screen.getByRole('heading', { name: 'About this gallery' })).toBeTruthy()
+  rerender(hud(true))
+  expect(screen.queryByRole('heading', { name: 'About this gallery' })).toBeNull()
+})
