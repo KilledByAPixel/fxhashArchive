@@ -56,6 +56,20 @@ test('assignRooms gives a solo room at SOLO_MIN, halls to the rest, in date orde
   expect(artistCount).toBe(3)                                          // alice, bob (in collab), charlie
 })
 
+test('a KT1 project with no collaborations entry does not raise artistCount', () => {
+  // Skipping this case, rather than falling through to crediting the contract
+  // address itself, is the fix: the contract is not a person, and counting it
+  // inflates the lobby's "N artists" figure by one per unresolved collaboration.
+  const alice = { id: 'tz1a', name: 'Alice' }
+  const tokens = [
+    ...Array.from({ length: SOLO_MIN }, (_, i) => tok(10 + i, `2021-11-${String(10 + i).padStart(2, '0')}T00:00:00.000Z`, alice)),
+    tok(50, '2022-01-01T00:00:00.000Z', { id: 'KT1nocollab', name: null }),
+  ]
+  const { artistCount, halls } = assignRooms(tokens, {})   // no collaborations recorded at all
+  expect(halls.get('2022-q1').map((t) => t.id)).toEqual([50])
+  expect(artistCount).toBe(1)   // alice only — the KT1 address is not a person
+})
+
 test('assignRooms orders solo artists by their earliest piece, ties by id', () => {
   const tokens = [
     ...[5, 6, 7, 8, 9].map((i) => tok(i, `2022-01-0${i - 4}T00:00:00.000Z`, { id: 'tz1late', name: 'Late' })),
@@ -133,7 +147,12 @@ function fixture() {
   const eras = ['2021-11-20', '2022-02-10', '2022-05-10', '2022-08-10', '2022-11-10', '2023-02-10', '2023-08-10']
   let id = 500
   for (const d of eras) for (let i = 0; i < 3; i++) add(id++, d, { id: `tz1s${id}`, name: `Solo ${id}` })
-  out.push(tok(999, '2022-01-01T00:00:00.000Z', A, { flag: 'HIDDEN' }))   // must vanish
+  // One token per moderation flag, so a fixture-level check catches a flag that
+  // HIDDEN_FLAGS (or a filter that only tests against 'HIDDEN') stops covering.
+  out.push(tok(996, '2022-01-02T00:00:00.000Z', A, { flag: 'MALICIOUS' }))        // must vanish
+  out.push(tok(997, '2022-01-03T00:00:00.000Z', A, { flag: 'REPORTED' }))         // must vanish
+  out.push(tok(998, '2022-01-04T00:00:00.000Z', A, { flag: 'AUTO_DETECT_COPY' })) // must vanish
+  out.push(tok(999, '2022-01-01T00:00:00.000Z', A, { flag: 'HIDDEN' }))           // must vanish
   return out
 }
 const duo = { collaborators: [{ id: 'tz1A', name: 'Ada' }, { id: 'tz1B', name: 'Bea' }] }
@@ -214,7 +233,9 @@ function checkInvariants(g, expectedIds) {
 test('buildGallery satisfies the layout invariants on the fixture', () => {
   const tokens = fixture()
   const g = buildGallery({ tokens, collaborations, generatedAt: '2026-08-23T00:00:00.000Z' })
-  checkInvariants(g, tokens.filter((t) => t.flag !== 'HIDDEN').map((t) => t.id))
+  // Every hidden flag, not just 'HIDDEN' — see the MALICIOUS/REPORTED/AUTO_DETECT_COPY
+  // tokens the fixture adds alongside it.
+  checkInvariants(g, tokens.filter((t) => !HIDDEN_FLAGS.has(t.flag)).map((t) => t.id))
   expect(g.rooms.map((r) => r.id)).toContain('tz1A')
   expect(g.rooms.map((r) => r.id)).toContain('tz1B')
   expect(g.rooms.map((r) => r.id)).toContain('tz1C')

@@ -6,8 +6,11 @@ import type { AtlasMeta, Painting, Room, Sign, Wall } from './types'
 import { EYE_Y, PAINTING, WALL_T } from './constants'
 
 const atlas: AtlasMeta = { size: 4096, tile: 256, gutter: 4, cols: 15, files: ['a', 'b'], small: ['c', 'd'] }
+// A wall at x = -4 has its inside face at -4 + WALL_T/2 = -3.85; the painting
+// stands WALL_OFFSET (WALL_T/2 + 0.02 = 0.17) off the rectangle edge at x = -4,
+// i.e. 0.02 clear of that inside face, at -4 + 0.17 = -3.83. See gallery-lib.mjs.
 const painting = (tile: number, over: Partial<Painting> = {}): Painting => ({
-  project: tile, slug: 'p', name: 'P', artist: 'A', year: 2022, room: 'r', x: -3.98, z: 20, yaw: Math.PI / 2, tile, ...over,
+  project: tile, slug: 'p', name: 'P', artist: 'A', year: 2022, room: 'r', x: -3.83, z: 20, yaw: Math.PI / 2, tile, ...over,
 })
 // Buffers are Float32, so 2.2 comes back as 2.2000000477; compare to 5 places.
 const bounds = (g: { getAttribute(n: string): { array: ArrayLike<number> } }, axis: 0 | 1 | 2) => {
@@ -31,11 +34,22 @@ test('tileUv addresses the image inside its gutter, top row at v = 1', () => {
   expect(atlasFile(225, atlas)).toBe(1)
 })
 
+test('tileUv is identical between the large and small atlas for the same tile', () => {
+  // Both atlases share the same 15-column grid and the same tile numbering (see
+  // scripts/gallery-lib.mjs ATLAS / ATLAS_SMALL), just scaled — so a tile's UV
+  // rectangle must come out exactly the same whichever one the client loaded. The
+  // phone path (chooseSmall) depends on this being exact, not merely close.
+  const small: AtlasMeta = { size: 2048, tile: 128, gutter: 2, cols: 15, files: ['a'], small: ['a'] }
+  for (const t of [0, 14, 15, 224, 225]) {
+    expect(tileUv(t, small)).toEqual(tileUv(t, atlas))
+  }
+})
+
 test('paintings become one quad each, only for the requested file', () => {
   const g = buildPaintingGeometry([painting(0), painting(1), painting(225)], atlas, 0)
   expect(g.getAttribute('position').count).toBe(12)
   expectBounds(g, 1, EYE_Y - PAINTING / 2, EYE_Y + PAINTING / 2)
-  expectBounds(g, 0, -3.98, -3.98)              // flat against the wall plane
+  expectBounds(g, 0, -3.83, -3.83)              // flat against the wall plane, clear of the wall behind it
   expectBounds(g, 2, 20 - PAINTING / 2, 20 + PAINTING / 2)
   const uv = g.getAttribute('uv').array
   for (let i = 0; i < uv.length; i += 2) {
@@ -55,7 +69,7 @@ test('every normal on a painting quad points into the room', () => {
 test('a frame sits just behind its painting and a little larger', () => {
   const g = buildFrameGeometry([painting(0)])
   expect(g.getAttribute('position').count).toBe(6)
-  expect(bounds(g, 0)[0]).toBeLessThan(-3.98)
+  expect(bounds(g, 0)[0]).toBeLessThan(-3.83)
   expectBounds(g, 1, EYE_Y - PAINTING / 2 - 0.06, EYE_Y + PAINTING / 2 + 0.06)
 })
 
@@ -66,6 +80,19 @@ test('a wall segment becomes a box WALL_T thick, corners closed', () => {
   expectBounds(g, 0, -4 - WALL_T / 2, -4 + WALL_T / 2)
   expectBounds(g, 1, 0, 4)
   expectBounds(g, 2, -WALL_T / 2, 10 + WALL_T / 2)
+})
+
+test('a painting on a wall stands clear of it, not buried inside the opaque box', () => {
+  // Regression for the bug where WALL_OFFSET was measured from the room rectangle's
+  // edge (the wall's centre line) instead of its inside face, burying every painting
+  // 0.13 m inside the wall. Build the actual wall box for the -4 wall this painting
+  // hangs on, and check the painting's quad sits outside it, not inside.
+  const w: Wall = { x1: -4, z1: 0, x2: -4, z2: 10, y0: 0, y1: 4 }
+  const wallInsideFace = bounds(buildWallGeometry([w]), 0)[1]   // the wall box's far (room-side) x-bound
+  expect(wallInsideFace).toBeCloseTo(-4 + WALL_T / 2, 6)
+  const paintingX = bounds(buildPaintingGeometry([painting(0)], atlas, 0), 0)[0]
+  expect(paintingX).toBeGreaterThan(wallInsideFace)
+  expect(paintingX).toBeGreaterThan(-4 + WALL_T / 2)
 })
 
 test('each room gets a floor and a ceiling', () => {

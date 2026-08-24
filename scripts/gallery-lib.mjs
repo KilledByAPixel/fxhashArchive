@@ -25,8 +25,14 @@ export const ROOM_GAP = 2
 export const CORNER = 1
 export const LOBBY = 8
 export const HALL_MIN = 12
-/** How far a painting or sign stands off its wall, so it never z-fights with it. */
-export const WALL_OFFSET = 0.02
+/**
+ * How far a painting or sign stands off the wall's inside face, so it never
+ * z-fights with it. Measured from that face, not from the room rectangle's edge:
+ * the edge is the wall's centre line, and the wall is WALL_T thick, so its inside
+ * face already sits WALL_T/2 further into the room. Skipping that term buries
+ * every painting 0.13 m inside the (opaque) wall instead of standing it proud of it.
+ */
+export const WALL_OFFSET = WALL_T / 2 + 0.02
 
 /** Kept in step with HIDDEN_FLAGS in src/lib/data.ts and scripts/build-summary.mjs. */
 export const HIDDEN_FLAGS = new Set(['MALICIOUS', 'HIDDEN', 'REPORTED', 'AUTO_DETECT_COPY'])
@@ -95,12 +101,16 @@ export function assignRooms(tokens, collaborations = {}) {
   const halls = new Map(ERAS.map((e) => [e.id, []]))
   for (const t of sorted) if (!soloIds.has(t.id)) halls.get(eraOf(t.createdAt)).push(t)
 
-  // Distinct people credited, collaboration members included.
+  // Distinct people credited, collaboration members included. A collaboration
+  // with no recorded collaborators entry is skipped rather than falling through to
+  // its KT1 contract address — that address is not a person, so counting it would
+  // overstate artistCount by one for every collaboration snapshot-collaborators.mjs
+  // did not (yet) resolve.
   const people = new Set()
   for (const t of sorted) {
     const members = collaborations[String(t.id)]?.collaborators
     if (members?.length) for (const m of members) people.add(m.id)
-    else if (t.author?.id) people.add(t.author.id)
+    else if (t.author?.id && !isCollab(t)) people.add(t.author.id)
   }
 
   return { solo, halls, artistCount: people.size }
