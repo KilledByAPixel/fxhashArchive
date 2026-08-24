@@ -248,16 +248,41 @@ and, below it, "420 archived works · 200 artists · 2021–2024", with the numb
 from the data (artists = distinct people credited, collaboration members
 included). Its east side is open to leg D.
 
-**Signs.** Four kinds, each a quad on a wall: the lobby title above the lobby's
+**Signs.** Five kinds, each a quad on a wall: the lobby title above the lobby's
 opening ("fxhash", 3 × 0.5, with the counts line under it, 3 × 0.25); an era sign
 on each portal's lintel (5 × 0.8, centred 3.5 m up) and, for the first era, on
 the pier beside the lobby opening (1.8 × 0.8); room signs (4.8 × 0.8, above the
 door on the corridor side and on the wall facing the door inside — they were
-2.4 × 0.4 and could not be read from the corridor); and a plaque under every
-painting's lower-right corner (0.5 × 0.12: "Name — Artist, Year"). Their text
-and placement are in the JSON; they are rasterised on the client into one
-canvas atlas, where identical signs share a drawing and plaques are drawn at
-twice the scale of the big signs so small text stays sharp.
+2.4 × 0.4 and could not be read from the corridor); a plaque under every
+painting's lower-right corner (0.5 × 0.12: "Name — Artist, Year"); and the
+lobby's two prose panels (below). Their text and placement are in the JSON;
+they are rasterised on the client into one canvas atlas, where identical signs
+share a drawing and plaques are drawn at twice the scale of the big signs so
+small text stays sharp. Text is near-black (`TEXT`, #141414) — it was #d8d8d8,
+chosen when the walls were near-black, and on a gallery-white wall that is a
+contrast ratio of 1.1:1 and unreadable; a test holds sign and wall together at
+4.5:1 or better. Not pure black: these are unlit quads standing off a lit wall,
+and #000 against a shadowed stretch reads as a hole punched through it.
+
+**Both faces.** A portal is a wall across the corridor, and both its sides are
+walked. Each portal's lintel therefore carries *two* era signs, back to back:
+the era you enter going on, facing the walker, and the era you enter turning
+back, facing the other way — the one before it in the sequence. Naming only the
+era ahead left anyone walking the loop anticlockwise with nothing to steer by.
+The first era has nothing before it, so the corridor face of the lobby's own
+opening carries the lobby's sign instead: "The lobby is through here — the walk
+begins there, at 2021". Era signs therefore number 2 × eras − 1.
+
+**Lobby panels.** The two walls a visitor is not already facing on arrival carry
+prose: behind them (the south wall) *About this gallery* — what is here, in what
+order, who gets a room, and that the corridor loops; beside them (the west wall)
+*How to walk it* — the keys, what clicking a painting does, and where the
+editions are. The north wall is the way out and the east is the way back in
+(with the full-circle sign), so both are left to their signs. A panel is a
+heading (`title`, 4 × 0.4 at 3 m) over its lines (`panel`, 7 × 0.28, from
+2.35 m down at 0.38 m pitch), straddling eye height as a museum sets its
+introductory text. `panel` is the one kind drawn in the body weight rather than
+semibold: it is prose, not a name.
 
 **Invariants** (these are the tests):
 

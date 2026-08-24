@@ -790,6 +790,16 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
   const sign = (kind, text, point, normal, y, w, h) =>
     signs.push({ text, kind, x: r6(point.x + normal.x * WALL_OFFSET), y, z: r6(point.z + normal.z * WALL_OFFSET), yaw: yawOf(normal), w, h })
   const opening = (from) => [{ from: from - OPENING_W / 2, to: from + OPENING_W / 2, top: DOOR_H }]
+  /**
+   * A wall panel: a heading with its lines stacked under it, centred on the wall
+   * and straddling eye height, the way a museum sets its introductory text. The
+   * lobby's two blank walls carry these — the walls you are not already facing
+   * when you arrive, since the one ahead is the way in.
+   */
+  const panel = (point, normal, heading, lines) => {
+    sign('title', heading, point, normal, 3, 4, 0.4)
+    lines.forEach((text, i) => sign('panel', text, point, normal, 2.35 - i * 0.38, 7, 0.28))
+  }
 
   // Lobby: the south-west corner of the loop. Spawn in the middle facing north up
   // leg A, the title above that opening and the first era's name on the pier
@@ -808,6 +818,25 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
   sign('title', 'fxhash', { x: 0, z: LOBBY }, { x: 0, z: -1 }, 3.65, 3, 0.5)
   sign('title', `${visible.length} archived works · ${artistCount} artists · ${span[0]}–${span[1]}`, { x: 0, z: LOBBY }, { x: 0, z: -1 }, 3.25, 3, 0.25)
   sign('title', `You have walked the whole of fxhash, ${span[0]}–${span[1]} — the lobby is ahead`, { x: HX, z: LOBBY / 2 }, { x: 1, z: 0 }, 3.5, 3.6, 0.4)
+  // The corridor face of the lobby's own opening. Walking back down leg A is
+  // walking back through the years, and this is what you are walking back into.
+  sign('title', `The lobby is through here — the walk begins there, at ${span[0]}`, { x: 0, z: LOBBY }, { x: 0, z: 1 }, 3.5, 4, 0.4)
+
+  // The two walls you are not facing when you arrive: behind you, what the place
+  // is; beside you, how to walk it. The east side is the way back in and carries
+  // the full-circle sign, and the north is the way out.
+  panel({ x: 0, z: 0 }, { x: 0, z: 1 }, 'About this gallery', [
+    `The ${visible.length} fxhash projects whose code this archive holds,`,
+    `hung in the order they were made, ${span[0]} to ${span[1]}.`,
+    'An artist with three or more archived works — or two much collected —',
+    'has a room; the rest line the corridor, which loops back to here.',
+  ])
+  panel({ x: -HX, z: LOBBY / 2 }, { x: 1, z: 0 }, 'How to walk it', [
+    'W A S D to walk, the mouse to look, hold Shift to run.',
+    'Click a painting and you step up to it — it runs there on the wall,',
+    'from the seed behind the picture you walked up to. ‹ › page the editions.',
+    'Esc steps back; the Rooms menu jumps to any era or artist.',
+  ])
 
   // Era markers: something to teleport to a metre past each portal, and the
   // era's name on the lintel facing you. The first era's name is on the pier
@@ -832,6 +861,12 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
       entry: { x: r6(m.centre.x), z: r6(m.centre.z), yaw: yawOf(m.dir) },
     })
     sign('era', m.era.label, m.wall, m.normal, m.y, m.w, 0.8)
+    // The other face. A portal is a wall across the corridor and both its sides
+    // are walked; naming only the era ahead left anyone who turned round with
+    // nothing to steer by. Going back you enter the era before this one — and
+    // the first era has none, so the back of that opening is the lobby's sign.
+    const before = ERAS[ERAS.indexOf(m.era) - 1]
+    if (before) sign('era', before.label, m.wall, neg(m.normal), m.y, m.w, 0.8)
   }
 
   // Legs as era sections between their portals, corners as they come, all

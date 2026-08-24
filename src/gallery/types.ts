@@ -44,7 +44,8 @@ export interface Painting {
 
 export interface Sign {
   text: string
-  kind: 'title' | 'era' | 'room' | 'plaque'
+  /** `panel` is the lobby's prose — set in the body weight, where a name is set bold. */
+  kind: 'title' | 'era' | 'room' | 'plaque' | 'panel'
   x: number; y: number; z: number; yaw: number
   w: number; h: number
 }

@@ -96,7 +96,7 @@ export function drawLabels(signs: Sign[], rects: PixelRect[], size: number): HTM
   ctx.fillStyle = `#${TEXT.toString(16).padStart(6, '0')}`
   signs.forEach((s, i) => {
     const r = rects[i]
-    const weight = s.kind === 'plaque' ? 'normal' : '600'
+    const weight = s.kind === 'plaque' || s.kind === 'panel' ? 'normal' : '600'
     let px = r.h * 0.6
     ctx.font = `${weight} ${px}px system-ui, sans-serif`
     const measured = ctx.measureText(s.text).width

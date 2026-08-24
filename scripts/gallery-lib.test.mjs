@@ -463,7 +463,7 @@ test('era markers replace era halls: one per era, zero-area, standing in the cor
       m.entry.x >= r.rect.x && m.entry.x <= r.rect.x + r.rect.w && m.entry.z >= r.rect.z && m.entry.z <= r.rect.z + r.rect.d)
     expect(standing).toBe(true)
   }
-  expect(g.signs.filter((s) => s.kind === 'era').length).toBe(ERAS.length)
+  expect(g.signs.filter((s) => s.kind === 'era').length).toBe(2 * ERAS.length - 1)
 })
 
 test('no blank walls: a room spreads its pieces over its walls', () => {
@@ -517,7 +517,7 @@ test('era portals: the corridor is sectioned by era, each section titled with it
   const titles = new Set(halls.map((r) => r.title))
   for (const title of titles) expect(ERAS.map((e) => e.label)).toContain(title)
   expect(titles.size).toBeGreaterThanOrEqual(3)
-  expect(g.signs.filter((s) => s.kind === 'era').length).toBe(ERAS.length)
+  expect(g.signs.filter((s) => s.kind === 'era').length).toBe(2 * ERAS.length - 1)
   // a portal is a lintel across the corridor whose midpoint lies on the line between two sections
   const lintels = g.walls.filter((w) => w.y0 === DOOR_H)
   expect(lintels.length).toBeGreaterThanOrEqual(3)   // the lobby's opening, the way back in, and at least one portal
@@ -549,7 +549,7 @@ const nearestLintel = (g, x, z) => Math.min(...g.walls.filter((w) => w.y0 > 0).m
 test('every era sign hangs on a lintel or on the lobby pier — none floats in the corridor', () => {
   for (const g of [loop(), buildGallery({ tokens: fixture(), collaborations, generatedAt: 'x' })]) {
     const signs = g.signs.filter((s) => s.kind === 'era')
-    expect(signs.length).toBe(ERAS.length)
+    expect(signs.length).toBe(2 * ERAS.length - 1)
     for (const s of signs) {
       const onPier = Math.abs(s.z - 8) < 0.5 && Math.abs(s.x) > 2   // beside the lobby opening
       expect(onPier || nearestLintel(g, s.x, s.z) < WALL_OFFSET + 1e-6).toBe(true)
@@ -606,4 +606,68 @@ test('pieces are hung by their edges: a museum of portraits keeps GAP between th
   for (const p of g.paintings) expect(p.w).toBeCloseTo(PAINTING / 2, 9)
   const legLength = (g) => { const [z0, z1] = extent(sections(g, 'leg-a'), 'z'); return z1 - z0 }
   expect(legLength(g)).toBeLessThanOrEqual(legLength(loop()) + 1e-9)
+})
+
+// ---- round six: signs that work in both directions -------------------------------
+// Frank walked back the way he came: a portal's lintel named the era on the face
+// you approach and nothing on the other, so turning round left you with no idea
+// what you were walking into. Every portal now names the era on both faces — the
+// one you enter going on, and the one you enter turning back — and the lobby's
+// opening says, on its corridor face, that the walk starts through it.
+
+test('a portal names an era on both faces: what you walk into, and what you turn back into', () => {
+  const g = loop()
+  const eras = g.signs.filter((s) => s.kind === 'era')
+  // one per era along the walk, and the same again on the back of each portal;
+  // the first era has nothing before it, so its lintel's back face is the lobby's.
+  expect(eras.length).toBe(2 * ERAS.length - 1)
+  const labels = ERAS.map((e) => e.label)
+  const onPier = (s) => Math.abs(s.z - 8) < 0.5 && Math.abs(s.x) > 2
+  for (const s of eras.filter((s) => !onPier(s))) {
+    // its twin hangs at the same spot on the wall, facing the other way
+    const nx = Math.sin(s.yaw), nz = Math.cos(s.yaw)
+    const twin = eras.find((t) =>
+      Math.abs(t.x - (s.x - 2 * WALL_OFFSET * nx)) < 1e-6 &&
+      Math.abs(t.z - (s.z - 2 * WALL_OFFSET * nz)) < 1e-6 &&
+      Math.abs(t.y - s.y) < 1e-6)
+    expect(twin).toBeDefined()
+    // 5 places, not 6: the build rounds every angle to a micrometre, so two opposite faces differ by π ∓ 1e-6.
+    expect(Math.abs(yawOfSign(twin) - yawOfSign(s))).toBeCloseTo(Math.PI, 5)
+    // the two faces are consecutive eras: you came out of one and into the other
+    expect(Math.abs(labels.indexOf(s.text) - labels.indexOf(twin.text))).toBe(1)
+  }
+})
+
+/** A sign's facing as an angle in [0, 2π), for comparing two that face opposite ways. */
+const yawOfSign = (s) => (s.yaw + 2 * Math.PI) % (2 * Math.PI)
+
+test('the lobby opening says, on its corridor face, that the walk starts through it', () => {
+  const g = loop()
+  const back = g.signs.find((s) => s.kind === 'title' && /begins/i.test(s.text) && s.z > 7)
+  expect(back).toBeDefined()
+  expect(back.yaw).toBeCloseTo(0, 6)             // faces north, up leg A: read on the way back
+  expect(back.y).toBeGreaterThanOrEqual(DOOR_H)  // on the lintel over the opening
+})
+
+test('the lobby tells you what the place is and how to walk it, on the walls you are not facing', () => {
+  const g = loop()
+  const panels = g.signs.filter((s) => s.kind === 'panel')
+  expect(panels.length).toBeGreaterThanOrEqual(6)
+  // behind you as you spawn (the south wall, facing north) and to the side (the
+  // west wall, facing east) — never the north wall you are already looking at
+  const behind = panels.filter((s) => Math.abs(s.z) < 0.5 && Math.abs(s.yaw) < 1e-6)
+  const side = panels.filter((s) => Math.abs(s.x + 4) < 0.5 && Math.abs(s.yaw - Math.PI / 2) < 1e-6)
+  expect(behind.length).toBeGreaterThanOrEqual(3)
+  expect(side.length).toBeGreaterThanOrEqual(3)
+  for (const s of panels) {
+    expect(s.y).toBeGreaterThan(0.9)             // no line down at the skirting
+    expect(s.y + s.h / 2).toBeLessThan(WALL_H)   // nor through the ceiling
+    expect(s.w).toBeLessThanOrEqual(8)           // fits the lobby wall
+  }
+  // each panel is headed, and the headings are not panel text
+  for (const wall of [{ z: 0, yaw: 0 }, { x: -4, yaw: Math.PI / 2 }]) {
+    const heads = g.signs.filter((s) => s.kind === 'title' && Math.abs(s.yaw - wall.yaw) < 1e-6 &&
+      (wall.z !== undefined ? Math.abs(s.z) < 0.5 : Math.abs(s.x + 4) < 0.5))
+    expect(heads.length).toBe(1)
+  }
 })
