@@ -26,6 +26,8 @@ export interface BuiltScene {
   scene: Scene
   /** The one merged walls mesh, so picking can be blocked by it — see engine.ts paintingAt. */
   wallsMesh: Mesh
+  /** The one merged floor mesh: the surface screen-space reflections are drawn on. */
+  floorsMesh: Mesh
   paintingMeshes: Mesh[]
   /** paintingIndex[f][floor(faceIndex / 2)] is the painting behind a hit on paintingMeshes[f]. */
   paintingIndex: Painting[][]
@@ -134,6 +136,7 @@ export function buildScene(
   return {
     scene,
     wallsMesh,
+    floorsMesh: floors,
     paintingMeshes,
     paintingIndex,
     keyLight: key,

@@ -140,9 +140,11 @@ export class GalleryEngine {
 
   /**
    * Rebuild the render path for a quality level. 'low' renders straight; 'high'
-   * composes ambient occlusion and anti-aliasing; 'ultra' swaps the occlusion
-   * for screen-space reflections, which carry their own beauty pass and do not
-   * stack with it.
+   * composes ambient occlusion and anti-aliasing; 'ultra' renders through
+   * SSRPass instead of a plain RenderPass — it carries its own beauty pass and
+   * paints the room's reflection onto the floor — and then the occlusion and
+   * anti-aliasing exactly as 'high' does, so turning reflections on adds them
+   * rather than trading the occlusion away.
    */
   setQuality(quality: Quality): void {
     this.quality = quality
@@ -155,16 +157,17 @@ export class GalleryEngine {
     const h = Math.max(1, this.canvas.clientHeight)
     const composer = new EffectComposer(this.renderer)
     if (quality === 'ultra') {
-      const reflected = [...this.built.paintingMeshes, ...['frames', 'walls', 'lights'].map((n) => this.built.scene.getObjectByName(n) as Mesh).filter(Boolean)]
-      const ssr = new SSRPass({ renderer: this.renderer, scene: this.built.scene, camera: this.camera, width: w, height: h, groundReflector: null, selects: reflected })
+      // `selects` names the surfaces that reflect, not what they show: the floor
+      // alone. (The first build listed the paintings and walls here — the things
+      // meant to appear in the reflection — and so nothing reflected at all.)
+      const ssr = new SSRPass({ renderer: this.renderer, scene: this.built.scene, camera: this.camera, width: w, height: h, groundReflector: null, selects: [this.built.floorsMesh] })
       ssr.opacity = 0.4
-      ssr.maxDistance = 6
+      ssr.maxDistance = 10   // metres of ray: a wall's pictures reach the floor a few metres out
       composer.addPass(ssr)
     } else {
       composer.addPass(new RenderPass(this.built.scene, this.camera))
-      const gtao = new GTAOPass(this.built.scene, this.camera, w, h)
-      composer.addPass(gtao)
     }
+    composer.addPass(new GTAOPass(this.built.scene, this.camera, w, h))
     composer.addPass(new SMAAPass())
     composer.addPass(new OutputPass())
     this.composer = composer

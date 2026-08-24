@@ -107,3 +107,10 @@ test('a floor that can reflect, walls and frames that cast and take shadows, lig
   expect(built.keyLight.parent).toBe(built.scene)
   built.dispose()
 })
+
+test('the floor is exposed on its own: it is the one surface that reflects', () => {
+  const built = buildScene(gallery, [null, null], null)
+  expect(built.floorsMesh.name).toBe('floors')
+  expect(built.floorsMesh.parent).toBe(built.scene)
+  built.dispose()
+})
