@@ -332,3 +332,12 @@ export async function loadProjectMarketStats(
  * change or the building goes stale.
  */
 export const loadGallery = () => getJson<Gallery>('gallery.json')
+
+/**
+ * Which artists have a solo room, without paying for the rest of gallery.json.
+ *
+ * ArtistPage only ever needs the answer to "does this one artist have a room?" —
+ * fetching the whole 137 KB building (mostly wall and painting geometry it never
+ * looks at) just to read one boolean off it was the bug this exists to fix.
+ */
+export const loadGalleryRooms = () => getJson<{ solo: string[] }>('gallery/rooms.json')

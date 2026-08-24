@@ -80,6 +80,8 @@ for (const f of [
   'data/generators/manifest.json',
   'data/collaborations.json',
   'data/users.json',
+  'data/gallery.json',
+  'data/gallery/rooms.json',
 ]) {
   check(set.has(`${root}/${f}`), f)
 }
@@ -95,6 +97,7 @@ const dirs = [
   'data/descriptions/',
   'data/market/',
   'data/artists/',
+  'data/gallery/',
 ]
 for (const d of dirs) {
   const n = entries.filter((e) => e.startsWith(`${root}/${d}`)).length
@@ -106,6 +109,7 @@ console.log()
 for (const [inZip, onDisk] of [
   ['data/generators/manifest.json', 'public/data/generators/manifest.json'],
   ['data/summary.json', 'public/data/summary.json'],
+  ['data/gallery.json', 'public/data/gallery.json'],
 ]) {
   if (!existsSync(onDisk)) {
     console.log(`skip  ${inZip} (no local copy to compare)`)

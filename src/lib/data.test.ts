@@ -1,7 +1,7 @@
 import { test, expect, vi, beforeEach } from 'vitest'
 import {
   loadMeta, loadShard, findTokenBySlug, isVisible, loadIterationIds,
-  loadIterationContract, loadSummary, loadProjectMarketStats, loadProjectSeed, loadProjectIteration, _resetCache, loadProjectArtists, loadProjectText } from './data'
+  loadIterationContract, loadSummary, loadProjectMarketStats, loadProjectSeed, loadProjectIteration, _resetCache, loadProjectArtists, loadProjectText, loadGalleryRooms } from './data'
 import type { LeanToken } from './types'
 
 const tok = (id: number, over: Partial<LeanToken> = {}): LeanToken => ({
@@ -25,6 +25,7 @@ const routes: Record<string, unknown> = {
     byProject: { '1': 0, '2': 1, '3': 2 },
   },
   'gallery.json': { generatedAt: 'T', counts: { paintings: 1 }, rooms: [], walls: [], paintings: [], signs: [] },
+  'gallery/rooms.json': { solo: ['tz1a', 'tz1b'] },
 }
 
 beforeEach(() => {
@@ -403,4 +404,9 @@ test('iteration text falls back to the description when the file omits it', asyn
 test('loadGallery fetches the baked museum', async () => {
   const { loadGallery } = await import('./data')
   expect((await loadGallery()).counts.paintings).toBe(1)
+})
+
+test('loadGalleryRooms fetches just the solo-room id list, not the whole museum', async () => {
+  expect((await loadGalleryRooms()).solo).toEqual(['tz1a', 'tz1b'])
+  expect(vi.mocked(fetch).mock.calls.some((c) => String(c[0]).endsWith('gallery/rooms.json'))).toBe(true)
 })

@@ -77,6 +77,14 @@ async function main() {
   await writeFile(join(DATA, 'gallery.json'), json)
   bytes += Buffer.byteLength(json)
 
+  // ArtistPage only needs to know whether *an* artist has a solo room — not the
+  // 40 KB building it lives in — so that one boolean gets its own tiny file rather
+  // than making every artist-page visit fetch the whole gallery.json for it.
+  const soloIds = gallery.rooms.filter((r) => r.kind === 'solo').map((r) => r.id).sort()
+  const roomsJson = JSON.stringify({ solo: soloIds })
+  await writeFile(join(OUT_DIR, 'rooms.json'), roomsJson)
+  bytes += Buffer.byteLength(roomsJson)
+
   const halls = gallery.rooms.filter((r) => r.kind === 'hall')
   console.log(
     `${gallery.counts.paintings} paintings, ${gallery.counts.soloRooms} solo rooms, ` +

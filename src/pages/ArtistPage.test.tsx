@@ -132,18 +132,11 @@ test('badges the artist works whose code is fully archived', async () => {
 })
 
 test('an artist with a room links to it; one without has no link', async () => {
-  const gallery = {
-    generatedAt: 'T', counts: { paintings: 5, artists: 1, soloRooms: 1, years: [2021, 2022] as [number, number] },
-    atlas: { size: 4096, tile: 256, gutter: 4, cols: 15, files: [], small: [] },
-    spawn: { x: 0, z: 4, yaw: 0 },
-    rooms: [{ id: 'tz1a', kind: 'solo' as const, title: 'Alice', rect: { x: 0, z: 0, w: 8, d: 8 }, entry: { x: 0, z: 1, yaw: 0 } }],
-    walls: [], paintings: [], signs: [],
-  }
-  vi.spyOn(data, 'loadGallery').mockResolvedValue(gallery)
+  vi.spyOn(data, 'loadGalleryRooms').mockResolvedValue({ solo: ['tz1a'] })
   renderAt('tz1a')
   expect((await screen.findByRole('link', { name: /room in the gallery/i })).getAttribute('href')).toBe('/gallery?room=tz1a')
   cleanup()
-  vi.spyOn(data, 'loadGallery').mockResolvedValue({ ...gallery, rooms: [] })
+  vi.spyOn(data, 'loadGalleryRooms').mockResolvedValue({ solo: [] })
   renderAt('tz1a')
   await screen.findByRole('heading', { name: 'Alice' })
   expect(screen.queryByRole('link', { name: /room in the gallery/i })).toBeNull()
@@ -158,15 +151,8 @@ test('does not keep showing the previous artist\'s room link while navigating to
   vi.spyOn(data, 'loadArtists').mockResolvedValue([artist, bob])
   vi.spyOn(data, 'loadTokensMap').mockResolvedValue({ tz1a: [1], tz1b: [] })
   vi.spyOn(data, 'loadAllTokens').mockResolvedValue([tok(1)])
-  const gallery = {
-    generatedAt: 'T', counts: { paintings: 5, artists: 1, soloRooms: 1, years: [2021, 2022] as [number, number] },
-    atlas: { size: 4096, tile: 256, gutter: 4, cols: 15, files: [], small: [] },
-    spawn: { x: 0, z: 4, yaw: 0 },
-    rooms: [{ id: 'tz1a', kind: 'solo' as const, title: 'Alice', rect: { x: 0, z: 0, w: 8, d: 8 }, entry: { x: 0, z: 1, yaw: 0 } }],
-    walls: [], paintings: [], signs: [],
-  }
-  vi.spyOn(data, 'loadGallery')
-    .mockResolvedValueOnce(gallery)
+  vi.spyOn(data, 'loadGalleryRooms')
+    .mockResolvedValueOnce({ solo: ['tz1a'] })
     // Bob's own load never resolves, so the only way this test can pass is the
     // synchronous reset — nothing here ever tells the page Bob has no room.
     .mockReturnValueOnce(new Promise(() => {}))

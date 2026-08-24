@@ -5,7 +5,7 @@ import {
   loadTokensMap,
   loadAllTokens,
   loadSummary,
-  loadGallery,
+  loadGalleryRooms,
   loadCollaborations,
   isVisible,
   type Collaborator,
@@ -57,8 +57,8 @@ export default function ArtistPage() {
       (s) => { if (!cancelled) { setArchivedIds(new Set(s.archived)); setThumbs(s.thumbs) } },
       () => { if (!cancelled) { setArchivedIds(new Set()); setThumbs({}) } },
     )
-    loadGallery().then(
-      (g) => { if (!cancelled) setHasRoom(g.rooms.some((r) => r.kind === 'solo' && r.id === id)) },
+    loadGalleryRooms().then(
+      (rooms) => { if (!cancelled) setHasRoom(rooms.solo.includes(id!)) },
       () => { if (!cancelled) setHasRoom(false) },
     )
     ;(async () => {
