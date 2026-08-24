@@ -115,3 +115,11 @@ test('clicking back into the room shuts whichever panel is open', () => {
   rerender(hud(true))
   expect(screen.queryByRole('heading', { name: 'About this gallery' })).toBeNull()
 })
+
+test('the About panel\'s way to the source opens a new tab too', () => {
+  renderHud({ about })
+  fireEvent.click(screen.getByRole('button', { name: 'About' }))
+  const link = screen.getByRole('link', { name: /source/i })
+  expect(link.getAttribute('target')).toBe('_blank')
+  expect(link.getAttribute('rel')).toContain('noopener')
+})

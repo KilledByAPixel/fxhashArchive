@@ -153,3 +153,15 @@ test('no chain, no trouble: the bar still works when the lookup fails', async ()
   expect(screen.getByText(/KilledByAPixel/)).toBeTruthy()   // the bar is complete without it
   expect(screen.queryByRole('link', { name: 'fxhash' })).toBeNull()
 })
+
+// Frank: a link out of the gallery must open a new tab, or following it costs you
+// the place you were standing in the room — and a WebGL context that took a
+// moment to build.
+test('the way out to the project page opens a new tab', async () => {
+  renderViewer()
+  await screen.findByTitle('Zartz #1 (archived copy)')
+  const link = screen.getByRole('link', { name: /project page/i })
+  expect(link.getAttribute('href')).toBe('/token/zartz')
+  expect(link.getAttribute('target')).toBe('_blank')
+  expect(link.getAttribute('rel')).toContain('noopener')
+})

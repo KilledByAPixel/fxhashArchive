@@ -150,7 +150,11 @@ export default function Viewer({ painting, rect, onBack }: Props) {
           {positions > 1 && <button className="load-more" onClick={() => step(-1)} aria-label="‹">‹</button>}
           {positions > 1 && <button className="load-more" onClick={() => step(1)} aria-label="›">›</button>}
           {count > 1 && <button className="load-more" onClick={random}>Random</button>}
-          <Link to={`/token/${painting.slug}`}>Project page</Link>
+          {/* A new tab, because following this one from inside the gallery would
+              cost you the place you were standing — and a WebGL context that took
+              a moment to build. The one link that does leave in place is the HUD's
+              "← fxhash archive", which is the way out and means to be. */}
+          <Link to={`/token/${painting.slug}`} target="_blank" rel="noopener">Project page</Link>
           {owner && <span className="muted">held by <TzktLink address={owner.address} alias={owner.alias} /></span>}
         </div>
       </div>
