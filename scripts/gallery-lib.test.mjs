@@ -2,7 +2,7 @@ import { test, expect } from 'vitest'
 import { existsSync } from 'node:fs'
 import {
   ERAS, eraOf, isCollab, creditOf, assignRooms, SOLO_MIN, wallSegments, freeRuns, hangOnRun, GAP, WALL_H, DOOR_H, SPACING, CORNER, ROOM_MIN, ROOM_MID, WALL_T,
-  buildGallery, tileRect, ATLAS, ATLAS_SMALL, TILES_PER_ATLAS, WALL_OFFSET, PAINTING, EYE_Y, HIDDEN_FLAGS,
+  buildGallery, tileRect, ATLAS, ATLAS_SMALL, TILES_PER_ATLAS, WALL_OFFSET, SIGN_OFFSET, PAINTING, EYE_Y, HIDDEN_FLAGS,
 } from './gallery-lib.mjs'
 import { readArchiveInputs } from './gallery-inputs.mjs'
 
@@ -627,8 +627,8 @@ test('a portal names an era on both faces: what you walk into, and what you turn
     // its twin hangs at the same spot on the wall, facing the other way
     const nx = Math.sin(s.yaw), nz = Math.cos(s.yaw)
     const twin = eras.find((t) =>
-      Math.abs(t.x - (s.x - 2 * WALL_OFFSET * nx)) < 1e-6 &&
-      Math.abs(t.z - (s.z - 2 * WALL_OFFSET * nz)) < 1e-6 &&
+      Math.abs(t.x - (s.x - 2 * SIGN_OFFSET * nx)) < 1e-6 &&
+      Math.abs(t.z - (s.z - 2 * SIGN_OFFSET * nz)) < 1e-6 &&
       Math.abs(t.y - s.y) < 1e-6)
     expect(twin).toBeDefined()
     // 5 places, not 6: the build rounds every angle to a micrometre, so two opposite faces differ by π ∓ 1e-6.
@@ -669,5 +669,26 @@ test('the lobby tells you what the place is and how to walk it, on the walls you
     const heads = g.signs.filter((s) => s.kind === 'title' && Math.abs(s.yaw - wall.yaw) < 1e-6 &&
       (wall.z !== undefined ? Math.abs(s.z) < 0.5 : Math.abs(s.x + 4) < 0.5))
     expect(heads.length).toBe(1)
+  }
+})
+
+// ---- round seven: a sign is ink, not an object -----------------------------------
+// Frank saw a faint dark outline around every name and plaque. The signs stood
+// 2 cm off the plaster — a framed picture's standoff — so the ambient occlusion
+// found a gap to darken behind each one. A printed label has no gap.
+
+test('a sign lies on the wall where a painting stands off it', () => {
+  const g = loop()
+  expect(SIGN_OFFSET).toBeGreaterThan(WALL_T / 2)          // still clear of the plaster, not sunk into it
+  expect(SIGN_OFFSET).toBeLessThan(WALL_OFFSET)            // but not hung off it like a picture
+  expect(SIGN_OFFSET - WALL_T / 2).toBeCloseTo(0.005, 9)          // 5 mm of standoff, no more
+  const rooms = new Map(g.rooms.map((r) => [r.id, r]))
+  for (const p of g.paintings) {
+    const r = rooms.get(p.room)
+    const plaque = g.signs.find((s) => s.kind === 'plaque' && s.text.startsWith(p.name + ' —'))
+    expect(plaque).toBeDefined()
+    // the plaque hangs on the same wall as its painting, but flat against it
+    expect(edgeOf(r.rect, plaque.x, plaque.z).dist).toBeCloseTo(SIGN_OFFSET, 6)
+    expect(edgeOf(r.rect, p.x, p.z).dist).toBeCloseTo(WALL_OFFSET, 6)
   }
 })

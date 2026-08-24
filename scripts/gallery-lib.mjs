@@ -41,6 +41,18 @@ export const LOBBY = 8
  * every painting 0.13 m inside the (opaque) wall instead of standing it proud of it.
  */
 export const WALL_OFFSET = WALL_T / 2 + 0.02
+/**
+ * A sign stands this far off the wall's inside face: 5 mm, where a painting
+ * stands 2 cm.
+ *
+ * A sign is ink on the plaster, not an object hung off it. At a painting's
+ * standoff the ambient occlusion found a 2 cm gap behind every quad and
+ * darkened the wall around it, which put a faint outline around every artist's
+ * name and every plaque — the one thing a printed label does not have. Not
+ * zero: the quad still has to win the depth test against the wall it lies on,
+ * and at 40 m down a corridor the depth buffer resolves about a millimetre.
+ */
+export const SIGN_OFFSET = WALL_T / 2 + 0.005
 
 /** Kept in step with HIDDEN_FLAGS in src/lib/data.ts and scripts/build-summary.mjs. */
 export const HIDDEN_FLAGS = new Set(['MALICIOUS', 'HIDDEN', 'REPORTED', 'AUTO_DETECT_COPY'])
@@ -788,7 +800,7 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
     })
   /** A sign on a wall at `point` (on the wall line), facing `normal`, stood off like a painting. */
   const sign = (kind, text, point, normal, y, w, h) =>
-    signs.push({ text, kind, x: r6(point.x + normal.x * WALL_OFFSET), y, z: r6(point.z + normal.z * WALL_OFFSET), yaw: yawOf(normal), w, h })
+    signs.push({ text, kind, x: r6(point.x + normal.x * SIGN_OFFSET), y, z: r6(point.z + normal.z * SIGN_OFFSET), yaw: yawOf(normal), w, h })
   const opening = (from) => [{ from: from - OPENING_W / 2, to: from + OPENING_W / 2, top: DOOR_H }]
   /**
    * A wall panel: a heading with its lines stacked under it, centred on the wall
@@ -924,14 +936,17 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
     sign('room', a.name, at(s / 2, s), neg(V), 3.5, 4.8, 0.8)   // on the wall facing the door, inside
   }
 
-  // Plaques: under the lower-right corner, as a visitor facing the painting sees it.
+  // Plaques: under the lower-right corner, as a visitor facing the painting sees
+  // it — and back against the wall, where the painting itself stands proud.
+  const pull = WALL_OFFSET - SIGN_OFFSET
   for (const p of paintings) {
     const rx = Math.cos(p.yaw)
     const rz = -Math.sin(p.yaw)
     const shift = p.w / 2 - 0.25
     signs.push({
       text: `${p.name} — ${p.artist}, ${p.year}`, kind: 'plaque',
-      x: r6(p.x + rx * shift), y: r6(EYE_Y - p.h / 2 - 0.12), z: r6(p.z + rz * shift),
+      x: r6(p.x + rx * shift - Math.sin(p.yaw) * pull), y: r6(EYE_Y - p.h / 2 - 0.12),
+      z: r6(p.z + rz * shift - Math.cos(p.yaw) * pull),
       yaw: p.yaw, w: 0.5, h: 0.12,
     })
   }

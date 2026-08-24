@@ -1,6 +1,6 @@
 import { test, expect } from 'vitest'
-import { AdditiveBlending, DirectionalLight, HemisphereLight, Mesh, MeshBasicMaterial, MeshLambertMaterial, MeshStandardMaterial } from 'three'
-import { buildScene } from './scene'
+import { AdditiveBlending, DirectionalLight, HemisphereLight, Mesh, MeshBasicMaterial, MeshLambertMaterial, MeshStandardMaterial, Texture } from 'three'
+import { buildScene, hidden } from './scene'
 import type { Gallery, Painting } from './types'
 
 const painting = (tile: number): Painting => ({
@@ -113,4 +113,27 @@ test('the floor is exposed on its own: it is the one surface that reflects', () 
   expect(built.floorsMesh.name).toBe('floors')
   expect(built.floorsMesh.parent).toBe(built.scene)
   built.dispose()
+})
+
+test('the signs are ink on the wall: their own mesh, casting nothing', () => {
+  const built = buildScene(gallery, [null, null], { texture: new Texture(), uvs: gallery.signs.map(() => ({ u0: 0, u1: 1, v0: 0, v1: 1 })) })
+  expect(built.signsMesh).toBeTruthy()
+  expect(built.signsMesh!.name).toBe('signs')
+  expect(built.signsMesh!.castShadow).toBe(false)
+  built.dispose()
+})
+
+test('hidden() takes an object out of one pass and always puts it back', () => {
+  const m = new Mesh()
+  let sawDuring: boolean | null = null
+  expect(hidden(m, () => { sawDuring = m.visible; return 7 })).toBe(7)
+  expect(sawDuring).toBe(false)
+  expect(m.visible).toBe(true)
+  // a pass that throws must not leave the signs invisible for the rest of the session
+  expect(() => hidden(m, () => { throw new Error('pass blew up') })).toThrow('pass blew up')
+  expect(m.visible).toBe(true)
+  m.visible = false
+  hidden(m, () => {})
+  expect(m.visible).toBe(false)          // restores what it was, not a blanket true
+  expect(hidden(null, () => 'no mesh, no trouble')).toBe('no mesh, no trouble')
 })

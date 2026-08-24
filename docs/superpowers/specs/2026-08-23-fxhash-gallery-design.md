@@ -144,8 +144,13 @@ Units are metres, y up. Constants, all in `gallery-lib.mjs`:
 HALL_W         8      corridor width
 WALL_H         4      ceiling height everywhere
 WALL_T         0.3    wall thickness
-WALL_OFFSET    0.17   a painting or sign stands this far off the room rectangle's edge:
+WALL_OFFSET    0.17   a painting stands this far off the room rectangle's edge:
                       WALL_T/2 to the wall's inside face, plus 0.02 clear of it
+SIGN_OFFSET    0.155  a sign lies this far off it — the same face, plus 0.005. A sign is
+                      ink on plaster, not an object: at a painting's standoff the
+                      ambient occlusion darkened the 2 cm gap behind every quad and
+                      outlined every name and plaque. Not zero, because the quad must
+                      win the depth test 40 m down a corridor
 PAINTING       1.2    a painting's long side; the short side follows its preview's proportions
 EYE_Y          1.6    painting centre height, and the camera's eye height
 GAP            1      wall between neighbouring pictures' edges, whatever their widths

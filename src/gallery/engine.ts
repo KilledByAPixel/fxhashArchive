@@ -17,7 +17,7 @@ import { SSRPass } from 'three/examples/jsm/postprocessing/SSRPass.js'
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 import type { Quality } from './load'
 import type { Gallery, Painting, Pose, Room, Wall } from './types'
-import { buildScene, type BuiltScene } from './scene'
+import { buildScene, hidden, type BuiltScene } from './scene'
 import { makeLabelTexture } from './labels'
 import { solidWalls, type Point } from './collide'
 import {
@@ -167,7 +167,16 @@ export class GalleryEngine {
     } else {
       composer.addPass(new RenderPass(this.built.scene, this.camera))
     }
-    composer.addPass(new GTAOPass(this.built.scene, this.camera, w, h))
+    // The occlusion pass takes its own depth and normals from the scene, and the
+    // signs were in them: each quad's silhouette darkened the plaster behind it,
+    // drawing a faint outline around every name and every plaque. They are out
+    // of it now — the beauty pass has already drawn them, so the pass only needs
+    // them gone while it measures the room.
+    const gtao = new GTAOPass(this.built.scene, this.camera, w, h)
+    const takeAo = gtao.render.bind(gtao)
+    const signs = this.built.signsMesh
+    gtao.render = (...args: Parameters<typeof takeAo>) => hidden(signs, () => takeAo(...args))
+    composer.addPass(gtao)
     composer.addPass(new SMAAPass())
     composer.addPass(new OutputPass())
     this.composer = composer

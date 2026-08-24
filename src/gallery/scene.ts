@@ -13,7 +13,7 @@
 
 import {
   AdditiveBlending, Color, DirectionalLight, FogExp2, HemisphereLight, Mesh, MeshBasicMaterial,
-  MeshStandardMaterial, Scene, Texture,
+  MeshStandardMaterial, Object3D, Scene, Texture,
 } from 'three'
 import type { Gallery, Painting } from './types'
 import {
@@ -28,6 +28,8 @@ export interface BuiltScene {
   wallsMesh: Mesh
   /** The one merged floor mesh: the surface screen-space reflections are drawn on. */
   floorsMesh: Mesh
+  /** The one signs mesh, so a pass that must not see it can take it out — see hidden(). Null without labels. */
+  signsMesh: Mesh | null
   paintingMeshes: Mesh[]
   /** paintingIndex[f][floor(faceIndex / 2)] is the painting behind a hit on paintingMeshes[f]. */
   paintingIndex: Painting[][]
@@ -103,11 +105,19 @@ export function buildScene(
     paintingIndex.push(gallery.paintings.filter((p) => atlasFile(p.tile, gallery.atlas) === f))
   })
 
+  // Ink on the plaster: unlit, out of tone mapping, and casting nothing. It lies
+  // 5 mm off the wall (SIGN_OFFSET) so polygon offset is belt to that braces —
+  // the quad must win the depth test the length of a corridor away.
+  let signsMesh: Mesh | null = null
   if (labels) {
-    add('signs', new Mesh(
+    signsMesh = add('signs', new Mesh(
       buildSignGeometry(gallery.signs, labels.uvs),
-      new MeshBasicMaterial({ map: labels.texture, transparent: true, depthWrite: false, toneMapped: false }),
+      new MeshBasicMaterial({
+        map: labels.texture, transparent: true, depthWrite: false, toneMapped: false,
+        polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
+      }),
     ))
+    signsMesh.castShadow = false
   }
 
   // A white sky over a mid-grey ground, so nothing that faces sideways or down
@@ -140,6 +150,7 @@ export function buildScene(
     scene,
     wallsMesh,
     floorsMesh: floors,
+    signsMesh,
     paintingMeshes,
     paintingIndex,
     keyLight: key,
@@ -152,5 +163,23 @@ export function buildScene(
       key.shadow.dispose()
       scene.clear()
     },
+  }
+}
+
+/**
+ * Run `pass` with `object` hidden, then put it back exactly as it was — even if
+ * the pass throws, which would otherwise leave it invisible for the rest of the
+ * session. This is how the signs are kept out of the ambient occlusion: they are
+ * ink on a wall, and a pass that measures how surfaces shade each other has no
+ * business seeing them.
+ */
+export function hidden<T>(object: Object3D | null, pass: () => T): T {
+  if (!object) return pass()
+  const was = object.visible
+  object.visible = false
+  try {
+    return pass()
+  } finally {
+    object.visible = was
   }
 }
