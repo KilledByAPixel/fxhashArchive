@@ -309,6 +309,34 @@ test('a sculpture is the colour of the piece it was generated from', () => {
   }
   // Plinth stone, plaster for the untinted, and colour for the tinted: three at least.
   expect(colours(buildSculptureGeometry(list)).size).toBeGreaterThanOrEqual(3)
-  // With no tints at all, everything is stone or plaster and nothing else.
-  expect(colours(buildSculptureGeometry(plinths(gallery([BIG], ART)))).size).toBe(2)
+  // With no tints at all nothing is coloured: greyscale art gets greys, which is
+  // the one thing a picture with no dominant hue does tell you. Inventing a hue
+  // for it would be making something up about the work.
+  // Read off the vases alone: the plinth stone is warm by design and is not an
+  // object's colour at all.
+  const plainVases = buildSculptureGeometry(plinths(gallery([BIG], ART))).glazed.getAttribute('color')
+  const greys = new Set();
+  for (let i = 0; i < plainVases.count; i++) {
+    const [r, g, b2] = [plainVases.getX(i), plainVases.getY(i), plainVases.getZ(i)]
+    expect(Math.max(r, g, b2) - Math.min(r, g, b2)).toBeLessThan(0.02)
+    greys.add(r.toFixed(4))
+  }
+  expect(greys.size).toBeGreaterThan(1)              // and they are not all one grey
+})
+
+// Frank: "how can I vary the colour more?" The hues were already spread across
+// the wheel; what flattened them was strength — how dominant a hue was in the
+// thumbnail — which for near-monochrome pieces multiplied any saturation down to
+// grey. Four of the room's nine objects were coming out colourless that way.
+
+test('a washed-out picture still makes a properly coloured object', () => {
+  const faint = ART.map((p, i) => ({ ...p, tint: { hue: (i * 53) % 360, strength: 0.12 } }))
+  const { glazed } = buildSculptureGeometry(plinths(gallery([BIG], faint)))
+  const c = glazed.getAttribute('color')
+  let spread = 0
+  for (let i = 0; i < c.count; i++) {
+    spread = Math.max(spread, Math.max(c.getX(i), c.getY(i), c.getZ(i)) - Math.min(c.getX(i), c.getY(i), c.getZ(i)))
+  }
+  // At 0.12 strength these used to land at 0.11 saturation — grey in all but name.
+  expect(spread).toBeGreaterThan(0.15)
 })

@@ -67,6 +67,17 @@ export const SCULPTURE_SAT = 0.95
  */
 const VALUE_LO = 0.10
 const VALUE_HI = 0.92
+/**
+ * The least saturation a piece with a hue may give its object.
+ *
+ * `strength` is how dominant a hue was in the thumbnail, and a near-monochrome
+ * picture scores very low — four of the nine objects in the room came from
+ * pieces at 0.11 to 0.18, which multiplied out to grey however high SCULPTURE_SAT
+ * went. An object is a *reading* of its picture, not a copy of it: if the piece
+ * has a hue at all, the object wears it properly. Drop this to 0 to go back to
+ * letting a washed-out picture make a washed-out vase.
+ */
+const SAT_MIN = 0.5
 
 /** The smallest a block may be, and the most blocks a terrace may spend. */
 export const MIN_BLOCK = 0.078
@@ -164,13 +175,18 @@ export function plinthObstacles(list: Plinth[]): Obstacle[] {
  * the palette later does not reshape every vase in the room.
  */
 function objectColor(tint: Tint | undefined, seed: number): Rgb {
-  if (!tint || SCULPTURE_SAT <= 0) return linear(SCULPTURE_COLOR)
+  if (SCULPTURE_SAT <= 0) return linear(SCULPTURE_COLOR)
   const rand = mulberry32(seed ^ 0x9e3779b9)
-  const [r, g, b] = hsvToRgb255(
-    tint.hue,
-    Math.min(1, tint.strength * SCULPTURE_SAT),
-    between(rand, VALUE_LO, VALUE_HI),
-  )
+  const value = between(rand, VALUE_LO, VALUE_HI)
+  // A piece whose thumbnail had no dominant hue is greyscale art, and inventing
+  // a colour for it would be making something up about the work. It still varies
+  // — in lightness, which is the one thing a greyscale picture does say.
+  if (!tint) {
+    const v = Math.round(value * 255)
+    return linear((v << 16) | (v << 8) | v)
+  }
+  const sat = Math.min(1, Math.max(SAT_MIN, tint.strength * SCULPTURE_SAT))
+  const [r, g, b] = hsvToRgb255(tint.hue, sat, value)
   return linear((r << 16) | (g << 8) | b)
 }
 
