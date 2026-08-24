@@ -228,8 +228,11 @@ img { max-width: 100%; }
   width: 100%; height: 100%; box-sizing: border-box; padding: 1rem; background: #000;
   display: flex; align-items: center; justify-content: center; text-align: center; color: #999;
 }
+/* Sits on the frame's black mat just under the painting; the backing keeps it
+   legible wherever it spills — the walls are white now. */
 .gallery-bar {
   position: fixed; pointer-events: auto; display: flex; flex-wrap: wrap; gap: 0.5rem 0.75rem;
   align-items: center; color: #ccc; font-size: 0.9rem;
+  background: rgba(0, 0, 0, 0.7); padding: 0.3rem 0.6rem; box-sizing: border-box; border-radius: 0 0 6px 6px;
 }
 .gallery-bar .load-more { margin: 0; padding: 0.3rem 0.7rem; }

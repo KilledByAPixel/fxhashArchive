@@ -92,7 +92,10 @@ export default function Viewer({ painting, rect, onBack }: Props) {
         )}
       </div>
 
-      <div className="gallery-bar" style={{ left: rect.left, top: rect.top + rect.height + 12, width: rect.width }}>
+      {/* 4 px under the frame: inside the black mat the frame quad draws around the
+          painting. At 12 px the text sat half over the lit wall below and read as
+          spilling off the picture. */}
+      <div className="gallery-bar" style={{ left: rect.left, top: rect.top + rect.height + 4, width: rect.width }}>
         <span>
           <strong>{label}</strong>{count > 0 && <span className="muted"> of {count}</span>}
           {' · '}{painting.artist} · {painting.year}

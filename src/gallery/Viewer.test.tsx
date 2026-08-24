@@ -30,6 +30,11 @@ test('runs the first minted edition from the archived runner, placed over the pa
   const box = frame.parentElement as HTMLElement
   expect(box.style.left).toBe('100px')
   expect(box.style.width).toBe('600px')
+  // The bar sits just under the frame, inside the black mat the frame quad draws
+  // around the painting; 12 px put its text half over the wall below.
+  const bar = document.querySelector('.gallery-bar') as HTMLElement
+  expect(bar.style.top).toBe('654px')
+  expect(bar.style.left).toBe('100px')
   expect(screen.getByText(/of 3/)).toBeTruthy()
 })
 
