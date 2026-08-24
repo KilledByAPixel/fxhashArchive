@@ -830,6 +830,11 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
   sign('title', 'fxhash', { x: 0, z: LOBBY }, { x: 0, z: -1 }, 3.65, 3, 0.5)
   sign('title', `${visible.length} archived works · ${artistCount} artists · ${span[0]}–${span[1]}`, { x: 0, z: LOBBY }, { x: 0, z: -1 }, 3.25, 3, 0.25)
   sign('title', `You have walked the whole of fxhash, ${span[0]}–${span[1]} — the lobby is ahead`, { x: HX, z: LOBBY / 2 }, { x: 1, z: 0 }, 3.5, 3.6, 0.4)
+  // The lobby face of the same lintel, read on the way out into leg D. Leg D is
+  // the last leg of the loop, so walking out through here is walking the whole
+  // timeline backwards, newest first.
+  sign('title', `Through here is the end, ${span[1]} — walk this way and you go back in time`, { x: HX, z: LOBBY / 2 }, { x: -1, z: 0 }, 3.5, 3.6, 0.4)
+
   // The corridor face of the lobby's own opening. Walking back down leg A is
   // walking back through the years, and this is what you are walking back into.
   sign('title', `The lobby is through here — the walk begins there, at ${span[0]}`, { x: 0, z: LOBBY }, { x: 0, z: 1 }, 3.5, 4, 0.4)

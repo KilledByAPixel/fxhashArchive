@@ -692,3 +692,25 @@ test('a sign lies on the wall where a painting stands off it', () => {
     expect(edgeOf(r.rect, p.x, p.z).dist).toBeCloseTo(WALL_OFFSET, 6)
   }
 })
+
+// Frank, round eleven: the return lintel spoke only to the walker arriving at the
+// end of the loop. Its other face is read from the lobby, by someone about to walk
+// out into leg D — which is the last leg, so going that way runs the timeline
+// backwards. It should say so.
+
+test('the return lintel names the direction of time on both faces', () => {
+  const g = loop()
+  const [, last] = g.counts.years
+  const arriving = g.signs.find((s) => s.kind === 'title' && /walked/i.test(s.text))
+  const leaving = g.signs.find((s) => s.kind === 'title' && /back in time/i.test(s.text))
+  expect(arriving).toBeDefined()
+  expect(leaving).toBeDefined()
+  // the same lintel, the other face
+  expect(leaving.y).toBeCloseTo(arriving.y, 6)
+  expect(leaving.z).toBeCloseTo(arriving.z, 6)
+  expect(leaving.x).toBeCloseTo(arriving.x - 2 * SIGN_OFFSET, 6)
+  expect(Math.abs(leaving.yaw - arriving.yaw)).toBeCloseTo(Math.PI, 5)
+  expect(leaving.yaw).toBeCloseTo(-Math.PI / 2, 5)      // faces west, into the lobby
+  // and it names the end you would be walking into
+  expect(leaving.text).toContain(String(last))
+})
