@@ -67,3 +67,26 @@ test('plaques are drawn at twice the scale of the big signs, so small text stays
   const plaquePxPerM = rects[1].h / 0.12
   expect(plaquePxPerM / roomPxPerM).toBeCloseTo(2, 1)
 })
+
+// Frank, round six: "almost white on a white wall — basically unreadable". The
+// text colour was chosen when the walls were near-black; the museum is now
+// gallery-white, and a sign has to be read from across a corridor.
+import { TEXT } from './labels'
+import { WALL } from './scene'
+
+/** WCAG relative luminance of a 0xRRGGBB colour. */
+const luminance = (hex: number) => {
+  const channel = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)
+  const [r, g, b] = [(hex >> 16) & 255, (hex >> 8) & 255, hex & 255].map((v) => channel(v / 255))
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+const contrast = (a: number, b: number) => {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((p, q) => q - p)
+  return (hi + 0.05) / (lo + 0.05)
+}
+
+test('sign text reads against the wall it hangs on', () => {
+  // 4.5:1 is the AA threshold for body text; #d8d8d8 on this wall was 1.1:1.
+  expect(contrast(TEXT, WALL)).toBeGreaterThanOrEqual(4.5)
+  expect(luminance(TEXT)).toBeLessThan(luminance(WALL))   // dark on light, as a gallery prints its labels
+})

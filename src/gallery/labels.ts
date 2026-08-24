@@ -15,6 +15,17 @@ export interface PixelRect { x: number; y: number; w: number; h: number }
  * doors, eras on lintels, 0.8 m tall — get 160 px, which is plenty from where
  * they are read; plaques are read from a foot away and get twice that.
  */
+/**
+ * Near-black, as a gallery prints its labels.
+ *
+ * This was `#d8d8d8` — right when the walls were near-black, and unreadable
+ * once the museum turned gallery-white: pale grey on `WALL` is a contrast
+ * ratio of 1.1, so the artists' names and the plaques both vanished into the
+ * wall. Not pure black: the signs are unlit quads standing off a lit wall, and
+ * #000 against a shadowed wall reads as a hole punched in it.
+ */
+export const TEXT = 0x141414
+
 const BASE_PX_PER_M = 200
 const scaleOf = (sign: Sign) => (sign.kind === 'plaque' ? 2 : 1)
 const PAD = 2
@@ -82,7 +93,7 @@ export function drawLabels(signs: Sign[], rects: PixelRect[], size: number): HTM
   ctx.clearRect(0, 0, size, size)
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillStyle = '#d8d8d8'
+  ctx.fillStyle = `#${TEXT.toString(16).padStart(6, '0')}`
   signs.forEach((s, i) => {
     const r = rects[i]
     const weight = s.kind === 'plaque' ? 'normal' : '600'

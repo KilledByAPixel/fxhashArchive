@@ -39,6 +39,9 @@ export interface BuiltScene {
 /** Also the fog colour: a haze the far end of a corridor softens into, not a dark it vanishes into. */
 export const BACKGROUND = 0x5c5a57
 
+/** Gallery white. Exported because the signs' text has to be readable against it — see labels.ts. */
+export const WALL = 0xe8e6e1
+
 export function buildScene(
   gallery: Gallery,
   atlasTextures: (Texture | null)[],
@@ -60,7 +63,7 @@ export function buildScene(
   // Physically based where light matters: matte plaster walls, and a floor with
   // just enough polish to carry the room's reflection from the environment map
   // the engine installs (and true reflections when the visitor turns them on).
-  const wallsMesh = add('walls', new Mesh(buildWallGeometry(gallery.walls), new MeshStandardMaterial({ color: 0xe8e6e1, roughness: 0.95, metalness: 0 })))
+  const wallsMesh = add('walls', new Mesh(buildWallGeometry(gallery.walls), new MeshStandardMaterial({ color: WALL, roughness: 0.95, metalness: 0 })))
   wallsMesh.castShadow = true
   wallsMesh.receiveShadow = true
   const floors = add('floors', new Mesh(buildFloorGeometry(gallery.rooms), new MeshStandardMaterial({ color: 0x8f8880, roughness: 0.35, metalness: 0 })))
