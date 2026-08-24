@@ -452,3 +452,35 @@ test('you can go full circle: a lintel and a sign on the way back into the lobby
   expect(sign.x).toBeGreaterThan(4)                 // hangs on the leg D side, facing the returning walker
   expect(sign.yaw).toBeCloseTo(Math.PI / 2, 6)
 })
+
+// ---- signs you can read, where you expect them ----------------------------------
+// Frank could not read the names or the era markers from the corridor, and found
+// an era sign floating in mid-air at a corner: a hemmed-in first piece sent its
+// portal to the wrong leg and skipped the lintel.
+
+/** Distance from a point to the nearest lintel (a wall segment with y0 > 0), in the floor plan. */
+const nearestLintel = (g, x, z) => Math.min(...g.walls.filter((w) => w.y0 > 0).map((w) => {
+  const dx = w.x2 - w.x1, dz = w.z2 - w.z1
+  const t = Math.max(0, Math.min(1, ((x - w.x1) * dx + (z - w.z1) * dz) / (dx * dx + dz * dz)))
+  return Math.hypot(x - (w.x1 + t * dx), z - (w.z1 + t * dz))
+}))
+
+test('every era sign hangs on a lintel or on the lobby pier — none floats in the corridor', () => {
+  for (const g of [loop(), buildGallery({ tokens: fixture(), collaborations, generatedAt: 'x' })]) {
+    const signs = g.signs.filter((s) => s.kind === 'era')
+    expect(signs.length).toBe(ERAS.length)
+    for (const s of signs) {
+      const onPier = Math.abs(s.z - 8) < 0.5 && Math.abs(s.x) > 2   // beside the lobby opening
+      expect(onPier || nearestLintel(g, s.x, s.z) < WALL_OFFSET + 1e-6).toBe(true)
+    }
+    // no two era signs at one spot
+    const spots = new Set(signs.map((s) => `${s.x.toFixed(2)},${s.y.toFixed(2)},${s.z.toFixed(2)}`))
+    expect(spots.size).toBe(signs.length)
+  }
+})
+
+test('names and era markers are big enough to read from the corridor', () => {
+  const g = loop()
+  for (const s of g.signs.filter((s) => s.kind === 'room')) { expect(s.h).toBeGreaterThanOrEqual(0.8); expect(s.w).toBeGreaterThanOrEqual(4) }
+  for (const s of g.signs.filter((s) => s.kind === 'era')) expect(s.h).toBeGreaterThanOrEqual(0.8)
+})

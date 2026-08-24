@@ -10,8 +10,13 @@ import type { TileUv } from './geometry'
 
 export interface PixelRect { x: number; y: number; w: number; h: number }
 
-/** Pixels per metre of sign height at a 4096 atlas: a 0.12 m plaque is 48 px tall. */
-const BASE_PX_PER_M = 400
+/**
+ * Pixels per metre of sign height at a 4096 atlas. The big signs — names over
+ * doors, eras on lintels, 0.8 m tall — get 160 px, which is plenty from where
+ * they are read; plaques are read from a foot away and get twice that.
+ */
+const BASE_PX_PER_M = 200
+const scaleOf = (sign: Sign) => (sign.kind === 'plaque' ? 2 : 1)
 const PAD = 2
 
 /**
@@ -21,10 +26,21 @@ const PAD = 2
  * drops by a fifth and it tries again, so the worst outcome is smaller text.
  */
 export function packLabels(signs: Sign[], size: number): { rects: PixelRect[]; uvs: TileUv[]; pxPerM: number } {
+  // A name hangs above the door and again inside the room: identical signs
+  // share one drawing, so the atlas holds half as many.
+  const keyOf = (s: Sign) => `${s.kind}|${s.w}|${s.h}|${s.text}`
+  const unique: Sign[] = []
+  const slot = new Map<string, number>()
+  const index = signs.map((s) => {
+    const k = keyOf(s)
+    if (!slot.has(k)) { slot.set(k, unique.length); unique.push(s) }
+    return slot.get(k)!
+  })
   let pxPerM = (BASE_PX_PER_M * size) / 4096
   for (;;) {
-    const rects = shelfPack(signs, size, pxPerM)
-    if (rects) {
+    const packed = shelfPack(unique, size, pxPerM)
+    if (packed) {
+      const rects = index.map((i) => packed[i])
       const uvs = rects.map((r) => ({
         u0: r.x / size, u1: (r.x + r.w) / size, v1: 1 - r.y / size, v0: 1 - (r.y + r.h) / size,
       }))
@@ -41,8 +57,8 @@ function shelfPack(signs: Sign[], size: number, pxPerM: number): PixelRect[] | n
   let y = 0
   let shelf = 0
   for (const i of order) {
-    const h = Math.ceil(signs[i].h * pxPerM)
-    const w = Math.ceil(signs[i].w * pxPerM)
+    const h = Math.ceil(signs[i].h * pxPerM * scaleOf(signs[i]))
+    const w = Math.ceil(signs[i].w * pxPerM * scaleOf(signs[i]))
     if (w + PAD > size) return null
     if (x + w + PAD > size) { x = 0; y += shelf + PAD; shelf = 0 }
     if (y + h + PAD > size) return null

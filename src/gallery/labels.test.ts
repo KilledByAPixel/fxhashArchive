@@ -53,3 +53,17 @@ test('an impossible load shrinks rather than overflowing', () => {
   for (const r of rects) expect(r.y + r.h).toBeLessThanOrEqual(2048)
   expect(pxPerM).toBeLessThan(200)
 })
+
+test('identical signs share one rect, so a name above a door and inside its room costs one drawing', () => {
+  const twice = [sign('room', 4.8, 0.8, 1), sign('room', 4.8, 0.8, 1), sign('room', 4.8, 0.8, 2)]
+  const { rects } = packLabels(twice, 2048)
+  expect(rects[0]).toEqual(rects[1])
+  expect(rects[0]).not.toEqual(rects[2])
+})
+
+test('plaques are drawn at twice the scale of the big signs, so small text stays sharp', () => {
+  const { rects } = packLabels([sign('room', 4.8, 0.8, 0), sign('plaque', 0.5, 0.12, 0)], 4096)
+  const roomPxPerM = rects[0].h / 0.8
+  const plaquePxPerM = rects[1].h / 0.12
+  expect(plaquePxPerM / roomPxPerM).toBeCloseTo(2, 1)
+})

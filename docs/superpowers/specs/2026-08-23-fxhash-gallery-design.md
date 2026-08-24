@@ -170,15 +170,23 @@ steps of `SPACING`, at which every leg keeps its rooms' beat with gaps of at
 least `ROOM_GAP` and the walls hold every piece; the search starts from the
 lower bound the rooms and pieces imply.
 
-**Portals.** For every era after the first that has a corridor piece, a wall
-across the corridor with an `OPENING_W` opening and a lintel carrying the
-era's name, facing the walker, placed as close before the era's first piece as
-a lintel can go without standing within `CORNER` of a picture or cutting a
-door; if the first piece is in a corner or hemmed in, the portal is at the start
-of the next leg. A leg is split into sections at its portals; sections and
-corners are rooms of kind `hall` titled with the era in force. The way back
-into the lobby is a lintel too, with "You have walked the whole of fxhash,
-2021–2024 — the lobby is ahead" on it.
+**Portals.** For every era after the first, a wall across the corridor with an
+`OPENING_W` opening and a lintel carrying the era's name, facing the walker.
+A portal is an item in the walk: the sequence laid along the corridor is the
+pieces in date order with a portal inserted before the first piece of each
+era, so a portal takes a slot of its own at the same pitch as the pictures and
+is in era order by construction. Two rules keep it honest: a portal that would
+be within `SPACING` of another on the same leg passes on its slot and takes
+the next (the walls are spread independently, so their slots can coincide),
+and after the walk is laid, each portal is settled — moved up to six metres to
+the nearest spot at least `CORNER` from every picture on either wall, clear of
+every door by `PORTAL_CLEAR` (0.5), at least `SPACING` from other portals and
+from the leg's end. A portal that lands in a corner, where there is no wall to
+cut, stands at the junction at the start of the leg ahead; a second one there
+shares the lintel with a lower sign. A leg is split into sections at its
+portals; sections and corners are rooms of kind `hall` titled with the era in
+force. The way back into the lobby is a lintel too, with "You have walked the
+whole of fxhash, 2021–2024 — the lobby is ahead" on it.
 
 **Hanging in a room.** No blank walls: the room's walls are filled in the order
 *facing the door, left, right, door wall left of the door, door wall right of
@@ -195,11 +203,14 @@ included). Its east side is open to leg D.
 
 **Signs.** Four kinds, each a quad on a wall: the lobby title above the lobby's
 opening ("fxhash", 3 × 0.5, with the counts line under it, 3 × 0.25); an era sign
-above the first corridor piece of each era (3 × 0.5, centred 3.4 m up); room signs
-(2.4 × 0.4, above the door on the corridor side and on the wall facing the door
-inside); and a plaque under every painting's lower-right corner (0.5 × 0.12:
-"Name — Artist, Year"). Their text and placement are in the JSON; they are
-rasterised on the client.
+on each portal's lintel (5 × 0.8, centred 3.5 m up) and, for the first era, on
+the pier beside the lobby opening (1.8 × 0.8); room signs (4.8 × 0.8, above the
+door on the corridor side and on the wall facing the door inside — they were
+2.4 × 0.4 and could not be read from the corridor); and a plaque under every
+painting's lower-right corner (0.5 × 0.12: "Name — Artist, Year"). Their text
+and placement are in the JSON; they are rasterised on the client into one
+canvas atlas, where identical signs share a drawing and plaques are drawn at
+twice the scale of the big signs so small text stays sharp.
 
 **Invariants** (these are the tests):
 

@@ -312,6 +312,8 @@ export const INNER_MARGIN = 10
 export const INNER_MAX = 8
 /** Two of the widest inner rooms must fit face to face across the courtyard. */
 export const LOOP_MIN = 2 * INNER_MAX + ROOM_GAP
+/** A leg longer than this is a bug, not a museum; the search stops rather than spins. */
+export const LOOP_MAX = 400
 /** A portal — the lintel across the corridor where an era begins — keeps this clear of pictures and doors. */
 const PORTAL_CLEAR = 0.5
 
@@ -450,27 +452,41 @@ function share(runs, n) {
 }
 
 /**
- * Where to put the portal that opens an era: as close before its first corridor
- * piece as a lintel can go without standing on a picture or cutting a door. A
- * first piece in a corner, or one hemmed in, puts the portal at the start of
- * the next leg instead.
+ * Lay the walk out over the runs: each run's share of items spread along it,
+ * in walking order. A piece is hung; a portal on a leg is recorded at its slot
+ * — unless another portal on that leg is within SPACING of it, in which case
+ * it passes on the slot and takes the next, so two portals never share a
+ * lintel (each wall is spread on its own, and their slots can coincide). A
+ * portal that lands in a corner, where there is no wall to cut, moves to the
+ * junction at the start of the leg ahead; a second one there shares that
+ * lintel with a lower sign. Null if passing ran the slots out.
  */
-function portalFor(first, hung, gapsOf) {
-  const run = first.slot.run
-  const leg = run.part.kind === 'leg' ? run.part : null
-  if (leg) {
-    const a = first.slot.along
-    const pieces = hung.filter((h) => h.slot.run.part === leg).map((h) => h.slot.along)
-    const gaps = [...gapsOf(leg, 'OUT'), ...gapsOf(leg, 'IN')]
-    for (const back of [SPACING / 2, 1, 2, 2.5, 3]) {
-      const pos = a - back
-      if (pos < CORNER || pos > leg.len - CORNER) continue
-      if (pieces.some((p) => Math.abs(p - pos) < CORNER)) continue
-      if (gaps.some((g) => pos > g.from - PORTAL_CLEAR && pos < g.to + PORTAL_CLEAR)) continue
-      return { leg, pos }
+function assignWalk(runs, counts, items, parts, legs) {
+  const hung = []
+  const portals = new Map(legs.map((l) => [l, []]))   // leg -> [{ pos, era }]
+  const stacked = []                                  // { leg, era } sharing a junction lintel
+  let next = 0
+  for (let i = 0; i < runs.length && next < items.length; i++) {
+    const run = runs[i]
+    for (const c of spreadOnRun(run.a, run.b, counts[i])) {
+      if (next >= items.length) break
+      const item = items[next]
+      if (item.piece) {
+        hung.push({ t: item.piece, slot: { run, along: run.along(c), point: run.at(c), normal: run.normal } })
+      } else if (run.part.kind === 'leg') {
+        // Passing is for portals only; a slot facing a door on the other wall is
+        // the settling pass's job, which can move a portal a few metres.
+        if (portals.get(run.part).some((p) => Math.abs(p.pos - c) < SPACING)) continue
+        portals.get(run.part).push({ pos: c, era: item.portal })
+      } else {
+        const leg = parts[parts.indexOf(run.part) + 1]
+        if (portals.get(leg).some((p) => p.pos === 0)) stacked.push({ leg, era: item.portal })
+        else portals.get(leg).push({ pos: 0, era: item.portal })
+      }
+      next++
     }
   }
-  return { leg: null, after: run.part }
+  return next < items.length ? null : { hung, portals, stacked }
 }
 
 /**
@@ -490,6 +506,19 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
   const visible = tokens.filter((t) => !HIDDEN_FLAGS.has(t.flag))
   const { solo, halls, artistCount } = assignRooms(visible, collaborations, { volumes })
   const shared = [...halls.values()].flat().sort(byDate)
+
+  // The walk: the corridor's pieces in date order, and before the first piece of
+  // every era after the first, a portal — a reserved slot that gets the lintel.
+  // Giving portals a slot of their own is what keeps them the same pitch from the
+  // pictures as the pictures are from each other, and in era order by construction.
+  const items = []
+  const pending = ERAS.slice(1)
+  for (const t of shared) {
+    const era = ERAS.findIndex((e) => e.id === eraOf(t.createdAt))
+    while (pending.length && ERAS.indexOf(pending[0]) <= era) items.push({ portal: pending.shift() })
+    items.push({ piece: t })
+  }
+  for (const era of pending) items.push({ portal: era })
   const years = visible.map((t) => Number(t.createdAt.slice(0, 4)))
   const span = years.length ? [Math.min(...years), Math.max(...years)] : [0, 0]
 
@@ -505,9 +534,10 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
   })
   const need = (rooms, margin) => (rooms.reduce((t, s) => t + s + ROOM_GAP, 0) + ROOM_GAP) / 4 + 2 * margin
   const roomWall = [...sides.OUT, ...sides.IN].reduce((t, s) => t + s, 0)
-  const lower = Math.max(LOOP_MIN, need(sides.OUT, ROOM_GAP), need(sides.IN, INNER_MARGIN), (SPACING * shared.length + roomWall) / 8)
+  const lower = Math.max(LOOP_MIN, need(sides.OUT, ROOM_GAP), need(sides.IN, INNER_MARGIN), (SPACING * items.length + roomWall) / 8)
   let layout = null
   for (let L = Math.floor(lower / SPACING) * SPACING; !layout; L += SPACING) {
+    if (L > LOOP_MAX) throw new Error(`gallery: no loop up to ${LOOP_MAX} m holds ${solo.length} rooms and ${items.length} corridor items`)
     const parts = loopParts(L)
     const legs = parts.filter((p) => p.kind === 'leg')
     const placed = placeRooms(legs, L, solo)
@@ -516,11 +546,18 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
       placed.filter((p) => p.leg === leg && p.side === side)
         .map((p) => ({ from: p.a0 + p.s / 2 - DOOR_W / 2, to: p.a0 + p.s / 2 + DOOR_W / 2, top: DOOR_H }))
     const runs = corridorRuns(parts, gapsOf)
-    const counts = share(runs, shared.length)
-    if (!counts) continue
-    layout = { L, parts, legs, placed, gapsOf, runs, counts }
+    // Slots for the items, plus exactly as many as portals pass on: k grows until
+    // the walk fits, so the spare slots are the ones passed over in the middle,
+    // not a bare stretch at the end. share() says when the walls cannot hold
+    // that many at all, and then the loop grows.
+    for (let k = 0; k <= ERAS.length; k++) {
+      const counts = share(runs, items.length + k)
+      if (!counts) break
+      const walk = assignWalk(runs, counts, items, parts, legs)
+      if (walk) { layout = { L, parts, legs, placed, gapsOf, ...walk }; break }
+    }
   }
-  const { L, parts, legs, placed, gapsOf, runs, counts } = layout
+  const { L, parts, legs, placed, gapsOf, hung, portals, stacked } = layout
 
   const rooms = []
   const walls = []
@@ -555,51 +592,58 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
   sign('title', `${visible.length} archived works · ${artistCount} artists · ${span[0]}–${span[1]}`, { x: 0, z: LOBBY }, { x: 0, z: -1 }, 3.25, 3, 0.25)
   sign('title', `You have walked the whole of fxhash, ${span[0]}–${span[1]} — the lobby is ahead`, { x: HX, z: LOBBY / 2 }, { x: 1, z: 0 }, 3.5, 3.6, 0.4)
 
-  // The corridor's pieces: each run's share, spread along it, in walking order.
-  const hung = []
-  let next = 0
-  runs.forEach((run, i) => {
-    for (const c of spreadOnRun(run.a, run.b, counts[i])) {
-      const t = shared[next++]
-      hung.push({ t, slot: { run, along: run.along(c), point: run.at(c), normal: run.normal } })
-    }
-  })
-
-  // Era portals: for every era after the first, a lintel across the corridor
-  // just before its first piece; the corridor splits into sections at them.
-  const portals = new Map(legs.map((l) => [l, []]))   // leg -> [{ pos, era }]
-  const markers = []                                  // { era, entry point, dir, signAt, signNormal }
-  const legAfter = (part) => legs[Math.min(legs.length - 1, parts.indexOf(part) + 1 < parts.length ? legs.indexOf(parts[parts.indexOf(part) + 1]) : legs.length - 1)]
-  let previous = { centre: { x: 0, z: LOBBY + 1 }, dir: { x: 0, z: 1 }, wall: { x: HX - 1, z: LOBBY }, normal: { x: 0, z: -1 }, pier: true }
-  markers.push({ era: ERAS[0], ...previous })
-  for (const era of ERAS.slice(1)) {
-    const first = hung.find((h) => eraOf(h.t.createdAt) === era.id)
-    let m
-    if (first) {
-      let { leg, pos, after } = portalFor(first, hung, gapsOf)
-      if (!leg) { leg = legs[(legs.indexOf(legAfter(after)) + legs.length) % legs.length]; pos = 0 }
-      if (pos > 0 && !portals.get(leg).some((p) => Math.abs(p.pos - pos) < 1e-6)) portals.get(leg).push({ pos, era })
-      m = { centre: leg.at(pos + 1), dir: leg.U, wall: leg.at(pos), normal: neg(leg.U), pier: false }
-    } else {
-      const door = placed.filter((p) => eraOf(p.artist.projects[0].createdAt) === era.id)[0]
-      if (door) {
-        const wallDir = door.side === 'OUT' ? door.leg.OUT : door.leg.IN
-        m = { centre: door.leg.at(door.a0 + door.s / 2), dir: door.leg.U, wall: door.leg.at(door.a0 + door.s / 2, wallDir), normal: neg(wallDir), pier: false }
-      } else {
-        m = previous
+  // Settle the portals. A portal took a slot on one wall, but its lintel crosses
+  // the corridor, and the other wall's pictures — spread on their own — can sit
+  // at the very same distance along the leg, on the jamb. Pictures on a wall are
+  // at least SPACING apart, so within a metre and a half either way there is
+  // always a spot at least CORNER from every picture on both walls; take the
+  // nearest one that is also clear of doors and of other portals.
+  for (const leg of legs) {
+    const pieces = hung.filter((h) => h.slot.run.part === leg).map((h) => h.slot.along)
+    const gaps = [...gapsOf(leg, 'OUT'), ...gapsOf(leg, 'IN')]
+    const list = portals.get(leg)
+    for (const p of list) {
+      if (p.pos === 0) continue
+      // A portal within SPACING of a leg's end would put its marker on the
+      // junction (or the lobby's return lintel) and its lintel a step from the
+      // next one; keep it back.
+      const clear = (pos) =>
+        pos >= CORNER && pos <= leg.len - SPACING &&
+        !pieces.some((q) => Math.abs(q - pos) < CORNER) &&
+        !gaps.some((g) => pos > g.from - PORTAL_CLEAR && pos < g.to + PORTAL_CLEAR) &&
+        !list.some((o) => o !== p && Math.abs(o.pos - pos) < SPACING)
+      // Nearest first, up to six metres either way: a door's dead zone on the far
+      // wall is four metres wide, and the pictures beyond it are at pitch.
+      for (let d = 0; d <= 6; d += 0.5) {
+        if (clear(p.pos + d)) { p.pos = r6(p.pos + d); break }
+        if (d > 0 && clear(p.pos - d)) { p.pos = r6(p.pos - d); break }
       }
     }
-    previous = m
-    markers.push({ era, ...m })
   }
+
+  // Era markers: something to teleport to a metre past each portal, and the
+  // era's name on the lintel facing you. The first era's name is on the pier
+  // beside the lobby opening, whose lintel carries the title.
+  const markers = [{
+    era: ERAS[0], centre: { x: 0, z: LOBBY + 1 }, dir: { x: 0, z: 1 },
+    wall: { x: HX - 1, z: LOBBY }, normal: { x: 0, z: -1 }, y: 2.2, w: 1.8,
+  }]
+  for (const leg of legs) {
+    for (const p of portals.get(leg)) {
+      markers.push({ era: p.era, centre: leg.at(Math.min(p.pos + 1, leg.len - 1)), dir: leg.U, wall: leg.at(p.pos), normal: neg(leg.U), y: 3.5, w: 5 })
+    }
+  }
+  for (const { leg, era } of stacked) {
+    markers.push({ era, centre: leg.at(1.5), dir: leg.U, wall: leg.at(0), normal: neg(leg.U), y: 2.7, w: 5 })
+  }
+  markers.sort((p, q) => ERAS.indexOf(p.era) - ERAS.indexOf(q.era))
   for (const m of markers) {
     rooms.push({
       id: m.era.id, kind: 'era', title: m.era.label,
       rect: { x: r6(m.centre.x), z: r6(m.centre.z), w: 0, d: 0 },
       entry: { x: r6(m.centre.x), z: r6(m.centre.z), yaw: yawOf(m.dir) },
     })
-    if (m.pier) sign('era', m.era.label, m.wall, m.normal, 2.2, 1.8, 0.5)
-    else sign('era', m.era.label, m.wall, m.normal, 3.5, 3, 0.5)
+    sign('era', m.era.label, m.wall, m.normal, m.y, m.w, 0.8)
   }
 
   // Legs as era sections between their portals, corners as they come, all
@@ -609,7 +653,7 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
   let era = ERAS[0]
   for (const part of parts) {
     if (part.kind === 'leg') {
-      const cuts = [0, ...portals.get(part).map((p) => p.pos).sort((a, b) => a - b), part.len]
+      const cuts = [...new Set([0, ...portals.get(part).map((p) => p.pos), part.len])].sort((a, b) => a - b)
       const sections = []
       for (let i = 0; i + 1 < cuts.length; i++) {
         const portal = portals.get(part).find((p) => p.pos === cuts[i])
@@ -670,8 +714,8 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
       ...wallBetween(at(0, s), at(s, s)),
       ...wallBetween(at(s, 0), at(s, s)),
     )
-    sign('room', a.name, at(s / 2, 0), neg(V), 3.5, 2.4, 0.4)   // above the door, seen from the corridor
-    sign('room', a.name, at(s / 2, s), neg(V), 3.5, 2.4, 0.4)   // on the wall facing the door, inside
+    sign('room', a.name, at(s / 2, 0), neg(V), 3.5, 4.8, 0.8)   // above the door, seen from the corridor
+    sign('room', a.name, at(s / 2, s), neg(V), 3.5, 4.8, 0.8)   // on the wall facing the door, inside
   }
 
   // Plaques: under the lower-right corner, as a visitor facing the painting sees it.
