@@ -29,7 +29,7 @@ function renderAt(path: string) {
 
 test('header links to both artwork and artists', () => {
   renderAt('/')
-  expect(screen.getByRole('link', { name: 'fxhash viewer' })).toBeTruthy()
+  expect(screen.getByRole('link', { name: 'fxhash archive' })).toBeTruthy()
   expect(screen.getByRole('link', { name: 'Artwork' })).toBeTruthy()
   expect(screen.getByRole('link', { name: 'Artists' })).toBeTruthy()
 })
@@ -52,7 +52,7 @@ test('/artwork renders the grid', async () => {
 test('unknown route renders not-found', () => {
   renderAt('/definitely/not/a/route')
   expect(screen.getByText(/not found/i)).toBeTruthy()
-  expect(screen.getAllByRole('link', { name: 'fxhash viewer' })).toHaveLength(1)
+  expect(screen.getAllByRole('link', { name: 'fxhash archive' })).toHaveLength(1)
 })
 
 test('/gallery is its own full-bleed page, outside the site chrome', () => {

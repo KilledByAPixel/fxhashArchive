@@ -1,4 +1,4 @@
-// Frank wanted https://killedbyapixel.github.io/fxhashViewer/gallery to work,
+// Frank wanted https://killedbyapixel.github.io/fxhashArchive/gallery to work,
 // rather than only the /#/gallery form.
 //
 // GitHub Pages serves files, not routes: it answers a path only if something is

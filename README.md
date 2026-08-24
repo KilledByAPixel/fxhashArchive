@@ -1,6 +1,6 @@
-# fxhash viewer
+# fxhash archive
 
-**→ [killedbyapixel.github.io/fxhashViewer](https://killedbyapixel.github.io/fxhashViewer/)**
+**→ [killedbyapixel.github.io/fxhashArchive](https://killedbyapixel.github.io/fxhashArchive/)**
 
 An unofficial effort to preserve the art from [fxhash](https://fxhash.xyz), and a
 viewer for what has been preserved.
@@ -53,7 +53,7 @@ programs. That takes away a few things a piece may need — reading its own imag
 storing settings, starting a worker — so a small compatibility script puts them
 back without ever modifying what the artist wrote. The details, and why each
 choice was made, are in [`scripts/sandbox-shim.mjs`](scripts/sandbox-shim.mjs);
-[`/sandbox-check.html`](https://killedbyapixel.github.io/fxhashViewer/sandbox-check.html)
+[`/sandbox-check.html`](https://killedbyapixel.github.io/fxhashArchive/sandbox-check.html)
 reports which of them still work in your browser.
 
 ## For artists

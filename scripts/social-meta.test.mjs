@@ -14,7 +14,7 @@ import sharp from 'sharp'
 
 const html = readFileSync('index.html', 'utf8')
 const PUBLIC = 'public'
-const BASE = 'https://killedbyapixel.github.io/fxhashViewer/'
+const BASE = 'https://killedbyapixel.github.io/fxhashArchive/'
 
 const meta = (attr, name) =>
   new RegExp(`<meta[^>]*\\b${attr}="${name}"[^>]*content="([^"]*)"`, 'i').exec(html)?.[1] ??

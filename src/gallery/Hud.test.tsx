@@ -41,7 +41,7 @@ test('shows where you are and what the crosshair is on', () => {
   renderHud({ roomTitle: 'Zed', caption: 'Thing — Zed, 2022', locked: true })
   expect(screen.getByText('Zed')).toBeTruthy()
   expect(screen.getByText('Thing — Zed, 2022')).toBeTruthy()
-  expect(screen.getByRole('link', { name: /fxhash viewer/ }).getAttribute('href')).toBe('/')
+  expect(screen.getByRole('link', { name: /fxhash archive/ }).getAttribute('href')).toBe('/')
 })
 
 test('hints match the input: click to lock on a mouse, drag and tap on touch, nothing while viewing', () => {

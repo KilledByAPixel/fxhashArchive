@@ -27,7 +27,7 @@ body:
       label: Which project(s)?
       description: One per line. A link to the project on this viewer is ideal, but a name works.
       placeholder: |
-        https://killedbyapixel.github.io/fxhashViewer/#/token/your-project-slug
+        https://killedbyapixel.github.io/fxhashArchive/#/token/your-project-slug
         Another Project Name
     validations:
       required: true

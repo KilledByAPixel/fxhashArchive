@@ -31,7 +31,7 @@ export default function Hud({ rooms, roomTitle, caption, locked, mode, touch, on
   return (
     <div className="gallery-hud">
       <div className="gallery-hud-top">
-        <Link to="/" className="gallery-back">← fxhash viewer</Link>
+        <Link to="/" className="gallery-back">← fxhash archive</Link>
         <span className="gallery-room">{roomTitle}</span>
         <button className="load-more gallery-rooms-button" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
           Rooms

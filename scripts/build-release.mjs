@@ -68,7 +68,7 @@ function writeZip() {
 const README = `fxhash archive — v${version}
 
 An unofficial archive of the art from fxhash, on Tezos, with a viewer for it.
-https://github.com/KilledByAPixel/fxhashViewer
+https://github.com/KilledByAPixel/fxhashArchive
 
 
 HOW TO OPEN IT
