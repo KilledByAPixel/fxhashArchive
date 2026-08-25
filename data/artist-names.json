@@ -1,0 +1,25 @@
+{
+  "_readme": [
+    "Display names changed at the artist's own request.",
+    "",
+    "fxhash usernames were registered on chain, in the FXHASH User Registry",
+    "(KT1Ezht4PDKZri7aVppVGT4Jkw39sesaFnww), and this archive is a record of what",
+    "that catalog held. So a name is not edited on a whim: an entry here means the",
+    "artist asked, through the maintainer, to be shown differently.",
+    "",
+    "`was` is the on-chain name, kept so nothing is lost by the change. It is still",
+    "the name in public/data/users.json, which is a reading of the registry and is",
+    "left exactly as the chain has it — nothing the site displays comes from there.",
+    "",
+    "Run `npm run artists:names` after editing this file, and again after any rebuild",
+    "of collaborations.json, which re-derives collaborator names from users.json."
+  ],
+  "names": {
+    "tz1PpGEgBg2ZKk4PAeXh6hxSCqCpHA4YVwCy": {
+      "name": "OGCrayon",
+      "was": "ALT null",
+      "requested": "2026-08-25",
+      "note": "Renamed on objkt as well; the account's fxhash description is left as the artist wrote it."
+    }
+  }
+}

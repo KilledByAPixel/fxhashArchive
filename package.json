@@ -15,6 +15,7 @@
     "snapshot:contracts": "node scripts/snapshot-contracts.mjs",
     "snapshot:previews": "node scripts/snapshot-previews.mjs",
     "artists": "node scripts/rebuild-artists.mjs",
+    "artists:names": "node scripts/apply-artist-names.mjs",
     "summary": "node scripts/build-summary.mjs",
     "gallery": "node scripts/build-gallery.mjs",
     "check:gateways": "node scripts/check-gateways.mjs",
