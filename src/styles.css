@@ -27,7 +27,12 @@ img { max-width: 100%; }
    the composition, which is the one thing a preview must not do. Letterboxing on
    black costs some tile area and shows the whole piece. */
 .token-thumb, .img-fallback { width: 100%; aspect-ratio: 1; object-fit: contain; background: #000; display: block; }
-.token-name { padding: 0.5rem 0.75rem 0; font-weight: 600; color: #fff; }
+/* No inset of its own: the same class names an artist in the /artists list, where
+   it sits beside an avatar above a `.muted` count with no padding — so the name
+   read as tabbed a few pixels right of its own second line. The inset belongs to
+   the card, where the text sits under a thumbnail that runs edge to edge. */
+.token-name { font-weight: 600; color: #fff; }
+.token-card .token-name { padding: 0.5rem 0.75rem 0; }
 .token-author { padding: 0 0.75rem; color: #aaa; font-size: 0.85rem; }
 .browse-controls { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 1.25rem; }
 .browse-controls input { flex: 1; max-width: 360px; background: #1a1a1a; border: 1px solid #333; color: #eee; padding: 0.5rem 0.75rem; border-radius: 6px; }

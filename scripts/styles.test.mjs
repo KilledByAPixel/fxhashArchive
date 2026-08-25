@@ -67,3 +67,23 @@ test('the HUD stacks above the running artwork, so its panels are reachable', ()
     expect(rule(s)).toMatch(/position:\s*(absolute|fixed|relative)/)
   }
 })
+
+// Frank: an artist's name in the search results sat a few pixels to the right of
+// the count beneath it. `.token-name` carried the *card's* inset — sensible under
+// a full-bleed thumbnail, wrong in an artist row, where the name sits beside an
+// avatar next to a `.muted` line that has no padding at all. Four places use the
+// class and only three of them are cards, so the inset belongs to the card.
+test('a name is flush with the line under it, and inset only inside a card', () => {
+  /** The block for a rule whose selector is exactly this — not one containing it. */
+  const exact = (selector) => {
+    const m = new RegExp(`^${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{([^}]*)\\}`, 'm').exec(css)
+    expect(m, `no rule for exactly \`${selector}\``).toBeTruthy()
+    return m[1]
+  }
+  expect(exact('.token-name')).not.toMatch(/padding/)
+  // The card still insets both of its lines, by the same amount, or the name and
+  // the author under it would not line up either.
+  // `padding: <top> <side>`, where a zero top is written bare rather than as 0rem.
+  const side = (block) => /padding:\s*(?:[\d.]+rem|0)\s+([\d.]+rem)/.exec(block)?.[1]
+  expect(side(exact('.token-card .token-name'))).toBe(side(exact('.token-author')))
+})
