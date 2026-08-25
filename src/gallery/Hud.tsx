@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { REPO_URL } from '../lib/links'
 import type { AboutPanel, Room } from './types'
 import type { Mode } from './engine'
@@ -57,7 +56,10 @@ export default function Hud({ rooms, roomTitle, caption, locked, mode, touch, on
   return (
     <div className="gallery-hud">
       <div className="gallery-hud-top">
-        <Link to="/" className="gallery-back">← fxhash archive</Link>
+        {/* Where you are, and nothing else. A "← fxhash archive" link used to lead
+            here, in the strongest position on the screen, repeating the name of the
+            site on every frame of a walk through it — and on a phone it pushed the
+            room name off the row entirely. The way out is the browser's own back. */}
         <span className="gallery-room">{roomTitle}</span>
         <button className="load-more gallery-rooms-button" onClick={() => setPanel((p) => (p === 'rooms' ? null : 'rooms'))} aria-expanded={open}>
           Rooms

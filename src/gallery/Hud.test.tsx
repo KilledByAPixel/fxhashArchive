@@ -41,7 +41,10 @@ test('shows where you are and what the crosshair is on', () => {
   renderHud({ roomTitle: 'Zed', caption: 'Thing — Zed, 2022', locked: true })
   expect(screen.getByText('Zed')).toBeTruthy()
   expect(screen.getByText('Thing — Zed, 2022')).toBeTruthy()
-  expect(screen.getByRole('link', { name: /fxhash archive/ }).getAttribute('href')).toBe('/')
+  // The room you are standing in has the top-left corner to itself. There was a
+  // "← fxhash archive" link there, taking the eye first and saying the same thing
+  // on every screen of a walk; on a phone it crowded the room name out entirely.
+  expect(screen.queryByRole('link', { name: /fxhash archive/ })).toBeNull()
 })
 
 test('the opening hint is in the reader\'s own controls, and none at all while viewing', () => {
