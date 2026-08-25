@@ -219,7 +219,14 @@ img { max-width: 100%; }
 .gallery-rooms-button { margin: 0; padding: 0.4rem 0.9rem; }
 .gallery-about { max-width: 24rem; color: #ccc; font-size: 0.85rem; line-height: 1.5; }
 .gallery-about p { margin: 0 0 0.75rem; }
-.gallery-about a { color: #eee; }
+/* These were #eee — the panel's own prose is #ccc, so a link sat a shade off the
+   text around it and read as nothing at all. The site's link colour instead, and an
+   arrow ahead of each saying where it goes: back out of the building, or away to
+   another site entirely. */
+.gallery-about a { color: #9ecbff; }
+.gallery-about a:hover { text-decoration: underline; }
+.gallery-about a::before { content: '← '; }
+.gallery-about a[target="_blank"]::before { content: '↗ '; }
 .gallery-crosshair {
   position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px;
   border-radius: 50%; background: rgba(255, 255, 255, 0.8);

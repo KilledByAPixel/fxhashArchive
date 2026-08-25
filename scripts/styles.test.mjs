@@ -87,3 +87,18 @@ test('a name is flush with the line under it, and inset only inside a card', () 
   const side = (block) => /padding:\s*(?:[\d.]+rem|0)\s+([\d.]+rem)/.exec(block)?.[1]
   expect(side(exact('.token-card .token-name'))).toBe(side(exact('.token-author')))
 })
+
+// Frank: the two links at the foot of the gallery's About panel were the same
+// colour as the prose above them and carried no mark of any kind, so nothing said
+// they were links at all — let alone that one leaves the gallery and the other
+// leaves the site.
+test('the About panel marks its links as links, and says which way each one goes', () => {
+  const link = rule('.gallery-about a ')
+  // Not the colour of the panel's own text, which is what made them invisible.
+  const colourOf = (block) => /color:\s*(#[0-9a-f]{3,6})/i.exec(block)?.[1]?.toLowerCase()
+  expect(colourOf(link)).toBeTruthy()
+  expect(colourOf(link)).not.toBe(colourOf(rule('.gallery-about {')))
+  // An arrow ahead of each: back out of the building, or away to another site.
+  expect(rule('.gallery-about a::before')).toMatch(/content:\s*'←/)
+  expect(rule('.gallery-about a[target="_blank"]::before')).toMatch(/content:\s*'↗/)
+})
