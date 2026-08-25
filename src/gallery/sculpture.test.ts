@@ -3,6 +3,7 @@ import {
   plinths, plinthObstacles, buildSculptureGeometry, subdivide,
   GRID, GRID_SPACING, PLINTH_SIDE, PLINTH_H, SCULPTURE_MIN_SIDE,
   EDGE_MIN, MAX_CELLS, TERRACE_SIDE, PLINTH_COLOR, HUE_TREE, HUE_BLOCK,
+  type Plinth,
 } from './sculpture'
 import { linear } from './palette'
 import { FrontSide, Mesh, MeshBasicMaterial, Raycaster, Vector3 } from 'three'
@@ -538,4 +539,42 @@ test('no block is driven to pure black, however dark the object', () => {
     }
     expect(lit).toBe(c.count)
   }
+})
+
+// Frank: "these vases all kind of have a weird base ... they all kind of come to
+// a point." They did, and not by chance: the foot term was min(1, t / 0.08),
+// which is exactly 0 at t = 0, so every vase bottomed out on the 3 cm floor under
+// it. Forty seeds used to give forty identical feet.
+
+test('vases mostly stand on a flat foot, and not all on the same one', () => {
+  // Straight to the builder with made-up plinths: nine at a time from a gallery
+  // is not enough vases to say anything about a distribution.
+  const list: Plinth[] = Array.from({ length: 40 }, (_, i) => ({
+    x: i * 3, z: 0, seed: 7000 + i * 13, kind: 'vase' as const,
+  }))
+  const pos = buildSculptureGeometry(list).glazed.getAttribute('position')
+
+  const feet: number[] = []
+  for (const p of list) {
+    let footR = 0
+    for (let i = 0; i < pos.count; i++) {
+      const dx = pos.getX(i) - p.x
+      const dz = pos.getZ(i) - p.z
+      if (Math.abs(dx) > 1.2) continue
+      const r = Math.hypot(dx, dz)
+      if (r > 0.6) continue                              // a neighbour, not this one
+      if (pos.getY(i) < PLINTH_H + 1e-6) footR = Math.max(footR, r)
+    }
+    feet.push(footR)
+  }
+
+  // The regression, and the sharpest signal there is: every vase used to bottom
+  // out on the same 3 cm floor, so this set had exactly one member.
+  expect(new Set(feet.map((f) => f.toFixed(4))).size).toBeGreaterThan(30)
+
+  // Stems and flat feet separate cleanly by absolute radius — measured, the two
+  // groups sit at 3.0 to 5.4 cm and 8.5 to 23.6 cm with nothing in between.
+  const flat = feet.filter((f) => f > 0.07).length
+  expect(flat).toBeGreaterThan(list.length * 0.6)        // most of them stand flat
+  expect(flat).toBeLessThan(list.length)                 // but the stem is still drawn
 })

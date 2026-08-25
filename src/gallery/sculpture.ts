@@ -174,6 +174,19 @@ const DOME = 0.32
 const VASE_RADIAL = 12
 const VASE_RINGS = 10
 const VASE_R = 0.3
+/**
+ * How wide a vase's foot is, as a fraction of the body just above it.
+ *
+ * The taper used to run to zero at t = 0, so every vase bottomed out on the 3 cm
+ * floor below it and all five stood on a point. A turned pot mostly stands on a
+ * flat foot — so that is the common case, and the stem is kept for the occasional
+ * one, at FOOT_STEM_ODDS.
+ */
+const FOOT_FLAT: [number, number] = [0.72, 1]
+const FOOT_STEM: [number, number] = [0.15, 0.4]
+const FOOT_STEM_ODDS = 0.25
+/** How far up the vase the foot has finished widening into the body. */
+const FOOT_RISE = 0.08
 export const TERRACE_SIDE = 0.62
 
 export interface Plinth {
@@ -370,9 +383,14 @@ function translate(m: MeshArrays, cx: number, cz: number): void {
 /**
  * A lathe. The radius along the height is a constant plus two sines — the couple
  * of curves that make it a vase rather than a cylinder — clamped so it can never
- * pinch through itself, tapered to a foot at the bottom and closed with a small
- * lid at the top, because an open mouth on a single-sided material is a hole you
- * can see through.
+ * pinch through itself, standing on a foot and closed with a small lid at the
+ * top, because an open mouth on a single-sided material is a hole you can see
+ * through.
+ *
+ * The foot is drawn per vase: usually flat, which is how a turned pot stands, and
+ * now and then narrowed to a stem. The bottom is left open on purpose — it sits
+ * flush on the plinth lid, which seals it, and a face there would be coplanar
+ * with the lid and fight it.
  */
 function vase(m: MeshArrays, cx: number, y0: number, cz: number, rand: () => number, color: Rgb): void {
   const a1 = between(rand, 0.10, 0.22)
@@ -382,11 +400,16 @@ function vase(m: MeshArrays, cx: number, y0: number, cz: number, rand: () => num
   const f2 = between(rand, 1.6, 3.0)
   const p2 = between(rand, 0, Math.PI * 2)
   const height = between(rand, 0.5, SCULPTURE_H)
+  // Drawn after the profile's own parameters so that adding it left every vase's
+  // silhouette exactly as it was, and changed only what it stands on.
+  const foot = between(rand, ...(rand() < FOOT_STEM_ODDS ? FOOT_STEM : FOOT_FLAT))
   const profile = (t: number) => {
     const r = VASE_R * (0.55 + a1 * Math.sin(2 * Math.PI * f1 * t + p1) + a2 * Math.sin(2 * Math.PI * f2 * t + p2))
-    // A foot at the bottom and a closed shoulder at the top, so it stands on the
-    // plinth and does not end in a rim.
-    const ends = Math.min(1, t / 0.08) * Math.min(1, (1 - t) / 0.06 + 0.35)
+    // The foot at the bottom and a closed shoulder at the top, so it stands on
+    // the plinth and does not end in a rim. The foot term starts at `foot` rather
+    // than at zero, which is the whole difference between a pot and a spinning
+    // top: at 1 the base is as wide as the body above it.
+    const ends = (foot + (1 - foot) * Math.min(1, t / FOOT_RISE)) * Math.min(1, (1 - t) / 0.06 + 0.35)
     return Math.max(0.03, r * ends)
   }
   const at = (ring: number, seg: number): [number, number, number] => {
