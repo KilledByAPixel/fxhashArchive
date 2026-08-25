@@ -27,7 +27,26 @@ export interface PixelRect { x: number; y: number; w: number; h: number }
 export const TEXT = 0x141414
 
 const BASE_PX_PER_M = 200
-const scaleOf = (sign: Sign) => (sign.kind === 'plaque' ? 2 : 1)
+/**
+ * Extra texture density for a plaque, which is read from closer than anything
+ * else on the walls.
+ *
+ * This was 2, set when a plaque was 0.5 m wide and its text came out around 3 cm
+ * — too small to read without the density making up for it. The plaques are half
+ * again as big now, so the compensation can come down with the size going up.
+ * It has to, as well. The atlas was already packing to 3796 of its 4096 rows, and
+ * holding 2 here pushed the packer into its retry — which costs every sign in the
+ * building a fifth of its resolution to buy plaques something they no longer need.
+ *
+ * 1.4 rather than 1.5 because 1.5 still tips the 2048 atlas, the one low-end
+ * devices get, into that retry. At 1.4 both sizes pack at full resolution, with
+ * 184 rows to spare at 4096 and 38 at 2048, and a plaque's box comes to 50 px
+ * against the 48 it had at half the size — so the text is larger on the wall and
+ * fractionally sharper, rather than larger and softer. If signs are ever added,
+ * check this again: 2048 is the one with little room left.
+ */
+const PLAQUE_PX_SCALE = 1.4
+const scaleOf = (sign: Sign) => (sign.kind === 'plaque' ? PLAQUE_PX_SCALE : 1)
 const PAD = 2
 
 /**

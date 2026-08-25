@@ -70,6 +70,36 @@ export const WALL_OFFSET = WALL_T / 2 + 0.02
  */
 export const SIGN_OFFSET = WALL_T / 2 + 0.005
 
+/**
+ * The plaque under a painting.
+ *
+ * Its text is width-bound, every one of the 420 of them — it is shrunk to fit the
+ * box rather than to fit the height — so the width is what sets how big it reads,
+ * and raising the height alone does nothing at all. At 0.5 m it came out around
+ * 3 cm against a painting a metre wide; three quarters of a metre puts it near
+ * 4.5 cm and takes it from 42% of the median painting's width to 63%.
+ */
+export const PLAQUE_W = 0.75
+export const PLAQUE_H = 0.18
+/** Clear wall between the bottom of a painting and the top of its plaque. */
+const PLAQUE_GAP = 0.06
+
+/**
+ * The lobby title, and the strapline it stands over.
+ *
+ * The title read smaller than the artists' names over the doors, which is the
+ * wrong way round for the first thing anyone sees. Its text is width-bound too
+ * past about 0.6 m of height, so the width has to grow with it: at 3 m the
+ * lettering caps out near 38 cm however tall the box, and at 4 m it reaches the
+ * 48 cm the longest door signs get. The lobby wall is HALL_W across, so a 4 m
+ * sign still leaves two metres clear either side.
+ */
+const TITLE_W = 4
+const TITLE_H = 0.8
+const STRAP_H = 0.25
+/** Clear wall between the strapline and the title above it. */
+const TITLE_GAP = 0.1
+
 /** Kept in step with HIDDEN_FLAGS in src/lib/data.ts and scripts/build-summary.mjs. */
 export const HIDDEN_FLAGS = new Set(['MALICIOUS', 'HIDDEN', 'REPORTED', 'AUTO_DETECT_COPY'])
 
@@ -885,9 +915,13 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
   // pair, a hand's width over the arch, and the title sits on top of it — a
   // title belongs above its strapline even when the room is tall enough to put
   // it anywhere.
-  const countY = r6(Math.min(DOOR_H + 0.275, underCeiling(LOBBY_H, 0.25)))
-  const titleY = r6(Math.min(countY + 0.475, underCeiling(LOBBY_H, 0.5)))
-  sign('title', 'fxhash archive', { x: 0, z: LOBBY }, { x: 0, z: -1 }, titleY, 3, 0.5)
+  const countY = r6(Math.min(DOOR_H + 0.275, underCeiling(LOBBY_H, STRAP_H)))
+  // Derived from the two heights rather than a fixed 0.475, which was measured
+  // when the title was 0.5 m: growing the title while holding that number put its
+  // bottom edge below the strapline's top and the two overlapped.
+  const stack = STRAP_H / 2 + TITLE_GAP + TITLE_H / 2
+  const titleY = r6(Math.min(countY + stack, underCeiling(LOBBY_H, TITLE_H)))
+  sign('title', 'fxhash archive', { x: 0, z: LOBBY }, { x: 0, z: -1 }, titleY, TITLE_W, TITLE_H)
   // The years belong to the catalogue, not to the 420 hung here. Quoting the
   // gallery's own span made the lobby say fxhash ended in 2024, when the 420 are
   // simply the ones whose code could be archived — the platform ran to July 2025.
@@ -896,7 +930,9 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
   const strapline = catalog
     ? `${visible.length} archived works · ${artistCount} artists · from ${catalog.count.toLocaleString('en-US')} projects, ${catalog.span[0]}–${catalog.span[1]}`
     : `${visible.length} archived works · ${artistCount} artists · ${span[0]}–${span[1]}`
-  sign('title', strapline, { x: 0, z: LOBBY }, { x: 0, z: -1 }, countY, 3, 0.25)
+  // Widened with the title above it: the pair is one block, and a strapline set
+  // to a different measure than its title reads as a mistake rather than a choice.
+  sign('title', strapline, { x: 0, z: LOBBY }, { x: 0, z: -1 }, countY, TITLE_W, STRAP_H)
   sign('title', `You have walked the whole of fxhash, ${span[0]}–${span[1]} — the lobby is ahead`, { x: HX, z: LOBBY / 2 }, { x: 1, z: 0 }, 3.5, 3.6, 0.4)
   // The lobby face of the same lintel, read on the way out into leg D. Leg D is
   // the last leg of the loop, so walking out through here is walking the whole
@@ -1049,12 +1085,20 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
   for (const p of paintings) {
     const rx = Math.cos(p.yaw)
     const rz = -Math.sin(p.yaw)
-    const shift = p.w / 2 - 0.25
+    // Never wider than the piece it labels. Nine of the paintings are narrower
+    // than a full plaque, and a label overhanging its own work reads as a mistake.
+    const w = Math.min(PLAQUE_W, p.w)
+    // Right-aligned under the painting, so this is half the plaque and not a
+    // constant of its own — the two were separately written as 0.5 and 0.25, and
+    // changing one without the other slides every plaque off its picture.
+    const shift = p.w / 2 - w / 2
     signs.push({
       text: `${p.name} — ${p.artist}, ${p.year}`, kind: 'plaque',
-      x: r6(p.x + rx * shift - Math.sin(p.yaw) * pull), y: r6(EYE_Y - p.h / 2 - 0.12),
+      // Dropped by the gap plus half its own height, so a taller plaque keeps the
+      // same clear wall under the painting instead of creeping up towards it.
+      x: r6(p.x + rx * shift - Math.sin(p.yaw) * pull), y: r6(EYE_Y - p.h / 2 - PLAQUE_GAP - PLAQUE_H / 2),
       z: r6(p.z + rz * shift - Math.cos(p.yaw) * pull),
-      yaw: p.yaw, w: 0.5, h: 0.12,
+      yaw: p.yaw, w, h: PLAQUE_H,
     })
   }
 

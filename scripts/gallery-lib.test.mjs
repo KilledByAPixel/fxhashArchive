@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs'
 import {
   ERAS, eraOf, isCollab, creditOf, assignRooms, SOLO_MIN, wallSegments, freeRuns, hangOnRun, GAP, WALL_H, DOOR_H, SPACING, CORNER, ROOM_MIN, ROOM_MID, WALL_T,
   buildGallery, tileRect, ATLAS, ATLAS_SMALL, TILES_PER_ATLAS, WALL_OFFSET, SIGN_OFFSET, PAINTING, EYE_Y, HIDDEN_FLAGS,
-  ceilingHeight, LOBBY, LOBBY_H, ROOM_H_MIN, ROOM_H_MAX, ROOM_H_SLOPE,
+  ceilingHeight, LOBBY, LOBBY_H, ROOM_H_MIN, ROOM_H_MAX, ROOM_H_SLOPE, PLAQUE_H,
 } from './gallery-lib.mjs'
 import { readArchiveInputs } from './gallery-inputs.mjs'
 
@@ -593,8 +593,11 @@ test('a painting takes its preview\'s proportions, long side PAINTING; no size m
   expect(p(201).h).toBe(PAINTING)
   // the plaque sits under the lower-right corner of the actual picture
   const plaque = (id) => g.signs.find((s) => s.kind === 'plaque' && s.text.startsWith(p(id).name + ' '))
-  expect(plaque(101).y).toBeCloseTo(EYE_Y - p(101).h / 2 - 0.12, 9)
-  expect(plaque(102).y).toBeCloseTo(EYE_Y - PAINTING / 2 - 0.12, 9)
+  // 0.06 of clear wall, then half the plaque: written this way rather than as one
+  // number so that resizing the plaque does not silently move it up the painting.
+  const drop = 0.06 + PLAQUE_H / 2
+  expect(plaque(101).y).toBeCloseTo(EYE_Y - p(101).h / 2 - drop, 9)
+  expect(plaque(102).y).toBeCloseTo(EYE_Y - PAINTING / 2 - drop, 9)
 })
 
 // ---- the preview seed ---------------------------------------------------------------
@@ -791,7 +794,9 @@ test('the lobby names the archive on the lintel over its own opening', () => {
   expect(title.y + title.h / 2).toBeLessThan(LOBBY_H - 1)
   // The count stays a pair with it, tucked between the title and the arch.
   const count = g.signs.find((s) => /archived works/.test(s.text))
-  expect(title.y - count.y).toBeCloseTo(0.475, 6)
+  // The rule rather than the resulting number — this was 0.475 when the title was
+  // 0.5 m tall, and read as a constant of the design when it is a consequence of it.
+  expect(title.y - count.y).toBeCloseTo(count.h / 2 + 0.1 + title.h / 2, 6)
   expect(count.y - count.h / 2).toBeGreaterThanOrEqual(DOOR_H)
 })
 
@@ -830,7 +835,10 @@ test('every sign hangs where it can be read, not up under the ceiling', () => {
   const g = loop()
   const tall = g.rooms.filter((r) => r.h > WALL_H)
   expect(tall.length).toBeGreaterThan(0)          // there are tall rooms to get this wrong in
-  for (const s of g.signs) expect(s.y + s.h / 2).toBeLessThanOrEqual(4.2)
+  // The lobby title hangs highest, and it tops out at 4.3 now that it is 0.8 m
+  // tall — still 1.7 m clear of the 6 m ceiling, and a 31 degree look up from the
+  // spawn point rather than the 45 the comment above is guarding against.
+  for (const s of g.signs) expect(s.y + s.h / 2).toBeLessThanOrEqual(4.4)
 })
 
 test('the lobby title sits just above the arch, with the counts under it', () => {
@@ -843,5 +851,5 @@ test('the lobby title sits just above the arch, with the counts under it', () =>
   expect(counts.y).toBeLessThan(title.y)
   // Both clear the opening they hang over, and neither is up in the roof.
   expect(counts.y - counts.h / 2).toBeGreaterThanOrEqual(DOOR_H)
-  expect(title.y + title.h / 2).toBeLessThanOrEqual(DOOR_H + 1.1)
+  expect(title.y + title.h / 2).toBeLessThanOrEqual(DOOR_H + 1.4)
 })
