@@ -209,3 +209,24 @@ test('a panel with no touch wording reads the same on a phone as on a wall', () 
   fireEvent.click(screen.getByRole('button', { name: 'About' }))
   expect(screen.getByText(/W A S D to walk/)).toBeTruthy()
 })
+
+test('an open panel has the screen to itself: the walking hints step aside', () => {
+  // Frank: the Rooms list runs down the right of the screen and can reach the
+  // bottom of it, straight through "Click to look around" in the middle and the
+  // controls hint along the bottom. Neither is worth reading while a menu is up.
+  renderHud({ about, caption: 'Thing — Zed, 2022' })
+  expect(screen.getByText(/click to look around/i)).toBeTruthy()
+  expect(screen.getByText(/WASD to walk/i)).toBeTruthy()
+  expect(screen.getByText('Thing — Zed, 2022')).toBeTruthy()
+
+  fireEvent.click(screen.getByRole('button', { name: 'Rooms' }))
+  expect(screen.queryByText(/click to look around/i)).toBeNull()
+  expect(screen.queryByText(/WASD to walk/i)).toBeNull()
+  expect(screen.queryByText('Thing — Zed, 2022')).toBeNull()
+
+  // Back when the menu shuts: opening one is not the same as having learned to
+  // walk, and someone who closes it without moving still has not been told how.
+  fireEvent.click(screen.getByRole('button', { name: 'Rooms' }))
+  expect(screen.getByText(/click to look around/i)).toBeTruthy()
+  expect(screen.getByText(/WASD to walk/i)).toBeTruthy()
+})

@@ -205,9 +205,9 @@ img { max-width: 100%; }
 .gallery-hud-top { display: flex; gap: 1rem; align-items: center; padding: 0.75rem 1rem; }
 .gallery-hud-top > * { pointer-events: auto; }
 /* Grey, not the white the removed link wore. The rooms it sits over are lit plaster
-   and white on that barely registers; grey reads as a quiet label on a bright wall,
-   which is what it is. */
-.gallery-room { color: #aaa; flex: 1; pointer-events: none; }
+   and pale text on that barely registers; the darker the label, the more of the wall
+   it has to work against, which is the opposite of how this reads on a dark page. */
+.gallery-room { color: #888; flex: 1; pointer-events: none; }
 .gallery-rooms {
   pointer-events: auto; position: absolute; top: 3.25rem; right: 1rem; min-width: 14rem;
   max-height: calc(100vh - 5rem); overflow-y: auto;

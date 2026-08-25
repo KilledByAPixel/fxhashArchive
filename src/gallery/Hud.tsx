@@ -103,11 +103,16 @@ export default function Hud({ rooms, roomTitle, caption, locked, mode, touch, on
       )}
 
       {mode === 'walk' && locked && <div className="gallery-crosshair" aria-hidden="true" />}
-      {mode === 'walk' && caption && <p className="gallery-caption">{caption}</p>}
-      {mode === 'walk' && !touch && !locked && <p className="gallery-hint">Click to look around</p>}
+      {/* Nothing from the walk while a panel is up. The Rooms list runs down the
+          right of the screen and can reach the bottom of it, straight through the
+          hint in the middle and the controls line along the bottom; the caption
+          shares the middle too, and names whatever the crosshair happens to be on
+          behind the menu, which is not what the reader is looking at. */}
+      {mode === 'walk' && !panel && caption && <p className="gallery-caption">{caption}</p>}
+      {mode === 'walk' && !panel && !touch && !locked && <p className="gallery-hint">Click to look around</p>}
       {/* One opening hint each, in the reader's own controls, and both gone the
           moment they do anything. See `acted` for why touch cannot use `locked`. */}
-      {mode === 'walk' && !acted && (
+      {mode === 'walk' && !panel && !acted && (
         <p className="gallery-hint gallery-hint-bottom">
           {touch
             ? 'Drag to look · tap the floor to walk · tap a painting to see it run'
