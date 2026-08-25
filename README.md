@@ -1,7 +1,9 @@
 # fxhash archive
 
-**→ [killedbyapixel.github.io/fxhashArchive](https://killedbyapixel.github.io/fxhashArchive/)**\
-**→ [walk the interactive gallery](https://killedbyapixel.github.io/fxhashArchive/gallery)**
+# → [View the Archive](https://killedbyapixel.github.io/fxhashArchive/)
+# → [Explore the 3D Gallery](https://killedbyapixel.github.io/fxhashArchive/gallery)
+
+![fxhash archive logo](public/social.jpg)
 
 An unofficial effort to preserve the art from [fxhash](https://fxhash.xyz), a
 viewer for what has been preserved, and an interactive gallery you can walk
