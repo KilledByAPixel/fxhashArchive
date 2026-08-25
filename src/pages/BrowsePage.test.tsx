@@ -42,12 +42,13 @@ test('largest-edition sorting is gone', async () => {
   expect(screen.queryByRole('option', { name: /edition/i })).toBeNull()
 })
 
-test('offers random, most collected and newest', async () => {
+test('offers random, most collected, newest and oldest', async () => {
   renderPage()
   await screen.findByPlaceholderText(/search projects/i)
   expect(screen.getByRole('option', { name: /random/i })).toBeTruthy()
   expect(screen.getByRole('option', { name: /collected/i })).toBeTruthy()
   expect(screen.getByRole('option', { name: /newest/i })).toBeTruthy()
+  expect(screen.getByRole('option', { name: /oldest/i })).toBeTruthy()
 })
 
 test('defaults to random, not newest', async () => {
@@ -128,4 +129,67 @@ test('shows no summary-failure note when the summary loads fine', async () => {
   renderPage()
   await screen.findByPlaceholderText(/search projects/i)
   expect(screen.queryByText(/archive and ranking information could not be loaded/i)).toBeNull()
+})
+
+// Frank, looking at the live site: "I select newest, and this is from November
+// 2023." It was Farol — made in November 2023, mint scheduled for April 2026.
+// The snapshot is ordered by mintOpensAt, so Farol sat last in catalog order, and
+// "Newest" reversed the catalog. Checked against the live fxhash API: the archive
+// holds all 27,430 projects and the last one made is Scale, 2025-07-21.
+
+/**
+ * The Farol case in miniature: catalog order is mintOpensAt ascending, so the
+ * project with the furthest-future mint comes last — and it is not the newest.
+ */
+const dated = [
+  token(1, { createdAt: '2021-03-01T00:00:00Z', mintOpensAt: '2021-03-01T00:00:00Z' }),
+  token(2, { createdAt: '2025-07-21T00:00:00Z', mintOpensAt: '2025-07-21T00:00:00Z' }),
+  token(3, { createdAt: '2023-11-17T00:00:00Z', mintOpensAt: '2026-04-12T00:00:00Z' }),
+]
+
+const sortBy = async (mode: string) => {
+  renderPage()
+  await screen.findByPlaceholderText(/search projects/i)
+  fireEvent.change(screen.getByRole('combobox'), { target: { value: mode } })
+  return names()
+}
+
+test('newest goes by when a project was made, not by where it sits in the snapshot', async () => {
+  vi.spyOn(data, 'loadAllTokens').mockResolvedValue(dated)
+  // Reversing the catalog would give 3, 2, 1 — putting the 2023 project first
+  // because its mint opens in 2026. The 2025 project is the newest.
+  expect(await sortBy('newest')).toEqual(['Tok 2', 'Tok 3', 'Tok 1'])
+})
+
+test('oldest is the same order the other way up', async () => {
+  vi.spyOn(data, 'loadAllTokens').mockResolvedValue(dated)
+  expect(await sortBy('oldest')).toEqual(['Tok 1', 'Tok 3', 'Tok 2'])
+})
+
+test('projects sharing a timestamp still come out in a settled order', async () => {
+  const sameSecond = [
+    token(3, { createdAt: '2022-05-05T00:00:00Z' }),
+    token(1, { createdAt: '2022-05-05T00:00:00Z' }),
+    token(2, { createdAt: '2022-05-05T00:00:00Z' }),
+  ]
+  vi.spyOn(data, 'loadAllTokens').mockResolvedValue(sameSecond)
+  // 1,249 of the real projects share a timestamp with another, so this is the
+  // common case, not a corner. Id breaks the tie, and it breaks it both ways.
+  expect(await sortBy('oldest')).toEqual(['Tok 1', 'Tok 2', 'Tok 3'])
+  cleanup()
+  expect(await sortBy('newest')).toEqual(['Tok 3', 'Tok 2', 'Tok 1'])
+})
+
+test('a project with no date sorts last, whichever way round it is', async () => {
+  const withNull = [
+    token(1, { createdAt: null }),
+    token(2, { createdAt: '2024-01-01T00:00:00Z' }),
+    token(3, { createdAt: '2022-01-01T00:00:00Z' }),
+  ]
+  vi.spyOn(data, 'loadAllTokens').mockResolvedValue(withNull)
+  // An unknown date is not a very old one — it goes to the end either way, as an
+  // unranked project does under "most collected".
+  expect(await sortBy('newest')).toEqual(['Tok 2', 'Tok 3', 'Tok 1'])
+  cleanup()
+  expect(await sortBy('oldest')).toEqual(['Tok 3', 'Tok 2', 'Tok 1'])
 })

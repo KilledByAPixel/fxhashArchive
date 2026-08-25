@@ -101,9 +101,9 @@ async function writeAtlas(file, paintings, thumbs, atlas) {
 }
 
 async function main() {
-  const { tokens, collaborations, thumbs, volumes, sizes, previews } = await readArchiveInputs(DATA)
+  const { tokens, collaborations, thumbs, volumes, sizes, previews, catalog } = await readArchiveInputs(DATA)
   const generatedAt = new Date().toISOString()
-  const inputs = { tokens, collaborations, volumes, sizes, previews, generatedAt }
+  const inputs = { tokens, collaborations, volumes, sizes, previews, catalog, generatedAt }
   // Lay out, learn what colour each room's art is, lay out again with it.
   const { tints, pieceTints } = await sampleTints(buildGallery(inputs), thumbs)
   const gallery = buildGallery({ ...inputs, tints, pieceTints })

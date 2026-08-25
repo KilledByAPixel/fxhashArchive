@@ -12,6 +12,9 @@ import { join } from 'node:path'
  * the same source build-summary.mjs uses — so the gallery cannot disagree with the
  * grid's badges about what is archived.
  */
+/** Kept in step with isVisible in src/lib/data.ts, which is what the browse grid uses. */
+const HIDDEN_FLAGS = new Set(['MALICIOUS', 'HIDDEN', 'REPORTED', 'AUTO_DETECT_COPY'])
+
 export async function readArchiveInputs(dataDir = 'public/data') {
   const manifest = JSON.parse(await readFile(join(dataDir, 'generators', 'manifest.json'), 'utf8'))
   const archived = new Set(Object.keys(manifest).map(Number))
@@ -20,11 +23,28 @@ export async function readArchiveInputs(dataDir = 'public/data') {
     .filter((f) => /^index-\d+\.json$/.test(f))
     .sort()
   const tokens = []
+  // What the archive covers as a whole, tallied as the shards go past.
+  //
+  // The gallery hangs the 420 projects whose code is archived, and every year it
+  // quoted came from those 420 — which made the lobby read as though fxhash
+  // stopped in 2024. It did not: it ran to July 2025, and the catalogue records
+  // all of it. Counted the way the browse grid counts, flagged projects excluded,
+  // so a visitor cannot read one number on the wall and a different one on the
+  // site. This loop already visits every token, so it costs nothing.
+  let catalogCount = 0
+  let lo = Infinity
+  let hi = -Infinity
   for (const f of shards) {
     for (const t of JSON.parse(await readFile(join(dataDir, 'tokens', f), 'utf8'))) {
+      if (!HIDDEN_FLAGS.has(t.flag)) {
+        catalogCount++
+        const year = Number(String(t.createdAt ?? '').slice(0, 4))
+        if (Number.isFinite(year) && year > 0) { lo = Math.min(lo, year); hi = Math.max(hi, year) }
+      }
       if (archived.has(t.id)) tokens.push(t)
     }
   }
+  const catalog = catalogCount && Number.isFinite(lo) ? { count: catalogCount, span: [lo, hi] } : null
 
   // The manifest and the catalog are captured separately, so a manifest id with no
   // matching token is possible (a project removed from the catalog after it was
@@ -67,5 +87,5 @@ export async function readArchiveInputs(dataDir = 'public/data') {
     for (const [id, q] of Object.entries(rows)) if (found.has(Number(id)) && typeof q === 'string' && q) previews.set(Number(id), q)
   }
 
-  return { tokens, collaborations, thumbs, volumes, sizes, previews }
+  return { tokens, collaborations, thumbs, volumes, sizes, previews, catalog }
 }

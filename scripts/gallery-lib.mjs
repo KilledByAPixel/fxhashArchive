@@ -753,7 +753,7 @@ function nudgePortals(deficits, portals, legs) {
  * back into the lobby says you have come full circle. Nothing here depends on
  * input order — see byDate — so the same archive gives the same building.
  */
-export function buildGallery({ tokens, collaborations = {}, volumes = new Map(), sizes = new Map(), previews = new Map(), tints = new Map(), pieceTints = new Map(), generatedAt }) {
+export function buildGallery({ tokens, collaborations = {}, volumes = new Map(), sizes = new Map(), previews = new Map(), tints = new Map(), pieceTints = new Map(), catalog = null, generatedAt }) {
   const visible = tokens.filter((t) => !HIDDEN_FLAGS.has(t.flag))
   const { solo, halls, artistCount } = assignRooms(visible, collaborations, { volumes })
   const shared = [...halls.values()].flat().sort(byDate)
@@ -888,7 +888,15 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
   const countY = r6(Math.min(DOOR_H + 0.275, underCeiling(LOBBY_H, 0.25)))
   const titleY = r6(Math.min(countY + 0.475, underCeiling(LOBBY_H, 0.5)))
   sign('title', 'fxhash archive', { x: 0, z: LOBBY }, { x: 0, z: -1 }, titleY, 3, 0.5)
-  sign('title', `${visible.length} archived works · ${artistCount} artists · ${span[0]}–${span[1]}`, { x: 0, z: LOBBY }, { x: 0, z: -1 }, countY, 3, 0.25)
+  // The years belong to the catalogue, not to the 420 hung here. Quoting the
+  // gallery's own span made the lobby say fxhash ended in 2024, when the 420 are
+  // simply the ones whose code could be archived — the platform ran to July 2025.
+  // With no catalogue given (an older data file, or a test) it falls back to what
+  // it can vouch for on its own, which is this building's span.
+  const strapline = catalog
+    ? `${visible.length} archived works · ${artistCount} artists · from ${catalog.count.toLocaleString('en-US')} projects, ${catalog.span[0]}–${catalog.span[1]}`
+    : `${visible.length} archived works · ${artistCount} artists · ${span[0]}–${span[1]}`
+  sign('title', strapline, { x: 0, z: LOBBY }, { x: 0, z: -1 }, countY, 3, 0.25)
   sign('title', `You have walked the whole of fxhash, ${span[0]}–${span[1]} — the lobby is ahead`, { x: HX, z: LOBBY / 2 }, { x: 1, z: 0 }, 3.5, 3.6, 0.4)
   // The lobby face of the same lintel, read on the way out into leg D. Leg D is
   // the last leg of the loop, so walking out through here is walking the whole

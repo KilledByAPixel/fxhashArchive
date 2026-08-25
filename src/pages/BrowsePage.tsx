@@ -6,7 +6,7 @@ import TokenCard from '../components/TokenCard'
 import { bylineLabel } from '../components/Byline'
 
 const PAGE = 60
-type SortMode = 'random' | 'collected' | 'newest'
+type SortMode = 'random' | 'collected' | 'newest' | 'oldest'
 
 export default function BrowsePage() {
   const [tokens, setTokens] = useState<LeanToken[] | null>(null)
@@ -62,7 +62,26 @@ export default function BrowsePage() {
       const last = Number.MAX_SAFE_INTEGER
       return [...filtered].sort((a, b) => (rank.get(a.id) ?? last) - (rank.get(b.id) ?? last))
     }
-    return [...filtered].reverse() // snapshot is mint-date ASC, so reverse = newest first
+    // Sort by the date the cards actually show.
+    //
+    // This used to reverse the catalog, on the grounds that the snapshot is mint
+    // date ascending. It is — scripts/snapshot.mjs pages the API with
+    // sort: { mintOpensAt: "ASC" } — but `mintOpensAt` is when a mint opens, not
+    // when the work was made, and the two come apart badly. Farol was made in
+    // November 2023 and had its mint scheduled for April 2026, so reversing put a
+    // 2023 project at the head of "Newest" and buried every one of the 1,451
+    // visible projects from 2024 onward behind it.
+    const dir = sort === 'newest' ? -1 : 1
+    return [...filtered].sort((a, b) => {
+      // Undated projects sort last whichever way round it is, as unranked ones do
+      // above: an unknown date is not a very old one.
+      if (!a.createdAt) return b.createdAt ? 1 : 0
+      if (!b.createdAt) return -1
+      const byDate = a.createdAt.localeCompare(b.createdAt)
+      // 1,249 projects share a timestamp with another, so without a tiebreak the
+      // order within a second is whatever the sort happens to do with it.
+      return (byDate !== 0 ? byDate : a.id - b.id) * dir
+    })
   }, [tokens, query, sort, seed, rank, archivedOnly, archivedIds])
 
   if (error) return <p>Failed to load catalog: {error}</p>
@@ -83,6 +102,7 @@ export default function BrowsePage() {
           <option value="random">Random</option>
           <option value="collected">Most collected</option>
           <option value="newest">Newest</option>
+          <option value="oldest">Oldest</option>
         </select>
         <label className="archived-filter">
           <input
