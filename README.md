@@ -31,7 +31,7 @@ If fxhash does come back, nothing here was wasted.
 **Tezos only.** fxhash also published work on Ethereum and Base, and none of that
 is here. Its Tezos and EVM sides are served by different backends, and only the
 Tezos one was reachable while this was built. Everything below is about the
-Tezos catalog: 27,430 projects and 5,407 artists.
+Tezos catalog: 27,430 projects and 4,130 artists.
 
 ## What you can do here
 

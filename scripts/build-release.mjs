@@ -93,7 +93,7 @@ WHAT IS IN IT
 
     index.html, assets/     the viewer
     data/tokens/            the catalog: 27,430 projects
-    data/artists/           5,407 artists, and 18,855 on-chain usernames
+    data/artists/           4,130 artists, and 18,855 on-chain usernames
     data/seeds/             every seed: 1,802,387 of them, with artifact URIs
     data/iterations/        which iterations belong to which project
     data/descriptions/      what the artists wrote about their own work

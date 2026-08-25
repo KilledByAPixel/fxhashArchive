@@ -32,19 +32,82 @@ export function buildSlugIndex(shards) {
   return index
 }
 
-export function buildArtists(rawTokens) {
+/**
+ * Kept in step with HIDDEN_FLAGS in src/lib/data.ts, and with the copies in
+ * build-summary.mjs, gallery-lib.mjs and archive-generators.mjs. snapshot-lib.test.mjs
+ * checks this one against gallery-lib's, so at least one pair cannot drift in silence.
+ */
+export const HIDDEN_FLAGS = new Set(['MALICIOUS', 'HIDDEN', 'REPORTED', 'AUTO_DETECT_COPY'])
+
+/**
+ * Restate each artist's project count as the number their own page shows, and drop
+ * the rows that name nobody.
+ *
+ * The directory used to count a project only under `token.author.id`, over every
+ * token including the moderated ones. Neither half of that matched the artist page,
+ * which shows their own projects *and* their collaborations, moderated work excluded
+ * — so the two disagreed for 1,574 artists, in both directions. Measured against the
+ * real catalog: 339 undercounted because collaborations are authored by a KT1
+ * contract rather than by a person, and 1,235 overcounted because nothing filtered
+ * flagged work. 860 of those had nothing visible at all, one of them promising 48
+ * projects and opening on a page that showed none.
+ *
+ * Two kinds of row are dropped. A contract is not an artist: the 427 collaboration
+ * contracts were listed with a null name and a bare KT1 address, holding a count that
+ * belongs to the people, who are credited by name on every byline. And an artist
+ * whose work is entirely moderated has a page reading "No visible projects from this
+ * artist", so a row pointing at it promises work that cannot be shown.
+ *
+ * This does not *add* anyone. Someone who only ever collaborated has no row here and
+ * gains none — their page is built from the collaboration record when it is asked for.
+ *
+ * @param artists      rows carrying identity: id, name, avatarUri, description
+ * @param tokens       the catalog, lean or raw; needs id, flag and author
+ * @param collaborations  collaborations.json — its byArtist credits and byProject contracts
+ */
+export function reviseArtists(artists, tokens, collaborations = {}) {
+  const { byArtist = {}, byProject = {} } = collaborations
+  const contracts = new Set(Object.values(byProject).map((c) => c.contract))
+
+  // Sets, not counters: an artist listed as a collaborator on a project they also
+  // authored must not be credited with it twice.
+  const credited = new Map()
+  const credit = (id, project) => {
+    if (!id) return
+    const seen = credited.get(id) ?? new Set()
+    seen.add(project)
+    credited.set(id, seen)
+  }
+
+  const visible = new Set()
+  for (const t of tokens) {
+    if (HIDDEN_FLAGS.has(t.flag)) continue
+    visible.add(t.id)
+    credit(t.author?.id, t.id)
+  }
+  // A collaboration credit is only worth a count if the project itself can be seen.
+  for (const [id, projects] of Object.entries(byArtist)) {
+    for (const p of projects) if (visible.has(p)) credit(id, p)
+  }
+
+  return artists
+    .filter((a) => !contracts.has(a.id))
+    .map((a) => ({ ...a, tokenCount: credited.get(a.id)?.size ?? 0 }))
+    .filter((a) => a.tokenCount > 0)
+    .sort((x, y) => y.tokenCount - x.tokenCount)
+}
+
+export function buildArtists(rawTokens, collaborations = {}) {
   const byId = new Map()
   for (const t of rawTokens) {
     const a = t.author
-    if (!a) continue
-    const cur = byId.get(a.id) ?? {
+    if (!a || byId.has(a.id)) continue
+    byId.set(a.id, {
       id: a.id, name: a.name ?? null, avatarUri: a.avatarUri ?? null,
       description: a.description ?? null, tokenCount: 0,
-    }
-    cur.tokenCount += 1
-    byId.set(a.id, cur)
+    })
   }
-  return [...byId.values()].sort((x, y) => y.tokenCount - x.tokenCount)
+  return reviseArtists([...byId.values()], rawTokens, collaborations)
 }
 
 export function buildTokensMap(tokens) {

@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { test, expect } from 'vitest'
+import { HIDDEN_FLAGS } from './snapshot-lib.mjs'
 
 /**
  * Conformance checks against the *real* committed snapshot in `public/data/`.
@@ -157,4 +158,37 @@ test('tokens are ordered by mintOpensAt ascending across the whole catalog', () 
   }
   expect(firstFew(outOfOrder)).toEqual([])
   expect(total).toBe(meta.tokenCount)
+})
+
+test('the directory count is the count the artist page shows', () => {
+  // An artist noticed his row said 14 projects and his page listed 15. The row and
+  // the page were computed from different things: the row grouped tokens by
+  // author.id over the raw catalog, while ArtistPage takes the union of
+  // tokens-map and collaborations.byArtist and filters with isVisible. This asserts
+  // the two definitions have not drifted apart again, against the shipped bytes.
+  const artists = read('artists', 'index.json')
+  const map = read('artists', 'tokens-map.json')
+  const { byArtist, byProject } = read('collaborations.json')
+
+  const flags = new Map()
+  for (const file of shardFiles) for (const t of read('tokens', file)) flags.set(t.id, t.flag)
+  const visible = (id) => flags.has(id) && !HIDDEN_FLAGS.has(flags.get(id))
+
+  const wrong = []
+  for (const a of artists) {
+    const page = new Set([...(map[a.id] ?? []), ...(byArtist[a.id] ?? [])])
+    const shown = [...page].filter(visible).length
+    if (shown !== a.tokenCount) wrong.push(`${a.name ?? a.id}: row says ${a.tokenCount}, page shows ${shown}`)
+  }
+  expect(firstFew(wrong)).toEqual([])
+
+  // Nobody is listed who has nothing to show, and no minting contract is listed as
+  // if it were a person.
+  const contracts = new Set(Object.values(byProject).map((c) => c.contract))
+  expect(firstFew(artists.filter((a) => a.tokenCount === 0).map((a) => a.id))).toEqual([])
+  expect(firstFew(artists.filter((a) => contracts.has(a.id)).map((a) => a.id))).toEqual([])
+
+  // Sorted by that count, which is what /artists relies on for its ordering.
+  const counts = artists.map((a) => a.tokenCount)
+  expect(counts).toEqual([...counts].sort((x, y) => y - x))
 })

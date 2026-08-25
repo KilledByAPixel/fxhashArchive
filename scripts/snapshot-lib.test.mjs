@@ -1,8 +1,9 @@
 import { test, expect } from 'vitest'
 import {
   leanToken, shardTokens, buildSlugIndex, buildArtists, buildTokensMap, buildMeta,
-  isTruncatedSnapshot, MIN_RETAINED_RATIO,
+  isTruncatedSnapshot, MIN_RETAINED_RATIO, reviseArtists, HIDDEN_FLAGS,
 } from './snapshot-lib.mjs'
+import { HIDDEN_FLAGS as GALLERY_HIDDEN_FLAGS } from './gallery-lib.mjs'
 
 const raw = (id, over = {}) => ({
   id, slug: `tok-${id}`, name: `Tok ${id}`, flag: 'CLEAN',
@@ -44,6 +45,79 @@ test('buildArtists aggregates by author, sorted by tokenCount desc', () => {
     { id: 'tz1abc', name: 'Alice', avatarUri: 'ipfs://av', description: 'bio', tokenCount: 2 },
     { id: 'tz1x', name: 'Bob', avatarUri: null, description: null, tokenCount: 1 },
   ])
+})
+
+// --- the count has to be the one the artist's own page shows -------------------
+// It was neither half of that. A collaboration is authored by its *contract*, so
+// grouping on author.id credited those projects to nobody; and nothing filtered
+// moderated work, so a directory row could promise 48 projects and open on a page
+// that showed none. Both were measured across the real catalog: 339 artists
+// undercounted, 1,235 overcounted, 860 of them by everything they had.
+
+const collabToken = (id, contract) => raw(id, {
+  author: { id: contract, name: null, avatarUri: null, description: null },
+})
+
+/** collaborations.json, as the two builders read it. */
+const collabs = (byArtist, contract = 'KT1collab') => ({
+  byArtist,
+  byProject: Object.fromEntries(
+    [...new Set(Object.values(byArtist).flat())].map((p) => [String(p), { contract, collaborators: [] }]),
+  ),
+})
+
+test('buildArtists counts collaborative projects for each collaborator', () => {
+  const tokens = [raw(1), collabToken(2, 'KT1collab')]
+  const artists = buildArtists(tokens, collabs({ tz1abc: [2], tz1bob: [2] }))
+  // Alice: her own #1 plus the collaboration.
+  expect(artists.find((a) => a.id === 'tz1abc').tokenCount).toBe(2)
+  // Bob only ever collaborated, so he has no row in the directory and gains none —
+  // his page is built from the collaboration record when someone asks for it.
+  expect(artists.some((a) => a.id === 'tz1bob')).toBe(false)
+  // And the contract that minted the collaboration is not an artist at all.
+  expect(artists.some((a) => a.id === 'KT1collab')).toBe(false)
+})
+
+test('buildArtists leaves moderated projects out of the count', () => {
+  const artists = buildArtists([raw(1), raw(2, { flag: 'MALICIOUS' }), raw(3, { flag: 'REPORTED' })])
+  expect(artists.find((a) => a.id === 'tz1abc').tokenCount).toBe(1)
+})
+
+test('buildArtists drops an artist whose every project is moderated', () => {
+  const spam = { id: 'tz1spam', name: 'Copyminter', avatarUri: null, description: null }
+  const artists = buildArtists([raw(1), raw(2, { flag: 'MALICIOUS', author: spam })])
+  // Their page says "No visible projects from this artist", so a directory row
+  // pointing at it is a promise of work that cannot be shown.
+  expect(artists.map((a) => a.id)).toEqual(['tz1abc'])
+})
+
+test('buildArtists sorts by the corrected count, not the raw one', () => {
+  const bob = { id: 'tz1x', name: 'Bob', avatarUri: null, description: null }
+  const tokens = [
+    raw(1, { flag: 'MALICIOUS' }), raw(2, { flag: 'MALICIOUS' }), raw(3),
+    raw(4, { author: bob }), raw(5, { author: bob }),
+  ]
+  // Alice has more projects; Bob has more that can be seen.
+  expect(buildArtists(tokens).map((a) => a.id)).toEqual(['tz1x', 'tz1abc'])
+})
+
+test('reviseArtists keeps who an artist is and only restates how much they made', () => {
+  const listed = [{ id: 'tz1abc', name: 'Alice', avatarUri: 'ipfs://av', description: 'bio', tokenCount: 99 }]
+  // The identity fields cannot be rebuilt from a lean token — descriptions are not
+  // in one — so a revision has to carry them through untouched.
+  expect(reviseArtists(listed, [leanToken(raw(1)), leanToken(collabToken(2, 'KT1collab'))], collabs({ tz1abc: [2] })))
+    .toEqual([{ id: 'tz1abc', name: 'Alice', avatarUri: 'ipfs://av', description: 'bio', tokenCount: 2 }])
+})
+
+test('reviseArtists ignores a collaboration id that names no project in the catalog', () => {
+  const listed = [{ id: 'tz1abc', name: 'Alice', avatarUri: null, description: null, tokenCount: 1 }]
+  expect(reviseArtists(listed, [leanToken(raw(1))], collabs({ tz1abc: [404] }))[0].tokenCount).toBe(1)
+})
+
+test('the visibility rule matches the one the gallery build uses', () => {
+  // Five copies of this set exist across the scripts, each with a comment saying it
+  // is kept in step with the others. This is the only one that checks.
+  expect([...HIDDEN_FLAGS].sort()).toEqual([...GALLERY_HIDDEN_FLAGS].sort())
 })
 
 test('buildTokensMap maps author id to token ids', () => {
