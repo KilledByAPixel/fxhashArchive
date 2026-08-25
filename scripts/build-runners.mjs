@@ -30,7 +30,7 @@
 
 import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { buildRunner, buildLiveWrapper, RUNNER_ENTRY } from './runner-lib.mjs'
+import { buildRunner, buildLiveWrapper, needsLegacyPatch, RUNNER_ENTRY } from './runner-lib.mjs'
 import { GATEWAY_ORIGINS } from './archive-lib.mjs'
 
 const OUT = 'public/data/generators'
@@ -55,6 +55,9 @@ let failed = 0
 let bytes = 0
 let shimBytes = 0
 
+// Counted and printed rather than left silent: this is the number of projects that
+// would otherwise draw the wrong art, and a change in it is worth noticing.
+let legacyCount = 0
 for (const [id, entry] of Object.entries(manifest)) {
   const source = join(OUT, id, entry.entry)
   let html
@@ -69,6 +72,7 @@ for (const [id, entry] of Object.entries(manifest)) {
     continue
   }
 
+  if (needsLegacyPatch(html)) legacyCount++
   const runner = buildRunner(html)
   // What this actually costs on disk is the whole derived file, not just the
   // inserted shim — the site has a 1 GB ceiling, so report the real number.
@@ -88,5 +92,6 @@ if (!DRY) {
 const mb = (n) => (n / 1048576).toFixed(1)
 console.log(
   `${DRY ? '[dry run] ' : ''}${built} runners built${failed ? `, ${failed} failed` : ''} ` +
-    `| ${mb(bytes)} MiB on disk, of which ${mb(shimBytes)} MiB is shim`,
+    `| ${mb(bytes)} MiB on disk, of which ${mb(shimBytes)} MiB is shim` +
+    ` | ${legacyCount} carry the gentk v1 Math.pow patch`,
 )
