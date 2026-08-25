@@ -911,8 +911,8 @@ export function buildGallery({ tokens, collaborations = {}, volumes = new Map(),
       lines: [
         `The ${visible.length} fxhash projects whose code this archive holds,`,
         `hung in the order they were made, ${span[0]} to ${span[1]}.`,
-        'An artist with three or more archived works — or two that sold well —',
-        'has a room; the rest line the corridor, which loops back to here.',
+        'Some artists with two or more archived works have their own room;',
+        'the rest line the corridor, which loops back to here.',
       ],
     },
     {
