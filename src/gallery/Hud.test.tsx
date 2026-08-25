@@ -114,6 +114,18 @@ test('About sits beside Rooms, says what the place is, and points at the source'
   expect(screen.getByRole('link', { name: /source/i }).getAttribute('href')).toBe(REPO_URL)
 })
 
+test('About holds the way out, now that the corner does not', () => {
+  // Taking the back link out of the top bar left the browser's own back as the only
+  // exit — which someone who opened a shared /#/gallery link has no history for.
+  // It lives in About instead: reachable, and out of sight while walking.
+  renderHud({ about })
+  fireEvent.click(screen.getByRole('button', { name: 'About' }))
+  const out = screen.getByRole('link', { name: /rest of the archive/i })
+  expect(out.getAttribute('href')).toBe('/')
+  // In place, not a new tab: leaving the gallery is the one link that means to.
+  expect(out.getAttribute('target')).toBeNull()
+})
+
 test('one panel at a time: they share a corner, so opening either shuts the other', () => {
   renderHud({ about })
   fireEvent.click(screen.getByRole('button', { name: 'About' }))

@@ -204,9 +204,10 @@ img { max-width: 100%; }
 .gallery-hud { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
 .gallery-hud-top { display: flex; gap: 1rem; align-items: center; padding: 0.75rem 1rem; }
 .gallery-hud-top > * { pointer-events: auto; }
-/* The room name has the corner to itself now, so it takes the weight the link that
-   used to sit there had — a lone grey label in an empty corner reads as leftover. */
-.gallery-room { color: #fff; font-weight: 600; flex: 1; pointer-events: none; }
+/* Grey, not the white the removed link wore. The rooms it sits over are lit plaster
+   and white on that barely registers; grey reads as a quiet label on a bright wall,
+   which is what it is. */
+.gallery-room { color: #aaa; flex: 1; pointer-events: none; }
 .gallery-rooms {
   pointer-events: auto; position: absolute; top: 3.25rem; right: 1rem; min-width: 14rem;
   max-height: calc(100vh - 5rem); overflow-y: auto;

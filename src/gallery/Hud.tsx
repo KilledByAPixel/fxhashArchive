@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { REPO_URL } from '../lib/links'
 import type { AboutPanel, Room } from './types'
 import type { Mode } from './engine'
@@ -59,7 +60,7 @@ export default function Hud({ rooms, roomTitle, caption, locked, mode, touch, on
         {/* Where you are, and nothing else. A "← fxhash archive" link used to lead
             here, in the strongest position on the screen, repeating the name of the
             site on every frame of a walk through it — and on a phone it pushed the
-            room name off the row entirely. The way out is the browser's own back. */}
+            room name off the row entirely. It is in the About panel now. */}
         <span className="gallery-room">{roomTitle}</span>
         <button className="load-more gallery-rooms-button" onClick={() => setPanel((p) => (p === 'rooms' ? null : 'rooms'))} aria-expanded={open}>
           Rooms
@@ -92,6 +93,11 @@ export default function Hud({ rooms, roomTitle, caption, locked, mode, touch, on
               <p>{(touch && p.touch ? p.touch : p.lines).join(' ')}</p>
             </section>
           ))}
+          {/* The way out of the building. It used to be a link in the top-left
+              corner, which spent the best position on the screen saying the same
+              thing throughout a walk; here it is out of sight until wanted. In
+              place, not a new tab — leaving is the one thing that should. */}
+          <p><Link to="/">Leave the gallery for the rest of the archive</Link></p>
           <p><a href={REPO_URL} target="_blank" rel="noreferrer noopener">The source, and the archive behind it</a></p>
         </aside>
       )}
