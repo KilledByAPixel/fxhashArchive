@@ -190,7 +190,13 @@ img { max-width: 100%; }
 .gallery-unsupported { display: flex; align-items: center; justify-content: center; padding: 2rem; }
 .gallery-unsupported p { max-width: 30rem; }
 
-.gallery-hud { position: absolute; inset: 0; pointer-events: none; }
+/* The two layers over the canvas, stacked on purpose. Neither declared a
+   z-index, so they went by document order — and GalleryView renders the Viewer
+   after the Hud, which put an open Rooms or About panel *behind* the running
+   artwork: a menu you are most likely to want from inside a piece was the one
+   place you could not reach it. The HUD is pointer-events: none but for its own
+   controls, so sitting on top costs the artwork none of its clicks. */
+.gallery-hud { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
 .gallery-hud-top { display: flex; gap: 1rem; align-items: center; padding: 0.75rem 1rem; }
 .gallery-hud-top > * { pointer-events: auto; }
 .gallery-back { color: #fff; font-weight: 600; }
@@ -224,7 +230,7 @@ img { max-width: 100%; }
 
 /* The piece, over the painting. The frame must coincide with the quad behind it, so
  * it gives up the border, the radius and the width cap the project page gives it. */
-.gallery-viewer { position: absolute; inset: 0; pointer-events: none; }
+.gallery-viewer { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
 .gallery-frame { position: fixed; pointer-events: auto; }
 .gallery-frame .archived-frame { width: 100%; height: 100%; max-width: none; aspect-ratio: auto; border: 0; border-radius: 0; }
 .gallery-frame-note {

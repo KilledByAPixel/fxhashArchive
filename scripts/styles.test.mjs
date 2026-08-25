@@ -47,3 +47,23 @@ test('a running piece is the same size whichever source it came from', () => {
     expect(rule(selector)).toContain('max-width: var(--artwork)')
   }
 })
+
+// Frank: opening Rooms or About while a piece was running put the panel *behind*
+// the artwork. Nothing in the gallery declared a z-index at all, so the two
+// layers stacked by document order — and GalleryView renders the Viewer after
+// the Hud, which is exactly backwards for a menu you are meant to reach from
+// inside a piece.
+test('the HUD stacks above the running artwork, so its panels are reachable', () => {
+  const zOf = (selector) => {
+    const m = /z-index:\s*(-?\d+)/.exec(rule(selector))
+    expect(m, `${selector} declares no z-index, so it stacks by document order`).toBeTruthy()
+    return Number(m[1])
+  }
+  const hud = zOf('.gallery-hud {')
+  const viewer = zOf('.gallery-viewer {')
+  expect(hud).toBeGreaterThan(viewer)
+  // Both are positioned, or a z-index on them means nothing at all.
+  for (const s of ['.gallery-hud {', '.gallery-viewer {']) {
+    expect(rule(s)).toMatch(/position:\s*(absolute|fixed|relative)/)
+  }
+})
