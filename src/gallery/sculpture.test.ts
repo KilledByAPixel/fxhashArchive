@@ -2,8 +2,9 @@ import { test, expect } from 'vitest'
 import {
   plinths, plinthObstacles, buildSculptureGeometry, subdivide,
   GRID, GRID_SPACING, PLINTH_SIDE, PLINTH_H, SCULPTURE_MIN_SIDE,
-  MIN_BLOCK, MAX_BLOCKS, TERRACE_SIDE,
+  EDGE_MIN, MAX_CELLS, TERRACE_SIDE, PLINTH_COLOR, HUE_TREE, HUE_BLOCK,
 } from './sculpture'
+import { linear } from './palette'
 import { FrontSide, Mesh, MeshBasicMaterial, Raycaster, Vector3 } from 'three'
 import { resolve } from './collide'
 import { PLAYER_RADIUS } from './constants'
@@ -90,7 +91,7 @@ test('two meshes: the vases are glazed, and everything else is not', () => {
     expect(g.groups.length).toBe(0)
   }
   const tris = (matte.getAttribute('position').count + glazed.getAttribute('position').count) / 3
-  expect(tris).toBeLessThan(5000)     // low poly is still the brief
+  expect(tris).toBeLessThan(5000)     // low poly is still the brief; measures 4320
   expect(tris).toBeGreaterThan(500)
   // The split is exactly the vases: they stand on plinths, so nothing in the
   // glazed mesh reaches the floor, while the matte one has the plinth undersides.
@@ -126,6 +127,11 @@ test('the objects are properly coloured, and not nine shades of the same plaster
 // point between a tenth and nine tenths of the way along, each half nudged in
 // height, and each half cut again, until the pieces are too small or there are
 // enough of them. Quartering at the middle made a grid; this does not.
+//
+// Then: make it more like Divide By Circle. So the cuts now take both axes at
+// once a third of the time, heights sit in plateaus rather than wandering at
+// every level, and a disc is scored through the square — packed and domed inside
+// it, thinned out beyond it, and a ring of nothing where the circle falls.
 
 /** A dependable stream for the tests, so a failure is a failure and not a draw. */
 const lcg = (seed: number) => {
@@ -133,25 +139,72 @@ const lcg = (seed: number) => {
   return () => { a = (a * 1664525 + 1013904223) >>> 0; return a / 4294967296 }
 }
 
-test('the blocks tile the square exactly, none too small, none past the budget', () => {
+/** The radius the terraces are built at, mid-range. */
+const R = 0.45 * TERRACE_SIDE / 2
+
+test('the blocks stay in the square, never overlap, and never go under the minimum', () => {
   for (let seed = 1; seed <= 25; seed++) {
-    const blocks = subdivide(lcg(seed), TERRACE_SIDE)
+    const blocks = subdivide(lcg(seed), TERRACE_SIDE, R)
     expect(blocks.length).toBeGreaterThan(1)
-    expect(blocks.length).toBeLessThanOrEqual(MAX_BLOCKS)
+    // They no longer tile the square — the ring and the thinned field are gaps on
+    // purpose — so the guarantee is the other one: no block covers another.
     let area = 0
     for (const b of blocks) {
       const w = b.x1 - b.x0, d = b.z1 - b.z0
-      expect(w).toBeGreaterThanOrEqual(MIN_BLOCK - 1e-9)
-      expect(d).toBeGreaterThanOrEqual(MIN_BLOCK - 1e-9)
+      expect(w).toBeGreaterThanOrEqual(EDGE_MIN - 1e-9)
+      expect(d).toBeGreaterThanOrEqual(EDGE_MIN - 1e-9)
       expect(b.x0).toBeGreaterThanOrEqual(-TERRACE_SIDE / 2 - 1e-9)
       expect(b.x1).toBeLessThanOrEqual(TERRACE_SIDE / 2 + 1e-9)
       expect(b.z0).toBeGreaterThanOrEqual(-TERRACE_SIDE / 2 - 1e-9)
       expect(b.z1).toBeLessThanOrEqual(TERRACE_SIDE / 2 + 1e-9)
       area += w * d
     }
-    // Exactly the square: cuts, so no overlap and no gap, whatever the tree.
-    expect(area).toBeCloseTo(TERRACE_SIDE * TERRACE_SIDE, 9)
+    for (let i = 0; i < blocks.length; i++) {
+      for (let j = i + 1; j < blocks.length; j++) {
+        const a = blocks[i], b = blocks[j]
+        const overlap = a.x0 < b.x1 - 1e-9 && b.x0 < a.x1 - 1e-9 && a.z0 < b.z1 - 1e-9 && b.z0 < a.z1 - 1e-9
+        expect(overlap).toBe(false)
+      }
+    }
+    // And they are a subdivision of the square, not a scattering across it.
+    expect(area).toBeLessThanOrEqual(TERRACE_SIDE * TERRACE_SIDE + 1e-9)
+    expect(area).toBeGreaterThan(TERRACE_SIDE * TERRACE_SIDE * 0.3)
   }
+})
+
+test('the circle is cut clean: nothing straddles it, and it has two sides', () => {
+  let insideTotal = 0, outsideTotal = 0
+  for (let seed = 1; seed <= 25; seed++) {
+    const blocks = subdivide(lcg(seed), TERRACE_SIDE, R)
+    for (const b of blocks) {
+      // No surviving block has the circle running through it: every corner is on
+      // the same side of it as every other. That is what makes the ring a ring
+      // and not a fringe of blocks half in and half out.
+      const corners = [[b.x0, b.z0], [b.x1, b.z0], [b.x1, b.z1], [b.x0, b.z1]]
+      const within = corners.map(([x, z]) => Math.hypot(x, z) < R)
+      expect(new Set(within).size).toBe(1)
+      // and the flag agrees with the geometry it was derived from
+      expect(b.inside).toBe(within[0])
+      if (b.inside) insideTotal++; else outsideTotal++
+    }
+  }
+  expect(insideTotal).toBeGreaterThan(20)     // there is a disc
+  expect(outsideTotal).toBeGreaterThan(20)    // and there is a field
+})
+
+test('the disc is packed and the field is not', () => {
+  // Inside the circle every cell is built, outside only half of them are, so the
+  // disc covers far more of its own area than the field covers of its.
+  let inArea = 0, outArea = 0
+  for (let seed = 1; seed <= 25; seed++) {
+    for (const b of subdivide(lcg(seed), TERRACE_SIDE, R)) {
+      const a = (b.x1 - b.x0) * (b.z1 - b.z0)
+      if (b.inside) inArea += a; else outArea += a
+    }
+  }
+  const discArea = Math.PI * R * R * 25
+  const fieldArea = TERRACE_SIDE * TERRACE_SIDE * 25 - discArea
+  expect(inArea / discArea).toBeGreaterThan(outArea / fieldArea + 0.2)
 })
 
 test('no cut lands in the middle, and the blocks are not all one size', () => {
@@ -160,7 +213,7 @@ test('no cut lands in the middle, and the blocks are not all one size', () => {
   let centred = 0
   const widths = new Set<string>()
   for (let seed = 1; seed <= 40; seed++) {
-    for (const b of subdivide(lcg(seed), TERRACE_SIDE)) {
+    for (const b of subdivide(lcg(seed), TERRACE_SIDE, R)) {
       widths.add((b.x1 - b.x0).toFixed(4))
       for (const v of [b.x0, b.x1, b.z0, b.z1]) {
         if (Math.abs(Math.abs(v) - half) < 1e-9) continue   // the outer edge, not a cut
@@ -174,11 +227,32 @@ test('no cut lands in the middle, and the blocks are not all one size', () => {
   expect(widths.size).toBeGreaterThan(4)
 })
 
-test('heights follow the tree: they differ, and they stay in their range', () => {
-  const blocks = subdivide(lcg(11), TERRACE_SIDE)
-  const heights = blocks.map((b) => b.height)
-  expect(new Set(heights.map((h) => h.toFixed(5))).size).toBeGreaterThan(1)
-  for (const h of heights) expect(Number.isFinite(h)).toBe(true)
+test('heights come back as plateaus, not as noise', () => {
+  // The point of a low mutation rate: neighbours mostly inherit one height and
+  // the shape reads as terraces, so there are far fewer distinct heights than
+  // there are blocks. Nudging at every level, as this used to, gives one height
+  // per block and a heap of rubble.
+  let blocks = 0, levels = 0
+  for (let seed = 1; seed <= 25; seed++) {
+    const hs = subdivide(lcg(seed), TERRACE_SIDE, R).map((b) => b.height)
+    blocks += hs.length
+    levels += new Set(hs.map((h) => h.toFixed(6))).size
+    for (const h of hs) {
+      expect(Number.isFinite(h)).toBe(true)
+      expect(h).toBeGreaterThanOrEqual(0)
+      expect(h).toBeLessThanOrEqual(1)
+    }
+  }
+  expect(levels).toBeGreaterThan(25)          // it is not one flat slab either
+  expect(levels).toBeLessThan(blocks * 0.6)   // most blocks share a height with a neighbour
+})
+
+test('a terrace never makes more cells than its budget allows', () => {
+  for (let seed = 1; seed <= 40; seed++) {
+    // Built blocks are only the survivors, so the budget is the looser bound —
+    // what it really guards is the ring, which is cut fine and then discarded.
+    expect(subdivide(lcg(seed), TERRACE_SIDE, R).length).toBeLessThanOrEqual(MAX_CELLS)
+  }
 })
 
 test('nothing floats and nothing sinks: every object sits on its own plinth', () => {
@@ -339,4 +413,129 @@ test('a washed-out picture still makes a properly coloured object', () => {
   }
   // At 0.12 strength these used to land at 0.11 saturation — grey in all but name.
   expect(spread).toBeGreaterThan(0.15)
+})
+
+// Frank: "would it cost anything extra to apply colour to these? ... maybe we
+// could also do the colour mutation effect that it has where it does a tiny
+// mutation of colour every time it does a subdivide." It costs nothing — the
+// colour attribute was already allocated and already being written, one Rgb per
+// vertex, so this puts different numbers in slots that were being filled anyway.
+
+/** Every colour in the matte mesh, in the linear space a vertex colour is stored in. */
+const matteColours = (built: ReturnType<typeof buildSculptureGeometry>) => {
+  const c = built.matte.getAttribute('color')
+  const seen = new Set<string>()
+  for (let i = 0; i < c.count; i++) seen.add(`${c.getX(i).toFixed(4)},${c.getY(i).toFixed(4)},${c.getZ(i).toFixed(4)}`)
+  return seen
+}
+
+/**
+ * Back out of the linear space a vertex colour is stored in.
+ *
+ * Hue does not survive that conversion: sRGB to linear is a curve applied to each
+ * channel separately, so it moves the ratios between them and takes the hue with
+ * them. Reading a hue straight off the buffer reports drift the generator never
+ * applied — about nine degrees of it here, on top of a real fourteen.
+ */
+const srgb = (c: number) => (c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055)
+
+/** The shortest way round the wheel between two hues, which is not |a - b|. */
+const hueArc = (a: number, b: number) => {
+  const d = Math.abs(a - b) % 360
+  return d > 180 ? 360 - d : d
+}
+
+test('the colour and the height are the same tree', () => {
+  // They mutate inside one branch, so a block's shade decides its height: the
+  // number of distinct shades and the number of distinct (height, shade) pairs
+  // have to be equal. If colour were drawn per block instead, there would be one
+  // shade per block and this would come apart immediately.
+  let blocks = 0, shades = 0, pairs = 0
+  for (let seed = 1; seed <= 25; seed++) {
+    const bs = subdivide(lcg(seed), TERRACE_SIDE, R)
+    const key = (b: (typeof bs)[number]) => b.shade.map((v) => v.toFixed(6)).join()
+    blocks += bs.length
+    shades += new Set(bs.map(key)).size
+    pairs += new Set(bs.map((b) => b.height.toFixed(6) + '|' + key(b))).size
+    for (const b of bs) {
+      expect(b.shade.length).toBe(3)
+      for (const v of b.shade) {
+        expect(Number.isFinite(v)).toBe(true)
+        expect(v).toBeGreaterThanOrEqual(0)
+        expect(v).toBeLessThanOrEqual(1)
+      }
+    }
+  }
+  expect(pairs).toBe(shades)
+  // And the colour plateaus the same way the height does: neighbours share.
+  expect(shades).toBeGreaterThan(25)
+  expect(shades).toBeLessThan(blocks)
+})
+
+test('every block of a terrace is its own colour, and still the object\'s colour', () => {
+  // One hue for all the art, so any spread seen on a terrace is the mutation and
+  // not a difference between the pictures the objects came from.
+  const HUE = 210
+  const art = ART.map((p) => ({ ...p, tint: { hue: HUE, strength: 0.9 } }))
+  const list = plinths(gallery([BIG], art))
+  const built = buildSculptureGeometry(list)
+  const pos = built.matte.getAttribute('position')
+  const col = built.matte.getAttribute('color')
+
+  const terraceSeen = new Set<string>()
+  let worstArc = 0
+  for (const p of list.filter((q) => q.kind === 'terrace')) {
+    for (let i = 0; i < pos.count; i++) {
+      if (Math.abs(pos.getX(i) - p.x) > TERRACE_SIDE / 2 + 0.01) continue
+      if (Math.abs(pos.getZ(i) - p.z) > TERRACE_SIDE / 2 + 0.01) continue
+      if (pos.getY(i) < PLINTH_H + 0.02) continue        // the plinth, not the sculpture
+      const [r, g, b] = [srgb(col.getX(i)), srgb(col.getY(i)), srgb(col.getZ(i))]
+      terraceSeen.add(`${r.toFixed(4)},${g.toFixed(4)},${b.toFixed(4)}`)
+      const v = Math.max(r, g, b), lo = Math.min(r, g, b)
+      // Only where there is enough colour left for a hue to mean anything: a
+      // block mutated very dark or very pale has no reliable one to read.
+      if (v < 0.05 || (v - lo) / v < 0.25) continue
+      const d = v - lo
+      const raw = r === v ? ((g - b) / d) % 6 : g === v ? (b - r) / d + 2 : (r - g) / d + 4
+      worstArc = Math.max(worstArc, hueArc((((raw * 60) % 360) + 360) % 360, HUE))
+    }
+  }
+  // Every block differs from its neighbours — which is the Divide By Circle look
+  // when the palette is a single colour, and the reason it turns its per-block
+  // mutation up in that case.
+  expect(terraceSeen.size).toBeGreaterThan(40)
+  // But the object is still the colour of the picture it came from: the drift is
+  // capped at HUE_TREE + HUE_BLOCK, and the slack is for reading a hue back out of
+  // a colour that was rounded to eight bits a channel on the way in.
+  expect(worstArc).toBeGreaterThan(1)                        // it did drift
+  expect(worstArc).toBeLessThan(HUE_TREE + HUE_BLOCK + 2)    // but not far
+})
+
+test('a picture with no hue still gets no hue, however much its blocks mutate', () => {
+  // The saturation drift must not invent a colour for greyscale art. It is not
+  // enough that the base is grey: the mutation has to decline to move it.
+  const built = buildSculptureGeometry(plinths(gallery([BIG], ART)))
+  const stone = linear(PLINTH_COLOR).map((v) => v.toFixed(4)).join(',')
+  const notStone = [...matteColours(built)].filter((k) => k !== stone)
+  expect(notStone.length).toBeGreaterThan(40)      // the terraces did vary
+  for (const k of notStone) {
+    const [r, g, b] = k.split(',').map(Number)
+    expect(Math.max(r, g, b) - Math.min(r, g, b)).toBe(0)   // and every one is grey
+  }
+})
+
+test('no block is driven to pure black, however dark the object', () => {
+  // The value drift is scaled to the room the object's own value leaves, so a
+  // near-black terrace varies in proportion instead of crushing flat against
+  // zero and losing the block structure that is the whole point of it.
+  const dark = ART.map((p) => ({ ...p, tint: { hue: 30, strength: 0.9 } }))
+  for (const art of [dark, ART]) {
+    const built = buildSculptureGeometry(plinths(gallery([BIG], art)))
+    const c = built.matte.getAttribute('color')
+    let lit = 0
+    for (let i = 0; i < c.count; i++) {
+      if (Math.max(c.getX(i), c.getY(i), c.getZ(i)) > 0.002) lit++
+    }
+    expect(lit).toBe(c.count)
+  }
 })
