@@ -19,6 +19,11 @@
 // halfway costs nothing. Failures are counted and skipped, never written as a
 // zero-byte or error-page file, which would be an invisible hole in the archive.
 //
+// Three of 3,686 do not survive the encoder, and all three are the image rather than
+// the fetch: one truncated PNG, one BMP and one ICO — formats a browser reads and
+// sharp's prebuilt libvips does not. They keep working from a gateway for as long as
+// there is one, and a decoder for two files is not worth a dependency.
+//
 // Usage:
 //   node scripts/archive-avatars.mjs [--out DIR] [--size PX] [--limit N] [--commit]
 
@@ -118,7 +123,11 @@ async function main() {
       // `cover`, not `contain`: an avatar is drawn inside a circle, so the square is
       // filled and the edges are cropped anyway. Losing the corners of a portrait is
       // right where letterboxing a generative piece would be wrong.
-      const out = await sharp(raw)
+      // `failOn: 'none'`: a couple of these avatars are truncated on IPFS — the bytes
+      // that survive decode to a picture, and sharp's default is to refuse the whole
+      // image over the missing tail. A slightly short avatar beats no avatar, and the
+      // formats it genuinely cannot read still throw.
+      const out = await sharp(raw, { failOn: 'none' })
         .resize(SIZE, SIZE, { fit: 'cover', position: 'centre' })
         .webp({ quality: 82 })
         .toBuffer()
