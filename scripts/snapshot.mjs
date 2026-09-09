@@ -4,6 +4,7 @@ import {
   leanToken, shardTokens, buildSlugIndex, buildArtists, buildTokensMap, buildMeta,
   isTruncatedSnapshot, MIN_RETAINED_RATIO, markLocalAvatars,
 } from './snapshot-lib.mjs'
+import { renameById } from './artist-names-lib.mjs'
 
 const ENDPOINT = 'https://api.fxhash.xyz/graphql'
 const TAKE = 50 // API hard cap
@@ -53,6 +54,17 @@ for (let skip = 0; rawTokens.length < LIMIT; skip += TAKE) {
   if (page.length < TAKE) break
   await sleep(DELAY_MS)
 }
+
+// The third thing the API cannot know: a display name an artist has asked us to use.
+// It is applied to the raw rows, before anything is derived from them, so the shards
+// and the artists index both carry it. Without this the weekly refresh restores the
+// on-chain name every Monday — which is exactly what happened to the 2026-08-25
+// rename, undone six days later. data/artist-names.json keeps the original.
+const renames = await readFile('data/artist-names.json', 'utf8')
+  .then((s) => JSON.parse(s).names ?? {}).catch(() => ({}))
+const display = Object.fromEntries(Object.entries(renames).map(([id, v]) => [id, v.name]))
+const renamed = renameById(rawTokens, display)
+if (renamed) console.log(`applied ${renamed} display name${renamed === 1 ? '' : 's'} from data/artist-names.json`)
 
 const tokens = rawTokens.slice(0, LIMIT).map(leanToken)
 
