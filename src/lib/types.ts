@@ -26,6 +26,13 @@ export interface Artist {
   avatarUri: string | null
   description: string | null
   tokenCount: number
+  /**
+   * Their avatar is stored here, at `data/avatars/<id>.webp`, and should be preferred
+   * over `avatarUri` — which points at IPFS and will one day point at nothing. Set by
+   * scripts/rebuild-artists.mjs from what scripts/archive-avatars.mjs has fetched;
+   * absent for an artist whose avatar we do not hold.
+   */
+  avatar?: boolean
 }
 
 export interface SnapshotMeta {

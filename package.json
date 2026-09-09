@@ -14,6 +14,7 @@
     "snapshot:iterations": "node scripts/snapshot-iterations.mjs",
     "snapshot:contracts": "node scripts/snapshot-contracts.mjs",
     "snapshot:previews": "node scripts/snapshot-previews.mjs",
+    "avatars": "node scripts/archive-avatars.mjs",
     "artists": "node scripts/rebuild-artists.mjs",
     "artists:names": "node scripts/apply-artist-names.mjs",
     "summary": "node scripts/build-summary.mjs",

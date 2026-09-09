@@ -1,7 +1,7 @@
 import { test, expect } from 'vitest'
 import {
   leanToken, shardTokens, buildSlugIndex, buildArtists, buildTokensMap, buildMeta,
-  isTruncatedSnapshot, MIN_RETAINED_RATIO, reviseArtists, HIDDEN_FLAGS,
+  isTruncatedSnapshot, MIN_RETAINED_RATIO, reviseArtists, HIDDEN_FLAGS, markLocalAvatars,
 } from './snapshot-lib.mjs'
 import { HIDDEN_FLAGS as GALLERY_HIDDEN_FLAGS } from './gallery-lib.mjs'
 
@@ -173,4 +173,25 @@ test('previewQueryOf falls back to the hash alone, and to nothing for the first 
   expect(previewQueryOf({ artifactUri: 'ipfs://QmV17Zn' })).toBeNull()   // 2021: no preview hash was ever recorded
   expect(previewQueryOf({})).toBeNull()
   expect(previewQueryOf(null)).toBeNull()
+})
+
+// Avatars are stored under public/data/avatars/<address>.webp by
+// scripts/archive-avatars.mjs. The artist pages have to know which artists have one
+// without asking for a file that may not be there, and artists/index.json is the one
+// file both of those pages already load — so the flag rides along in it.
+test('markLocalAvatars flags the artists whose avatar is stored here', () => {
+  const artists = [{ id: 'tz1a', name: 'Ada' }, { id: 'tz1b', name: 'Bob' }]
+  const marked = markLocalAvatars(artists, ['tz1a.webp', 'stray.txt'])
+  expect(marked[0]).toEqual({ id: 'tz1a', name: 'Ada', avatar: true })
+  // Bob's is not stored, and the row must not claim it is — the page would render an
+  // <img> at a URL that 404s instead of falling back to the gateways.
+  expect(marked[1]).toEqual({ id: 'tz1b', name: 'Bob' })
+})
+
+test('markLocalAvatars clears a flag whose file has gone', () => {
+  // Re-running after a file is deleted has to take the claim back, or the index keeps
+  // promising a picture that no longer exists.
+  const marked = markLocalAvatars([{ id: 'tz1a', name: 'Ada', avatar: true }], [])
+  expect(marked[0].avatar).toBeUndefined()
+  expect(marked[0]).toEqual({ id: 'tz1a', name: 'Ada' })
 })

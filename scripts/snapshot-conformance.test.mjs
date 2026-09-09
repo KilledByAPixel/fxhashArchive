@@ -192,3 +192,17 @@ test('the directory count is the count the artist page shows', () => {
   const counts = artists.map((a) => a.tokenCount)
   expect(counts).toEqual([...counts].sort((x, y) => y - x))
 })
+
+test('every artist the index promises an avatar for has one stored', () => {
+  // The artist pages render <img src="data/avatars/<id>.webp"> off this flag alone,
+  // with no fallback — so a flag without a file is a broken image on a live page.
+  // Set by rebuild-artists.mjs from what archive-avatars.mjs fetched; these two can
+  // only disagree if the index was written and the files were not, or removed after.
+  const artists = read('artists', 'index.json')
+  const stored = new Set(readdirSync(join(DATA, 'avatars')).filter((f) => f.endsWith('.webp')))
+  const promised = artists.filter((a) => a.avatar)
+  expect(firstFew(promised.filter((a) => !stored.has(`${a.id}.webp`)).map((a) => a.id))).toEqual([])
+  // And the flag is actually being set — a run that fetched nothing would pass the
+  // check above vacuously while every avatar quietly came from a gateway again.
+  expect(promised.length).toBeGreaterThan(0)
+})

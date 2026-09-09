@@ -13,7 +13,7 @@ import {
 import type { Artist, LeanToken } from '../lib/types'
 import TokenCard from '../components/TokenCard'
 import { bylineLabel } from '../components/Byline'
-import IpfsImage from '../components/IpfsImage'
+import Avatar from '../components/Avatar'
 import LoadError from '../components/LoadError'
 import NotFoundPage from './NotFoundPage'
 
@@ -120,7 +120,7 @@ export default function ArtistPage() {
   return (
     <div>
       <div className="token-hero">
-        <IpfsImage uri={artist.avatarUri} alt={artist.name ?? artist.id} className="avatar-lg" />
+        <Avatar artist={artist} className="avatar-lg" />
         <div>
           <h2>{artist.name ?? artist.id}</h2>
           <p className="muted"><code>{artist.id}</code></p>

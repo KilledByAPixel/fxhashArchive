@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { loadArtists } from '../lib/data'
 import type { Artist } from '../lib/types'
-import IpfsImage from '../components/IpfsImage'
+import Avatar from '../components/Avatar'
 
 const PAGE = 100
 
@@ -33,7 +33,7 @@ export default function ArtistsPage() {
       <div className="artist-list">
         {visible.slice(0, shown).map((a) => (
           <Link key={a.id} to={`/artist/${a.id}`} className="artist-row">
-            <IpfsImage uri={a.avatarUri} alt={a.name ?? a.id} className="avatar" />
+            <Avatar artist={a} className="avatar" />
             <div>
               <div className="token-name">{a.name ?? a.id}</div>
               <div className="muted">{a.tokenCount} projects</div>

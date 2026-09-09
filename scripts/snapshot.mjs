@@ -1,8 +1,8 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import {
   leanToken, shardTokens, buildSlugIndex, buildArtists, buildTokensMap, buildMeta,
-  isTruncatedSnapshot, MIN_RETAINED_RATIO,
+  isTruncatedSnapshot, MIN_RETAINED_RATIO, markLocalAvatars,
 } from './snapshot-lib.mjs'
 
 const ENDPOINT = 'https://api.fxhash.xyz/graphql'
@@ -80,7 +80,24 @@ await mkdir(join(OUT, 'tokens'), { recursive: true })
 await mkdir(join(OUT, 'artists'), { recursive: true })
 await Promise.all(shards.map((s, i) => writeJson(`tokens/index-${String(i).padStart(3, '0')}.json`, s)))
 await writeJson('tokens/slug-index.json', buildSlugIndex(shards))
-await writeJson('artists/index.json', buildArtists(rawTokens.slice(0, LIMIT)))
+// The two things the API cannot tell us about an artist, both of which live in this
+// repository and both of which a refresh would otherwise throw away every Monday.
+//
+// Collaborations first: a collaborative project is authored by the KT1 contract it was
+// minted through, so without this file the count on an artist's row omits their
+// collaborations and the 427 contracts get listed as though they were people. That is
+// exactly what happened on 2026-08-31 — the weekly job quietly reverted the fix,
+// putting 417 contract rows back and dropping every collaborator's count.
+//
+// Then the avatars: `avatar: true` records that public/data/avatars holds a stored
+// copy, which is what the artist pages render instead of a gateway URL. It is a fact
+// about this repository, not about the catalog, so it has to be re-applied after the
+// rows are rebuilt or the flags vanish and every avatar goes back to IPFS.
+const collaborations = await readFile(join(OUT, 'collaborations.json'), 'utf8')
+  .then(JSON.parse).catch(() => ({}))
+const avatarFiles = await readdir(join(OUT, 'avatars')).catch(() => [])
+await writeJson('artists/index.json',
+  markLocalAvatars(buildArtists(rawTokens.slice(0, LIMIT), collaborations), avatarFiles))
 await writeJson('artists/tokens-map.json', buildTokensMap(tokens))
 await writeJson('meta.json', buildMeta(tokens, shards.length, new Date().toISOString()))
 console.log(`DONE: ${tokens.length} tokens, ${shards.length} shards -> ${OUT}`)

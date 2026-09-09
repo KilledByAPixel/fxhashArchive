@@ -3,12 +3,17 @@
 //
 // WHY THIS EXISTS
 // ---------------
-// The index is normally written by snapshot.mjs, straight from the fxhash API. That
-// API is gone — it answers HTTP 402 — so the file can never be regenerated from
-// source again, and a defect in it has to be repaired from what is already here.
-// Everything this needs is committed: the token shards carry each project's author
-// and moderation flag, and collaborations.json carries the credits recovered from
-// each collaboration contract's on-chain storage.
+// The index is normally written by snapshot.mjs, straight from the fxhash API — which
+// is still alive: it was the *website* that started answering 402 when fxhash shut
+// down, and an earlier version of this comment claimed the API had gone with it. It
+// had not, and the weekly refresh proved it by overwriting this file on 2026-08-31
+// with a version that had none of the corrections below.
+//
+// So this exists for the corrections the API cannot make: it knows nothing of
+// collaborations recovered from contract storage, and nothing of which avatars this
+// repository has stored. snapshot.mjs applies both itself now, and this rebuilds the
+// file from what is committed — the token shards carry each project's author and
+// moderation flag — without waiting a week or asking the network for anything.
 //
 // The defect: a row counted a project only under `token.author.id`, over the raw
 // catalog. An artist page counts their own *and* their collaborative projects and
@@ -24,7 +29,7 @@
 
 import { readdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { reviseArtists } from './snapshot-lib.mjs'
+import { markLocalAvatars, reviseArtists } from './snapshot-lib.mjs'
 
 const args = process.argv.slice(2)
 const outArg = args.indexOf('--out')
@@ -40,7 +45,11 @@ const tokens = (await Promise.all(shards.map((f) => read('tokens', f)))).flat()
 
 console.log(`${tokens.length} projects, ${before.length} artists listed`)
 
-const after = reviseArtists(before, tokens, collaborations)
+// Which artists have their avatar stored here, from whatever archive-avatars.mjs has
+// managed to fetch so far. Recorded in this file because it is the one both the
+// artists list and an artist's own page already load.
+const avatarFiles = await readdir(join(OUT, 'avatars')).catch(() => [])
+const after = markLocalAvatars(reviseArtists(before, tokens, collaborations), avatarFiles)
 
 const kept = new Map(after.map((a) => [a.id, a]))
 const contracts = new Set(Object.values(collaborations.byProject).map((c) => c.contract))
@@ -51,7 +60,7 @@ const raised = changed.filter((a) => kept.get(a.id).tokenCount > a.tokenCount).l
 
 console.log(`dropped ${droppedContracts} collaboration contracts and ${droppedEmpty} artists with nothing visible`)
 console.log(`corrected ${changed.length} counts (${raised} raised by collaborations, ${changed.length - raised} lowered by moderated work)`)
-console.log(`${after.length} artists remain`)
+console.log(`${after.length} artists remain, ${after.filter((a) => a.avatar).length} with an avatar stored here`)
 
 // A count that moved by a lot is worth seeing, not just tallying.
 for (const a of [...changed].sort((x, y) => Math.abs(kept.get(y.id).tokenCount - y.tokenCount) - Math.abs(kept.get(x.id).tokenCount - x.tokenCount)).slice(0, 5)) {

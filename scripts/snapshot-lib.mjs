@@ -97,6 +97,27 @@ export function reviseArtists(artists, tokens, collaborations = {}) {
     .sort((x, y) => y.tokenCount - x.tokenCount)
 }
 
+/**
+ * Record which artists have their avatar stored in this repository.
+ *
+ * scripts/archive-avatars.mjs writes them as `<address>.webp`, so the file name is
+ * derivable from the row and only the fact needs carrying — a flag, not a path. It
+ * rides in artists/index.json because that is the one file both the artists list and
+ * an artist's own page already load: anywhere else costs those pages a second fetch,
+ * and guessing at the URL instead costs a 404 for every artist whose avatar could not
+ * be fetched.
+ *
+ * Setting and clearing, not just setting: a run after a file is deleted has to take
+ * the claim back, or the index keeps promising a picture that is no longer there.
+ */
+export function markLocalAvatars(artists, files) {
+  const stored = new Set([...files].filter((f) => f.endsWith('.webp')).map((f) => f.slice(0, -'.webp'.length)))
+  return artists.map((a) => {
+    const { avatar: _was, ...rest } = a
+    return stored.has(a.id) ? { ...rest, avatar: true } : rest
+  })
+}
+
 export function buildArtists(rawTokens, collaborations = {}) {
   const byId = new Map()
   for (const t of rawTokens) {
