@@ -15,12 +15,18 @@
 //
 // Caveat kept honest: entries 1 and 3 both report `server: Filebase`, so they are one
 // operator serving two pinsets, not two operators. Entry 2 is genuinely separate.
-// Verified 2026-08-19: all three return byte-identical content, `access-control-allow-
-// origin: *`, no X-Frame-Options, and support `?format=tar` for the archiver.
+// Verified 2026-09-08 over six real CIDs with a browser's headers: both return
+// byte-identical content, `access-control-allow-origin: *`, no X-Frame-Options, and
+// support `?format=tar` for the archiver. Re-check with `npm run check:gateways`.
+//
+// gateway.fxhash.xyz was here, and first, as the one place every CID in this catalog
+// was definitely pinned. On 2026-09-08 it began answering *every* request with 403
+// and "This gateway is currently unavailable. Please contact the gateway owner." —
+// Filebase's message for a dedicated gateway that has been switched off. fxhash shut
+// down in 2024 and this had outlived it; now it has not. Nothing was lost: the same
+// CIDs come back byte-identical from both gateways below, so the content is still
+// pinned and only fxhash's door onto it closed.
 export const GATEWAYS = [
-  // fxhash's own gateway. The platform is gone but this outlived it, and it is the
-  // one place every CID in this catalog was definitely pinned.
-  'https://gateway.fxhash.xyz/ipfs/',
   'https://gateway.pinit.io/ipfs/',
   'https://ipfs.raribleuserdata.com/ipfs/',
 ]

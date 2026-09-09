@@ -15,8 +15,10 @@
  * `npm run check:gateways` probes this list and the app's together, and fails if the
  * two ever name different hosts.
  */
+// gateway.fxhash.xyz was first here until 2026-09-08, when Filebase began answering
+// every request to it with 403 "This gateway is currently unavailable". See the note
+// in src/lib/ipfs.ts; the two lists must name the same hosts.
 export const GATEWAY_ORIGINS = [
-  'https://gateway.fxhash.xyz',
   'https://gateway.pinit.io',
   'https://ipfs.raribleuserdata.com',
 ]
