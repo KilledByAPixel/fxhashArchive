@@ -61,8 +61,9 @@ IPFS. None of those need fxhash to be online.
 
 fxhash's own API was used only to *build* the snapshot, offline. If it disappears
 tomorrow the site keeps working exactly as it does today — only future refreshes
-stop. A weekly job tries to refresh the catalog and will start failing loudly the
-day that API stops answering.
+stop. Refreshing is a manual job now: fxhash is shut down, so there is nothing new
+for it to bring back, and the last two automatic runs between them changed one
+timestamp and undid an artist's requested rename.
 
 Artwork runs in a locked-down sandbox, since these are arbitrary third-party
 programs. That takes away a few things a piece may need — reading its own images,

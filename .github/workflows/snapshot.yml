@@ -1,12 +1,22 @@
-name: Weekly snapshot refresh
-# Doubles as a liveness canary for the fxhash GraphQL API: when that API is
-# retired for good, this job will start failing loudly (red X in Actions)
-# while the committed snapshot in public/data stays exactly as it is. The
-# site keeps serving the last-known-good catalog either way — only future
-# refreshes stop.
+name: Snapshot refresh (manual)
+# By hand only. This ran every Monday, back when fxhash was a live platform and a
+# refresh could bring back a new project or a changed moderation flag. fxhash is
+# shut down, so it cannot any more, and two runs measured on the real repository
+# say exactly that: 2026-09-07 changed one timestamp in meta.json, and 2026-08-31
+# changed 73 fields across 24 shards, every one of them reverting an artist's
+# display name back to the one they had asked us to stop using.
+#
+# So a weekly refresh had no upside left and one standing downside: it rewrites
+# derived files from an API that knows nothing this repository has added to them.
+# snapshot.mjs now re-applies all three of those — collaborations, stored avatars,
+# and accepted renames — but the general hazard remains, because the next
+# correction we make is one nobody will remember to wire in.
+#
+# Kept, rather than deleted, for the one thing it is still good for: the API is
+# the only source for a field the snapshot never captured, and while it answers
+# (it does — 200, on 2026-09-08) that option is open. Run it deliberately, look
+# at the diff, and expect it to be empty.
 on:
-  schedule:
-    - cron: '17 4 * * 1' # Mondays 04:17 UTC
   workflow_dispatch:
 permissions:
   contents: write
@@ -28,14 +38,14 @@ jobs:
           if git diff --cached --quiet; then
             echo "committed=false" >> "$GITHUB_OUTPUT"
           else
-            git commit -m "chore: weekly snapshot refresh"
+            git commit -m "chore: snapshot refresh"
             git push
             echo "committed=true" >> "$GITHUB_OUTPUT"
           fi
       # GitHub deliberately does not trigger workflows from pushes made with the
       # default GITHUB_TOKEN, so deploy.yml's `on: push` never fires for the commit
       # above. Without this step the refreshed catalog sits in the repo and never
-      # reaches the live site — the weekly job would accomplish nothing visible.
+      # reaches the live site — the job would accomplish nothing visible.
       - name: Publish the refreshed catalog
         if: steps.commit.outputs.committed == 'true'
         env:

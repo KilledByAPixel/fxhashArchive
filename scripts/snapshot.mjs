@@ -57,9 +57,10 @@ for (let skip = 0; rawTokens.length < LIMIT; skip += TAKE) {
 
 // The third thing the API cannot know: a display name an artist has asked us to use.
 // It is applied to the raw rows, before anything is derived from them, so the shards
-// and the artists index both carry it. Without this the weekly refresh restores the
-// on-chain name every Monday — which is exactly what happened to the 2026-08-25
-// rename, undone six days later. data/artist-names.json keeps the original.
+// and the artists index both carry it. Without this a refresh restores the on-chain
+// name — which is exactly what happened to the 2026-08-25 rename, undone six days
+// later by the Monday cron that no longer exists. data/artist-names.json keeps the
+// original.
 const renames = await readFile('data/artist-names.json', 'utf8')
   .then((s) => JSON.parse(s).names ?? {}).catch(() => ({}))
 const display = Object.fromEntries(Object.entries(renames).map(([id, v]) => [id, v.name]))
@@ -93,7 +94,7 @@ await mkdir(join(OUT, 'artists'), { recursive: true })
 await Promise.all(shards.map((s, i) => writeJson(`tokens/index-${String(i).padStart(3, '0')}.json`, s)))
 await writeJson('tokens/slug-index.json', buildSlugIndex(shards))
 // The two things the API cannot tell us about an artist, both of which live in this
-// repository and both of which a refresh would otherwise throw away every Monday.
+// repository and both of which a refresh would otherwise throw away.
 //
 // Collaborations first: a collaborative project is authored by the KT1 contract it was
 // minted through, so without this file the count on an artist's row omits their
