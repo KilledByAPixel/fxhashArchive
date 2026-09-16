@@ -46,7 +46,7 @@
 import { readFile, writeFile, rename, unlink, mkdir, readdir, rm, stat, cp } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
 import { execFileSync } from 'node:child_process'
-import { extractRefs, resolveRef, GATEWAY_ORIGINS } from './archive-lib.mjs'
+import { extractRefs, resolveRef, GATEWAY_ORIGINS, ONCHFS_ORIGIN } from './archive-lib.mjs'
 
 const GATEWAYS = GATEWAY_ORIGINS
 const TOKENS_DIR = 'public/data/tokens'
@@ -328,7 +328,7 @@ async function findEntryPoint(dir) {
  * fetched set is reported so a project that came back suspiciously thin can be
  * checked by hand rather than quietly shipped broken.
  */
-const ONCHFS_GATEWAY = 'https://onchfs.fxhash2.xyz'
+const ONCHFS_GATEWAY = ONCHFS_ORIGIN
 /** Entry points are HTML, so give up if a walk somehow finds none. */
 const ONCHFS_MAX_FILES = 400
 

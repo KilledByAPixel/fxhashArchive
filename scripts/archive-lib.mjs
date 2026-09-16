@@ -27,6 +27,22 @@ export const GATEWAY_ORIGINS = [
 export const GATEWAYS = GATEWAY_ORIGINS.map((o) => `${o}/ipfs/`)
 
 /**
+ * fxhash's resolver for `onchfs://`, the only one known. Must match ONCHFS_GATEWAY
+ * in src/lib/ipfs.ts.
+ *
+ * It belongs beside the IPFS gateways because it is a *fetch* origin like them, not
+ * because it is one: the code it serves is on chain and cannot be lost, only made
+ * harder to read. Every place that decides what the viewer may load has to know it,
+ * and one place did not — public/live.html was built from GATEWAY_ORIGINS alone, so
+ * all ~370 on-chain projects were refused with "That artwork host is not one this
+ * viewer knows" instead of running.
+ */
+export const ONCHFS_ORIGIN = 'https://onchfs.fxhash2.xyz'
+
+/** Everything the viewer is allowed to fetch a generator from. */
+export const ARTIFACT_ORIGINS = [...GATEWAY_ORIGINS, ONCHFS_ORIGIN]
+
+/**
  * Every same-origin reference in an HTML or CSS document, as written.
  *
  * Attributes are read only from inside tags. Scanning the whole document for

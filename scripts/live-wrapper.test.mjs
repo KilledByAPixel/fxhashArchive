@@ -2,14 +2,14 @@ import { test, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { buildLiveWrapper } from './runner-lib.mjs'
 import { SANDBOX_SHIM } from './sandbox-shim.mjs'
-import { GATEWAY_ORIGINS } from './archive-lib.mjs'
+import { ARTIFACT_ORIGINS, GATEWAY_ORIGINS, ONCHFS_ORIGIN } from './archive-lib.mjs'
 
 // public/live.html is the only shim delivery path that is assembled at build time
 // rather than inlined, so a bad substitution produces a page that still loads and
 // silently protects nothing. These tests are aimed squarely at that.
 
 const SRC = readFileSync('scripts/live-wrapper.src.html', 'utf8')
-const built = () => buildLiveWrapper(SRC, GATEWAY_ORIGINS)
+const built = () => buildLiveWrapper(SRC, ARTIFACT_ORIGINS)
 
 /** The wrapper's inline script, as the browser would see it. */
 function inlineScript(html) {
@@ -46,10 +46,15 @@ test('the whole shim is carried, not a truncated copy', () => {
   expect(shim).toBe(SANDBOX_SHIM)
 })
 
-test('the gateway allow-list is the same one the archiver fetches from', () => {
+test('the allow-list carries every origin an artifact can come from', () => {
   const script = inlineScript(built())
   const origins = JSON.parse(/var ALLOWED_ORIGINS = (\[[^\]]*\])/.exec(script)[1])
-  expect(origins).toEqual(GATEWAY_ORIGINS)
+  expect(origins).toEqual(ARTIFACT_ORIGINS)
+  // The onchfs resolver was missing here until 2026-09-15, and its absence failed no
+  // test: the wrapper refused all ~370 on-chain projects while every IPFS one kept
+  // working, so the viewer looked healthy unless you opened one of them.
+  expect(origins).toContain(ONCHFS_ORIGIN)
+  for (const gateway of GATEWAY_ORIGINS) expect(origins).toContain(gateway)
   // An empty list would refuse everything; a list containing '*' or a bare protocol
   // would defeat the check entirely.
   expect(origins.length).toBeGreaterThan(0)

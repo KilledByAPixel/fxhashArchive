@@ -31,7 +31,7 @@
 import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { buildRunner, buildLiveWrapper, needsLegacyPatch, RUNNER_ENTRY } from './runner-lib.mjs'
-import { GATEWAY_ORIGINS } from './archive-lib.mjs'
+import { ARTIFACT_ORIGINS } from './archive-lib.mjs'
 
 const OUT = 'public/data/generators'
 const MANIFEST = join(OUT, 'manifest.json')
@@ -86,7 +86,7 @@ for (const [id, entry] of Object.entries(manifest)) {
 if (!DRY) await writeFile(MANIFEST, JSON.stringify(manifest, null, 2) + '\n')
 if (!DRY) await writeFile(CHECK_OUT, buildRunner(await readFile(CHECK_SRC, 'utf8')))
 if (!DRY) {
-  await writeFile(LIVE_OUT, buildLiveWrapper(await readFile(LIVE_SRC, 'utf8'), GATEWAY_ORIGINS))
+  await writeFile(LIVE_OUT, buildLiveWrapper(await readFile(LIVE_SRC, 'utf8'), ARTIFACT_ORIGINS))
 }
 
 const mb = (n) => (n / 1048576).toFixed(1)
