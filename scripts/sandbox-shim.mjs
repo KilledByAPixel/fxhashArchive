@@ -38,6 +38,10 @@
  * behaviour is left in place — which is the behaviour the piece has today, so no
  * generator ends up worse off than before the shim existed.
  *
+ * ## A name Chrome took
+ *
+ * This one is not the sandbox. Chrome and Edge expose the WebGPU interface as the global `GPU`. It is a function, and `new GPU()` throws "Illegal constructor". gpu.js — evangel does `new GPU({ mode: 'gpu' })`, and it is not the only piece that does — cannot have that name. The browser build contemporary with these works assigns `window.GPU` to the module object, and the constructable class is the `GPU` property of that object. After the assignment `new GPU()` throws "GPU is not a constructor", `setup()` never runs, and the canvas stays the colour it was cleared to. A build that assigns the constructor function itself is returned unchanged. `navigator.gpu`, which is the real WebGPU entry point, is a different property and is not touched.
+ *
  * `public/sandbox-check.html` exercises all of this in a real sandboxed iframe;
  * open it whenever a browser release makes a piece stop working.
  */
@@ -310,12 +314,29 @@ const WORKER_SHIM = String.raw`
   }
 `
 
+const GPU_SHIM = String.raw`
+  var gpuValue = window.GPU
+  try {
+    Object.defineProperty(window, 'GPU', {
+      configurable: true,
+      enumerable: false,
+      get: function () {
+        var ctor = gpuValue && gpuValue.GPU
+        if (typeof gpuValue !== 'function' && typeof ctor === 'function' &&
+            ctor.prototype && typeof ctor.prototype.createKernel === 'function') {
+          return ctor
+        }
+        return gpuValue
+      },
+      set: function (next) { gpuValue = next },
+    })
+  } catch (e) { /* leave the native binding; nothing is made worse */ }
+`
+
 /**
  * The whole shim, as one IIFE.
  *
  * One scope on purpose: the worker patch reuses `sameServer` from the CORS patch,
  * and the three parts share a single cause worth reading top to bottom.
  */
-export const SANDBOX_SHIM = ['(function () {', CORS_SHIM, STORAGE_SHIM, WORKER_SHIM, '})();'].join(
-  '\n',
-)
+export const SANDBOX_SHIM = ['(function () {', GPU_SHIM, CORS_SHIM, STORAGE_SHIM, WORKER_SHIM, '})();'].join('\n')

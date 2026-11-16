@@ -25,9 +25,10 @@ const throwing = () => {
 /**
  * @param {object} opts
  * @param {boolean} [opts.sandboxed] false gives working APIs, to prove the shim leaves them be
+ * @param {function} [opts.beforeShim] initialize window before installing the shim
  * @param {object} [opts.extra] additional globals (Worker and friends)
  */
-function run({ sandboxed = true, extra = {} } = {}) {
+function run({ sandboxed = true, extra = {}, beforeShim = () => {} } = {}) {
   // Browsers declare these on Window.prototype / Document.prototype, and the shim
   // shadows them with an own property; putting them on a prototype here keeps that
   // distinction real rather than assuming it away.
@@ -76,6 +77,7 @@ function run({ sandboxed = true, extra = {} } = {}) {
     WeakSet,
     ...extra,
   })
+  beforeShim(window)
   vm.runInContext(SANDBOX_SHIM, context)
   return { window, document, notes }
 }
@@ -308,4 +310,61 @@ test('worker options are passed through untouched', () => {
   const { window } = run({ extra })
   new window.Worker('./w.js', { name: 'render', type: 'classic' })
   expect(calls.built[0].options).toEqual({ name: 'render', type: 'classic' })
+})
+
+function NativeGPU() {
+  throw new TypeError('Illegal constructor')
+}
+
+function runWithNativeGPU() {
+  return run({ beforeShim: (window) => { window.GPU = NativeGPU } })
+}
+
+test('gpu.js module objects expose the constructable class with createKernel', () => {
+  class GPU {
+    createKernel() { return 'kernel' }
+  }
+  const { window } = runWithNativeGPU()
+  window.GPU = { GPU }
+  expect(window.GPU).toBe(GPU)
+  expect(new window.GPU().createKernel()).toBe('kernel')
+})
+
+test('a constructor is returned unchanged even if it has a GPU property', () => {
+  class GPU { createKernel() {} }
+  class AlreadyConstructor {}
+  AlreadyConstructor.GPU = GPU
+  const { window } = runWithNativeGPU()
+  window.GPU = AlreadyConstructor
+  expect(window.GPU).toBe(AlreadyConstructor)
+  expect(new window.GPU()).toBeInstanceOf(AlreadyConstructor)
+})
+
+test('reads before gpu.js assigns its module still see the native GPU', () => {
+  const { window } = runWithNativeGPU()
+  expect(window.GPU).toBe(NativeGPU)
+  expect(() => new window.GPU()).toThrow('Illegal constructor')
+})
+
+test('objects without a createKernel class are returned unchanged', () => {
+  const { window } = runWithNativeGPU()
+  for (const value of [{ GPU: class {} }, { GPU: () => {} }, { GPU: { prototype: { createKernel() {} } } }, {}, null]) {
+    window.GPU = value
+    expect(window.GPU).toBe(value)
+  }
+})
+
+test('a non-configurable GPU binding does not interrupt the remaining shim', () => {
+  const { window } = run({
+    beforeShim(window) {
+      Object.defineProperty(window, 'GPU', { configurable: false, value: NativeGPU })
+    },
+  })
+  expect(window.GPU).toBe(NativeGPU)
+  window.localStorage.setItem('still', 'working')
+  expect(window.localStorage.getItem('still')).toBe('working')
+})
+
+test('the shipped shim never references navigator', () => {
+  expect(SANDBOX_SHIM).not.toContain('navigator')
 })

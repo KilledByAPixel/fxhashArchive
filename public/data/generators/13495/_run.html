@@ -9,6 +9,24 @@
 <script>
 (function () {
 
+  var gpuValue = window.GPU
+  try {
+    Object.defineProperty(window, 'GPU', {
+      configurable: true,
+      enumerable: false,
+      get: function () {
+        var ctor = gpuValue && gpuValue.GPU
+        if (typeof gpuValue !== 'function' && typeof ctor === 'function' &&
+            ctor.prototype && typeof ctor.prototype.createKernel === 'function') {
+          return ctor
+        }
+        return gpuValue
+      },
+      set: function (next) { gpuValue = next },
+    })
+  } catch (e) { /* leave the native binding; nothing is made worse */ }
+
+
   // Only assets this document itself serves. Forcing CORS on a third-party URL
   // whose server does not allow it would fail a load that works today.
   function sameServer(url) {
