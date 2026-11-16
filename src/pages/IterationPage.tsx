@@ -181,7 +181,7 @@ export default function IterationPage() {
   /**
    * Download a v1 artifact and splice fxhash's legacy Math.pow patch in ahead of its
    * seeding snippet. Every failure — network, non-OK, HTML that isn't actually a
-   * legacy piece, no <head> to splice after — falls back to the untouched URL: a
+   * legacy piece, no <head> to splice after — falls back to the sandbox wrapper: a
    * possibly-wrong seed beats a blank frame.
    */
   useEffect(() => {
@@ -193,9 +193,9 @@ export default function IterationPage() {
       .then((html) => {
         if (cancelled) return
         const patched = base && needsLegacyPatch(html) ? injectLegacyPatch(html, base) : null
-        setFrame(patched ? { view: 'patched', html: patched } : { view: 'direct' })
+        setFrame(patched ? { view: 'patched', html: patched } : { view: 'wrapped' })
       })
-      .catch(() => { if (!cancelled) setFrame({ view: 'direct' }) })
+      .catch(() => { if (!cancelled) setFrame({ view: 'wrapped' }) })
     return () => { cancelled = true }
   }, [frame.view, liveSrc])
 

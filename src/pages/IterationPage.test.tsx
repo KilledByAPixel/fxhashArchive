@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, cleanup } from '@testing-library/react'
+import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react'
 import { test, expect, vi, beforeEach, afterEach } from 'vitest'
 import { MemoryRouter, Routes, Route, Link } from 'react-router-dom'
 import IterationPage from './IterationPage'
@@ -20,7 +20,7 @@ beforeEach(() => {
   vi.spyOn(tzkt, 'fetchIteration').mockResolvedValue(iteration)
 })
 
-afterEach(() => { cleanup(); vi.restoreAllMocks() })
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
 
 const renderPage = () =>
   render(
@@ -355,3 +355,21 @@ test('the marketplace link is a button by the artwork, not small print in the ta
     expect(token.getAttribute('href')).toContain('tzkt.io')
   })
 })
+
+for (const fetchFails of [false, true]) {
+  test(`v1 artwork keeps the sandbox shim when legacy detection ${fetchFails ? 'fails' : 'finds no seed patch'}`, async () => {
+    vi.spyOn(tzkt, 'fetchIteration').mockResolvedValue({ ...iteration, contract: tzkt.GENTK_V1_CONTRACT })
+    vi.stubGlobal('fetch', fetchFails
+      ? vi.fn().mockRejectedValue(new Error('gateway unavailable'))
+      : vi.fn().mockResolvedValue({ ok: true, text: async () => '<html><head></head><body>gpu.js artwork</body></html>' }))
+    render(
+      <MemoryRouter initialEntries={[`/gentk/${tzkt.GENTK_V1_CONTRACT}/9`]}>
+        <Routes><Route path="/gentk/:contract/:tokenId" element={<IterationPage />} /></Routes>
+      </MemoryRouter>,
+    )
+    fireEvent.click(await screen.findByRole('button', { name: /run artwork/i }))
+    await waitFor(() => expect(document.querySelector('iframe')?.getAttribute('src')).toBe(
+      liveWrapperSrc(`${GATEWAYS[0]}QmGen/?fxhash=oo9`),
+    ))
+  })
+}
