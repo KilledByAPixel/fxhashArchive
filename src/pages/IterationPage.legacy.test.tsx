@@ -153,7 +153,7 @@ test('the legacy patch is gated on the v1 contract address itself, not a list po
   expect(V1).toBe('KT1KEa8z6vWXDJrVqtMrAeDVzsvxat3kHaCE')
 })
 
-test('a rejected artifact fetch falls back to the direct src rather than showing nothing', async () => {
+test('a rejected artifact fetch falls back to the sandbox wrapper rather than showing nothing', async () => {
   vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('network down'))))
 
   renderPage(V1)
@@ -161,14 +161,14 @@ test('a rejected artifact fetch falls back to the direct src rather than showing
 
   const frame = await waitFor(() => {
     const f = document.querySelector('iframe')
-    if (!f?.getAttribute('src')) throw new Error('no direct iframe yet')
+    if (!f?.getAttribute('src')) throw new Error('no wrapped iframe yet')
     return f
   })
-  expect(frame.getAttribute('src')).toBe(LIVE)
+  expect(frame.getAttribute('src')).toBe(liveWrapperSrc(LIVE))
   expect(frame.getAttribute('srcdoc')).toBeNull()
 })
 
-test('a non-OK artifact response falls back to the direct src', async () => {
+test('a non-OK artifact response falls back to the sandbox wrapper', async () => {
   vi.stubGlobal('fetch', mockFetchText('nope', false))
 
   renderPage(V1)
@@ -176,13 +176,13 @@ test('a non-OK artifact response falls back to the direct src', async () => {
 
   const frame = await waitFor(() => {
     const f = document.querySelector('iframe')
-    if (!f?.getAttribute('src')) throw new Error('no direct iframe yet')
+    if (!f?.getAttribute('src')) throw new Error('no wrapped iframe yet')
     return f
   })
-  expect(frame.getAttribute('src')).toBe(LIVE)
+  expect(frame.getAttribute('src')).toBe(liveWrapperSrc(LIVE))
 })
 
-test('HTML that does not need patching is served directly, not through srcdoc', async () => {
+test('HTML that does not need patching is served through the sandbox wrapper', async () => {
   vi.stubGlobal('fetch', mockFetchText('<html><head></head><body>self-contained v2-era piece</body></html>'))
 
   renderPage(V1)
@@ -190,13 +190,13 @@ test('HTML that does not need patching is served directly, not through srcdoc', 
 
   const frame = await waitFor(() => {
     const f = document.querySelector('iframe')
-    if (!f?.getAttribute('src')) throw new Error('no direct iframe yet')
+    if (!f?.getAttribute('src')) throw new Error('no wrapped iframe yet')
     return f
   })
-  expect(frame.getAttribute('src')).toBe(LIVE)
+  expect(frame.getAttribute('src')).toBe(liveWrapperSrc(LIVE))
 })
 
-test('HTML with the snippet but no <head> falls back to the direct src', async () => {
+test('HTML with the snippet but no <head> falls back to the sandbox wrapper', async () => {
   vi.stubGlobal('fetch', mockFetchText(
     `<html><body><script>var fxhash = 'oo9'; b58dec = (s) => Math.pow(alphabet.length, 2)</script></body></html>`,
   ))
@@ -206,10 +206,10 @@ test('HTML with the snippet but no <head> falls back to the direct src', async (
 
   const frame = await waitFor(() => {
     const f = document.querySelector('iframe')
-    if (!f?.getAttribute('src')) throw new Error('no direct iframe yet')
+    if (!f?.getAttribute('src')) throw new Error('no wrapped iframe yet')
     return f
   })
-  expect(frame.getAttribute('src')).toBe(LIVE)
+  expect(frame.getAttribute('src')).toBe(liveWrapperSrc(LIVE))
 })
 
 test('shows a loading state while the artifact is being fetched', async () => {
